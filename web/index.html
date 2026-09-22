@@ -42,6 +42,152 @@
         }
       });
     }
+
+    // High-Performance Zero-Latency Web Audio Engine
+    (function() {
+      let audioCtx = null;
+      let audioMuted = false;
+      let bgmAudio = null;
+
+      function getAudioContext() {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            audioCtx = new AudioContext();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
+
+      // Auto-unlock Web Audio on any user gesture
+      ['click', 'pointerdown', 'keydown', 'touchstart'].forEach(function(evt) {
+        window.addEventListener(evt, function() {
+          getAudioContext();
+        }, { once: false, passive: true });
+      });
+
+      const soundBuffers = {};
+      const soundUrls = {
+        click: '/assets/assets/audio/click.mp3',
+        correct: '/assets/assets/audio/correct.mp3',
+        wrong: '/assets/assets/audio/wrong.mp3',
+        reward: '/assets/assets/audio/reward.mp3',
+        trade: '/assets/assets/audio/trade.mp3'
+      };
+
+      function preloadSounds() {
+        for (const name in soundUrls) {
+          fetch(soundUrls[name])
+            .then(function(res) { return res.arrayBuffer(); })
+            .then(function(buf) {
+              const ctx = getAudioContext();
+              if (ctx) {
+                return ctx.decodeAudioData(buf);
+              }
+            })
+            .then(function(decoded) {
+              if (decoded) soundBuffers[name] = decoded;
+            })
+            .catch(function() {});
+        }
+      }
+
+      window.addEventListener('load', preloadSounds);
+      setTimeout(preloadSounds, 300);
+
+      function playSynthClick(vol) {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const now = ctx.currentTime;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1500, now);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.04);
+          gain.gain.setValueAtTime(vol * 0.45, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } catch (e) {}
+      }
+
+      window.playTradeSound = function(name, volume) {
+        if (audioMuted) return;
+        const ctx = getAudioContext();
+        const vol = typeof volume === 'number' ? volume : 0.7;
+
+        if (name === 'click') {
+          if (soundBuffers['click'] && ctx) {
+            try {
+              const src = ctx.createBufferSource();
+              const gain = ctx.createGain();
+              src.buffer = soundBuffers['click'];
+              gain.gain.value = vol;
+              src.connect(gain);
+              gain.connect(ctx.destination);
+              src.start(0);
+              return;
+            } catch (e) {}
+          }
+          playSynthClick(vol);
+          return;
+        }
+
+        if (soundBuffers[name] && ctx) {
+          try {
+            const src = ctx.createBufferSource();
+            const gain = ctx.createGain();
+            src.buffer = soundBuffers[name];
+            gain.gain.value = vol;
+            src.connect(gain);
+            gain.connect(ctx.destination);
+            src.start(0);
+            return;
+          } catch (e) {}
+        }
+
+        // HTML5 Audio element fallback
+        try {
+          const audio = new Audio(soundUrls[name] || ('/assets/assets/audio/' + name + '.mp3'));
+          audio.volume = Math.min(1.0, Math.max(0.0, vol));
+          audio.play().catch(function() {});
+        } catch (e) {}
+      };
+
+      window.startTradeBgm = function(volume) {
+        if (audioMuted) return;
+        try {
+          if (!bgmAudio) {
+            bgmAudio = new Audio('/assets/assets/audio/bgm.mp3');
+            bgmAudio.loop = true;
+          }
+          bgmAudio.volume = typeof volume === 'number' ? volume : 0.28;
+          bgmAudio.play().catch(function() {});
+        } catch (e) {}
+      };
+
+      window.stopTradeBgm = function() {
+        try {
+          if (bgmAudio) {
+            bgmAudio.pause();
+            bgmAudio.currentTime = 0;
+          }
+        } catch (e) {}
+      };
+
+      window.setTradeAudioMuted = function(muted) {
+        audioMuted = muted;
+        if (muted && bgmAudio) {
+          bgmAudio.pause();
+        }
+      };
+    })();
   </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.

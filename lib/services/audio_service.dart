@@ -1,78 +1,121 @@
+import 'dart:js_interop';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+@JS('window.playTradeSound')
+external void _jsPlayTradeSound(JSString name, JSNumber vol);
+
+@JS('window.startTradeBgm')
+external void _jsStartTradeBgm(JSNumber vol);
+
+@JS('window.stopTradeBgm')
+external void _jsStopTradeBgm();
+
+@JS('window.setTradeAudioMuted')
+external void _jsSetTradeAudioMuted(JSBoolean muted);
+
 class AudioService {
-  static final AudioPlayer _bgmPlayer = AudioPlayer();
+  static final AudioPlayer _mobileBgmPlayer = AudioPlayer();
   static bool _bgmPlaying = false;
   static bool _isAudioEnabled = true;
 
   static void setAudioEnabled(bool enabled) {
     _isAudioEnabled = enabled;
-    if (!enabled) {
-      stopBgm();
-    }
-  }
-
-  static Source _getSource(String file) {
     if (kIsWeb) {
-      // In Flutter Web, direct absolute URL source works 100% reliably with browser HTML5 Audio
-      return UrlSource('assets/assets/audio/$file');
+      try {
+        _jsSetTradeAudioMuted((!enabled).toJS);
+      } catch (_) {}
     } else {
-      return AssetSource('audio/$file');
+      if (!enabled) {
+        stopBgm();
+      }
     }
   }
 
-  static Future<void> _playSfx(String file, double volume) async {
+  static Future<void> _play(String name, double volume) async {
     if (!_isAudioEnabled) return;
+    if (kIsWeb) {
+      try {
+        _jsPlayTradeSound(name.toJS, volume.toJS);
+        return;
+      } catch (e) {
+        debugPrint("Web JS Audio error: $e");
+      }
+    }
+
+    // Native mobile fallback
     try {
       final player = AudioPlayer();
       await player.setVolume(volume);
-      await player.play(_getSource(file));
-      // Auto dispose player after playback
-      player.onPlayerComplete.listen((_) {
-        player.dispose();
-      });
+      await player.play(AssetSource('audio/$name.mp3'));
+      player.onPlayerComplete.listen((_) => player.dispose());
     } catch (e) {
-      debugPrint("Audio _playSfx ($file) error: $e");
+      debugPrint("Native Audio error: $e");
     }
   }
 
-  // Play Sound Effects
-  static Future<void> playCorrect() async {
-    await _playSfx('correct.mp3', 0.85);
+  // --- SOUND EFFECTS ---
+
+  // 1. Crisp UI Button / Tab Tap Sound
+  static void playClick() {
+    _play('click', 0.65);
   }
 
-  static Future<void> playWrong() async {
-    await _playSfx('wrong.mp3', 0.80);
+  // 2. Quiz Correct
+  static void playCorrect() {
+    _play('correct', 0.85);
   }
 
-  static Future<void> playReward() async {
-    await _playSfx('reward.mp3', 0.90);
+  // 3. Quiz Wrong
+  static void playWrong() {
+    _play('wrong', 0.80);
   }
 
-  static Future<void> playTrade() async {
-    await _playSfx('trade.mp3', 0.85);
+  // 4. Milestone / Chest / Reward
+  static void playReward() {
+    _play('reward', 0.90);
   }
 
-  // Background Lo-Fi Ambient Chill Music
+  // 5. Market Buy / Sell Execution
+  static void playTrade() {
+    _play('trade', 0.85);
+  }
+
+  // --- BACKGROUND MUSIC ---
+
   static Future<void> startBgm() async {
     if (!_isAudioEnabled || _bgmPlaying) return;
+    _bgmPlaying = true;
+
+    if (kIsWeb) {
+      try {
+        _jsStartTradeBgm((0.28).toJS);
+        return;
+      } catch (_) {}
+    }
+
     try {
-      await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgmPlayer.setVolume(0.20); // Soft, non-distracting ambient level
-      await _bgmPlayer.play(_getSource('bgm.mp3'));
-      _bgmPlaying = true;
+      await _mobileBgmPlayer.setReleaseMode(ReleaseMode.loop);
+      await _mobileBgmPlayer.setVolume(0.25);
+      await _mobileBgmPlayer.play(AssetSource('audio/bgm.mp3'));
     } catch (e) {
-      debugPrint("Audio startBgm error: $e");
+      debugPrint("Mobile BGM error: $e");
     }
   }
 
   static Future<void> stopBgm() async {
+    _bgmPlaying = false;
+    if (kIsWeb) {
+      try {
+        _jsStopTradeBgm();
+        return;
+      } catch (_) {}
+    }
+
     try {
-      await _bgmPlayer.stop();
-      _bgmPlaying = false;
+      await _mobileBgmPlayer.stop();
     } catch (e) {
-      debugPrint("Audio stopBgm error: $e");
+      debugPrint("Mobile BGM stop error: $e");
     }
   }
 

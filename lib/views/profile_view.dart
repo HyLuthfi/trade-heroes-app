@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
 import 'admin_console_view.dart';
@@ -1333,7 +1334,10 @@ class _ProfileViewState extends State<ProfileView> {
       subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff94a3b8))),
       trailing: Switch(
         value: value,
-        onChanged: onChanged,
+        onChanged: (newVal) {
+          AudioService.playClick();
+          onChanged(newVal);
+        },
         activeColor: const Color(0xff10b981),
         activeTrackColor: const Color(0xff065f46),
       ),
@@ -1348,7 +1352,10 @@ class _ProfileViewState extends State<ProfileView> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      onTap: onTap,
+      onTap: () {
+        AudioService.playClick();
+        onTap();
+      },
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:provider/provider.dart';
+import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import 'kuis_view.dart';
 import 'materi_view.dart';
@@ -189,6 +189,7 @@ class _HomeViewState extends State<HomeView> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          AudioService.playClick();
           setState(() {
             _currentTabIndex = index;
           });

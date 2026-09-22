@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../services/audio_service.dart';
 import '../state/app_state.dart';
 
 class MarketView extends StatefulWidget {
@@ -473,6 +474,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           return Expanded(
             child: GestureDetector(
               onTap: () {
+                AudioService.playClick();
                 setState(() {
                   _selectedTabIdx = idx;
                 });
@@ -1174,6 +1176,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 7. Interactive Order Bottom Sheet
   void _showOrderSheet(BuildContext context, AppState appState, Map<String, dynamic> stock, {required bool isBuy}) {
+    AudioService.playClick();
     final currentPrice = (stock['price'] as num).toDouble();
     final holdingLots = appState.getHoldingLots(stock['ticker']);
     int lotCount = 1;
@@ -1996,7 +1999,10 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   Widget _buildQuickLotBtn(String label, VoidCallback onTap) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        AudioService.playClick();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

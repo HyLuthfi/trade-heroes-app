@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/quiz_overlay.dart';
 import '../widgets/daily_reward_modal.dart';
@@ -979,6 +980,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   },
                                   onTapUp: (_) {
                                     if (isUnlocked) {
+                                      AudioService.playClick();
                                       setState(() {
                                         _pressedLevelId = null;
                                         _selectedLevelId = id;
@@ -1989,6 +1991,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 onPressed: () {
+                                  AudioService.playClick();
                                   final qList = List<Map<String, dynamic>>.from(level['questions']);
                                   setState(() {
                                     _selectedLevelId = null;
