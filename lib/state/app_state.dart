@@ -42,6 +42,7 @@ class AppState extends ChangeNotifier {
   bool _bgmEnabled = false;
   String _language = "id";
   String _sfxTheme = "default";
+  String _bgmTrack = "default";
 
   // Getters
   int get petir => _isPremium ? 999999 : _petir;
@@ -70,6 +71,7 @@ class AppState extends ChangeNotifier {
   bool get bgmEnabled => _bgmEnabled;
   String get language => _language;
   String get sfxTheme => _sfxTheme;
+  String get bgmTrack => _bgmTrack;
 
   // Paper Trading Getters
   double get virtualBalance => _virtualBalance;
@@ -210,8 +212,10 @@ class AppState extends ChangeNotifier {
     _soundHaptic = json['soundHaptic'] ?? true;
     _bgmEnabled = json['bgmEnabled'] ?? false;
     _sfxTheme = json['sfxTheme'] ?? 'default';
+    _bgmTrack = json['bgmTrack'] ?? 'default';
     AudioService.setAudioEnabled(_soundHaptic);
     AudioService.setTheme(_sfxTheme);
+    AudioService.setBgmTrack(_bgmTrack);
     if (_bgmEnabled) AudioService.startBgm();
     _language = json['language'] ?? "id";
     _role = json['role'] ?? (_userEmail == 'luthfirg2502@gmail.com' ? 'admin' : 'user');
@@ -307,6 +311,7 @@ class AppState extends ChangeNotifier {
       'soundHaptic': _soundHaptic,
       'bgmEnabled': _bgmEnabled,
       'sfxTheme': _sfxTheme,
+      'bgmTrack': _bgmTrack,
       'language': _language,
       'virtualBalance': _virtualBalance,
       'portfolio': _portfolio,
@@ -536,6 +541,13 @@ class AppState extends ChangeNotifier {
   void setSfxTheme(String theme) {
     _sfxTheme = theme;
     AudioService.setTheme(theme);
+    _saveState();
+    notifyListeners();
+  }
+
+  void setBgmTrack(String track) {
+    _bgmTrack = track;
+    AudioService.setBgmTrack(track);
     _saveState();
     notifyListeners();
   }

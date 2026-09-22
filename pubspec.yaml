@@ -30,6 +30,7 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/
+    - assets/audio/bgm/
     - assets/audio/themes/default/
     - assets/audio/themes/minimal/
     - assets/audio/themes/arcade/

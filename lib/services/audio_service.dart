@@ -17,19 +17,19 @@ external void _jsSetTradeAudioMuted(JSBoolean muted);
 @JS('setTradeAudioTheme')
 external void _jsSetTradeAudioTheme(JSString theme);
 
+@JS('setTradeBgmTrack')
+external void _jsSetTradeBgmTrack(JSString track);
+
 class AudioService {
   static final AudioPlayer _mobileBgmPlayer = AudioPlayer();
   static bool _bgmPlaying = false;
   static bool _isAudioEnabled = true;
   static String _currentTheme = 'default';
+  static String _currentBgm = 'default';
 
+  // === SFX THEMES ===
   static const List<String> availableThemes = [
-    'default',
-    'minimal',
-    'arcade',
-    'nature',
-    'mechanical',
-    'bubble',
+    'default', 'minimal', 'arcade', 'nature', 'mechanical', 'bubble',
   ];
 
   static const Map<String, String> themeLabels = {
@@ -50,37 +50,69 @@ class AudioService {
     'bubble': 'Gelembung sabun yang playful',
   };
 
-  static const Map<String, String> themeIcons = {
-    'default': 'water_drop',
-    'minimal': 'lens_blur',
-    'arcade': 'sports_esports',
-    'nature': 'eco',
-    'mechanical': 'precision_manufacturing',
-    'bubble': 'bubble_chart',
+  // === BGM TRACKS ===
+  static const List<String> availableBgms = [
+    'default',
+    'ambient_piano',
+    'gentle_piano',
+    'chill_piano',
+    'lofi_study',
+    'jazz_cafe',
+    'deep_space',
+    'rain_meditation',
+  ];
+
+  static const Map<String, String> bgmLabels = {
+    'default': 'Acoustic Calm',
+    'ambient_piano': 'Ambient Piano & Strings',
+    'gentle_piano': 'Gentle Piano',
+    'chill_piano': 'Chill Light Piano',
+    'lofi_study': 'Lo-Fi Study Beats',
+    'jazz_cafe': 'Jazz Cafe',
+    'deep_space': 'Deep Space Ambient',
+    'rain_meditation': 'Rain Meditation',
+  };
+
+  static const Map<String, String> bgmDescriptions = {
+    'default': 'Piano akustik lembut, tenang',
+    'ambient_piano': 'Piano & strings ambient mengalun',
+    'gentle_piano': 'Piano solo halus & minimalis',
+    'chill_piano': 'Piano ringan, santai sepanjang hari',
+    'lofi_study': 'Lo-Fi beat santai untuk fokus belajar',
+    'jazz_cafe': 'Suasana kafe jazz yang hangat',
+    'deep_space': 'Drone ambient, floating, kosmik',
+    'rain_meditation': 'Pad ethereal untuk meditasi',
   };
 
   static String get currentTheme => _currentTheme;
+  static String get currentBgm => _currentBgm;
 
   static void setTheme(String theme) {
     if (!availableThemes.contains(theme)) return;
     _currentTheme = theme;
     if (kIsWeb) {
-      try {
-        _jsSetTradeAudioTheme(theme.toJS);
-      } catch (_) {}
+      try { _jsSetTradeAudioTheme(theme.toJS); } catch (_) {}
+    }
+  }
+
+  static void setBgmTrack(String track) {
+    if (!availableBgms.contains(track)) return;
+    _currentBgm = track;
+    if (kIsWeb) {
+      try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
+    }
+    // If BGM is playing, restart with new track
+    if (_bgmPlaying) {
+      stopBgm().then((_) => startBgm());
     }
   }
 
   static void setAudioEnabled(bool enabled) {
     _isAudioEnabled = enabled;
     if (kIsWeb) {
-      try {
-        _jsSetTradeAudioMuted((!enabled).toJS);
-      } catch (_) {}
+      try { _jsSetTradeAudioMuted((!enabled).toJS); } catch (_) {}
     } else {
-      if (!enabled) {
-        stopBgm();
-      }
+      if (!enabled) stopBgm();
     }
   }
 
@@ -94,8 +126,6 @@ class AudioService {
         debugPrint("Web JS Audio error: $e");
       }
     }
-
-    // Native mobile fallback
     try {
       final player = AudioPlayer();
       await player.setVolume(volume);
@@ -116,20 +146,15 @@ class AudioService {
   static void playReward() => _play('reward', 0.90);
   static void playTrade() => _play('trade', 0.85);
 
-  /// Play a preview of a specific theme's sound (immediate, no buffer dependency)
+  /// Preview a SFX theme
   static void previewTheme(String theme, String soundName) {
     if (!_isAudioEnabled) return;
     if (kIsWeb) {
       try {
-        // Temporarily switch theme, play via HTML5 fallback, restore
         final oldTheme = _currentTheme;
         _jsSetTradeAudioTheme(theme.toJS);
-        // Small delay to let theme switch register, then play
         Future.delayed(const Duration(milliseconds: 50), () {
-          try {
-            _jsPlayTradeSound(soundName.toJS, (0.4).toJS);
-          } catch (_) {}
-          // Restore original theme after sound plays
+          try { _jsPlayTradeSound(soundName.toJS, (0.4).toJS); } catch (_) {}
           Future.delayed(const Duration(milliseconds: 600), () {
             _currentTheme = oldTheme;
             try { _jsSetTradeAudioTheme(oldTheme.toJS); } catch (_) {}
@@ -140,8 +165,34 @@ class AudioService {
     }
     final oldTheme = _currentTheme;
     _currentTheme = theme;
-    _play(soundName, 0.4).then((_) {
-      _currentTheme = oldTheme;
+    _play(soundName, 0.4).then((_) { _currentTheme = oldTheme; });
+  }
+
+  /// Preview a BGM track (play 8 seconds then stop)
+  static void previewBgm(String track) {
+    if (!_isAudioEnabled) return;
+    final wasPlaying = _bgmPlaying;
+    final oldTrack = _currentBgm;
+
+    // Stop current BGM first
+    stopBgm().then((_) {
+      _currentBgm = track;
+      if (kIsWeb) {
+        try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
+      }
+      startBgm().then((_) {
+        // Stop preview after 8 seconds
+        Future.delayed(const Duration(seconds: 8), () {
+          stopBgm().then((_) {
+            _currentBgm = oldTrack;
+            if (kIsWeb) {
+              try { _jsSetTradeBgmTrack(oldTrack.toJS); } catch (_) {}
+            }
+            // Restore if was playing
+            if (wasPlaying) startBgm();
+          });
+        });
+      });
     });
   }
 
@@ -160,7 +211,10 @@ class AudioService {
     try {
       await _mobileBgmPlayer.setReleaseMode(ReleaseMode.loop);
       await _mobileBgmPlayer.setVolume(0.14);
-      await _mobileBgmPlayer.play(AssetSource('audio/bgm.mp3'));
+      final bgmPath = _currentBgm == 'default'
+          ? 'audio/bgm.mp3'
+          : 'audio/bgm/$_currentBgm.mp3';
+      await _mobileBgmPlayer.play(AssetSource(bgmPath));
     } catch (e) {
       debugPrint("Mobile BGM error: $e");
     }
@@ -169,15 +223,9 @@ class AudioService {
   static Future<void> stopBgm() async {
     _bgmPlaying = false;
     if (kIsWeb) {
-      try {
-        _jsStopTradeBgm();
-        return;
-      } catch (_) {}
+      try { _jsStopTradeBgm(); return; } catch (_) {}
     }
-
-    try {
-      await _mobileBgmPlayer.stop();
-    } catch (e) {
+    try { await _mobileBgmPlayer.stop(); } catch (e) {
       debugPrint("Mobile BGM stop error: $e");
     }
   }

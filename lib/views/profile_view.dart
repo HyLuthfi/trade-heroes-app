@@ -390,6 +390,112 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  void _showBgmPickerDialog(BuildContext context, AppState appState) {
+    final iconMap = {
+      'default': Icons.piano_rounded,
+      'ambient_piano': Icons.blur_on_rounded,
+      'gentle_piano': Icons.spa_rounded,
+      'chill_piano': Icons.wb_twilight_rounded,
+      'lofi_study': Icons.headphones_rounded,
+      'jazz_cafe': Icons.local_cafe_rounded,
+      'deep_space': Icons.auto_awesome_rounded,
+      'rain_meditation': Icons.water_rounded,
+    };
+    final colorMap = {
+      'default': const Color(0xff10b981),
+      'ambient_piano': const Color(0xff60a5fa),
+      'gentle_piano': const Color(0xffa78bfa),
+      'chill_piano': const Color(0xfffbbf24),
+      'lofi_study': const Color(0xffec4899),
+      'jazz_cafe': const Color(0xfff97316),
+      'deep_space': const Color(0xff818cf8),
+      'rain_meditation': const Color(0xff22d3ee),
+    };
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xff1e293b),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            title: const Text(
+              "Pilih Musik Latar",
+              style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: AudioService.availableBgms.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (_, idx) {
+                  final track = AudioService.availableBgms[idx];
+                  final isSelected = appState.bgmTrack == track;
+                  return ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    tileColor: isSelected ? const Color(0xff064e3b) : const Color(0xff0f172a),
+                    leading: Icon(
+                      iconMap[track] ?? Icons.music_note_rounded,
+                      color: colorMap[track] ?? Colors.white,
+                      size: 26,
+                    ),
+                    title: Text(
+                      AudioService.bgmLabels[track] ?? track,
+                      style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      AudioService.bgmDescriptions[track] ?? '',
+                      style: TextStyle(fontFamily: 'Outfit', color: Colors.white.withOpacity(0.5), fontSize: 11),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            AudioService.previewBgm(track);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.play_arrow_rounded, color: colorMap[track], size: 18),
+                          ),
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.check_circle_rounded, color: Color(0xff10b981), size: 22),
+                        ],
+                      ],
+                    ),
+                    onTap: () {
+                      appState.setBgmTrack(track);
+                      setDialogState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Musik latar: ${AudioService.bgmLabels[track]}"),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text("TUTUP", style: TextStyle(color: Color(0xff10b981), fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showLanguageSelectorDialog(BuildContext context, AppState appState) {
     showDialog(
       context: context,
@@ -1287,6 +1393,14 @@ class _ProfileViewState extends State<ProfileView> {
                               ),
                             );
                           },
+                        ),
+                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        _buildSettingItemTile(
+                          icon: Icons.library_music_rounded,
+                          iconColor: const Color(0xff8b5cf6),
+                          title: "Pilih Musik Latar",
+                          trailingText: AudioService.bgmLabels[appState.bgmTrack] ?? "Default",
+                          onTap: () => _showBgmPickerDialog(context, appState),
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingItemTile(
