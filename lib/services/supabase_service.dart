@@ -123,4 +123,31 @@ class SupabaseService {
       return null;
     }
   }
+
+  // Fetch All Profiles (Admin Console)
+  static Future<List<Map<String, dynamic>>> fetchAllProfiles() async {
+    try {
+      final response = await client
+          .from('profiles')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint("Error fetching all profiles: $e");
+      return [];
+    }
+  }
+
+  // Admin Update User Profile
+  static Future<bool> adminUpdateProfile(String targetUserId, Map<String, dynamic> updates) async {
+    try {
+      final payload = Map<String, dynamic>.from(updates);
+      payload['updated_at'] = DateTime.now().toUtc().toIso8601String();
+      await client.from('profiles').update(payload).eq('id', targetUserId);
+      return true;
+    } catch (e) {
+      debugPrint("Error in adminUpdateProfile: $e");
+      return false;
+    }
+  }
 }

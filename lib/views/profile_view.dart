@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
+import 'admin_console_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({Key? key}) : super(key: key);
@@ -1024,6 +1025,73 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
 
                   const SizedBox(height: 28),
+
+                  // Admin Console Command Card (Only visible to Admin)
+                  if (appState.isAdmin) ...[
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AdminConsoleView()),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xff78350f), Color(0xff1e293b)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xfff59e0b), width: 1.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xfff59e0b).withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xfff59e0b).withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xfffbbf24), size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    "Admin Console & CMS",
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    "Kelola trader, status VIP, kurikulum, & metrik",
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xffcbd5e1)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xfffbbf24), size: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
                   // 4. Settings & Preferences Section Header
                   Row(
                     children: const [

@@ -28,6 +28,7 @@ class AppState extends ChangeNotifier {
   String _userEmail = "user@kursussaham.com";
   String _userAvatar = "bull";
   String? _userId;
+  String _role = "user";
 
   // Paper Trading Simulator State
   double _virtualBalance = 100000000.0; // Default 100 Juta Rupiah
@@ -58,6 +59,8 @@ class AppState extends ChangeNotifier {
   String get userEmail => _userEmail;
   String get userAvatar => _userAvatar;
   String? get userId => _userId;
+  String get role => _role;
+  bool get isAdmin => _role == 'admin' || _userEmail == 'luthfirg2502@gmail.com';
   bool get isCloudSynced => SupabaseService.isAuthenticated;
   bool get darkMode => _darkMode;
   bool get dailyReminder => _dailyReminder;
@@ -202,6 +205,7 @@ class AppState extends ChangeNotifier {
     _dailyReminder = json['dailyReminder'] ?? true;
     _soundHaptic = json['soundHaptic'] ?? true;
     _language = json['language'] ?? "id";
+    _role = json['role'] ?? (_userEmail == 'luthfirg2502@gmail.com' ? 'admin' : 'user');
     _virtualBalance = (json['virtualBalance'] as num?)?.toDouble() ?? 100000000.0;
     if (json['portfolio'] != null && json['portfolio'] is List) {
       _portfolio = List<Map<String, dynamic>>.from(json['portfolio']);
@@ -222,6 +226,7 @@ class AppState extends ChangeNotifier {
     if (data['is_premium'] != null) _isPremium = data['is_premium'];
     if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
     if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
+    if (data['role'] != null) _role = data['role'];
     if (data['virtual_balance'] != null) {
       _virtualBalance = (data['virtual_balance'] as num).toDouble();
     }
@@ -287,6 +292,7 @@ class AppState extends ChangeNotifier {
       'userEmail': _userEmail,
       'userAvatar': _userAvatar,
       'userId': _userId,
+      'role': _role,
       'darkMode': _darkMode,
       'dailyReminder': _dailyReminder,
       'soundHaptic': _soundHaptic,
@@ -324,6 +330,7 @@ class AppState extends ChangeNotifier {
       'virtual_balance': _virtualBalance,
       'portfolio': _portfolio,
       'trade_history': _tradeHistory,
+      'role': _role,
     };
 
     SupabaseService.saveProfile(user.id, cloudPayload).then((success) {
