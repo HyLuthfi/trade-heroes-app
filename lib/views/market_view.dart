@@ -1175,7 +1175,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 7. Interactive Order Bottom Sheet
   void _showOrderSheet(BuildContext context, AppState appState, Map<String, dynamic> stock, {required bool isBuy}) {
-    AudioService.playClick();
+    AudioService.playConfirm();
     final currentPrice = (stock['price'] as num).toDouble();
     final holdingLots = appState.getHoldingLots(stock['ticker']);
     int lotCount = 1;

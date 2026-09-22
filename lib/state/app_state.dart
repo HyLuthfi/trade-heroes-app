@@ -41,7 +41,6 @@ class AppState extends ChangeNotifier {
   bool _soundHaptic = true;
   bool _bgmEnabled = false;
   String _language = "id";
-  String _sfxTheme = "default";
   String _bgmTrack = "default";
 
   // Getters
@@ -70,7 +69,6 @@ class AppState extends ChangeNotifier {
   bool get soundHaptic => _soundHaptic;
   bool get bgmEnabled => _bgmEnabled;
   String get language => _language;
-  String get sfxTheme => _sfxTheme;
   String get bgmTrack => _bgmTrack;
 
   // Paper Trading Getters
@@ -211,10 +209,8 @@ class AppState extends ChangeNotifier {
     _dailyReminder = json['dailyReminder'] ?? true;
     _soundHaptic = json['soundHaptic'] ?? true;
     _bgmEnabled = json['bgmEnabled'] ?? false;
-    _sfxTheme = json['sfxTheme'] ?? 'default';
     _bgmTrack = json['bgmTrack'] ?? 'default';
     AudioService.setAudioEnabled(_soundHaptic);
-    AudioService.setTheme(_sfxTheme);
     AudioService.setBgmTrack(_bgmTrack);
     if (_bgmEnabled) AudioService.startBgm();
     _language = json['language'] ?? "id";
@@ -310,7 +306,6 @@ class AppState extends ChangeNotifier {
       'dailyReminder': _dailyReminder,
       'soundHaptic': _soundHaptic,
       'bgmEnabled': _bgmEnabled,
-      'sfxTheme': _sfxTheme,
       'bgmTrack': _bgmTrack,
       'language': _language,
       'virtualBalance': _virtualBalance,
@@ -534,13 +529,6 @@ class AppState extends ChangeNotifier {
 
   void setLanguage(String lang) {
     _language = lang;
-    _saveState();
-    notifyListeners();
-  }
-
-  void setSfxTheme(String theme) {
-    _sfxTheme = theme;
-    AudioService.setTheme(theme);
     _saveState();
     notifyListeners();
   }

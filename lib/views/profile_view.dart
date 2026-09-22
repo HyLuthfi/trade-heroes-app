@@ -293,123 +293,6 @@ class _ProfileViewState extends State<ProfileView> {
     VipPassModal.show(context);
   }
 
-  void _showSfxThemePickerDialog(BuildContext context, AppState appState) {
-    final iconMap = {
-      'default': Icons.water_drop_rounded,
-      'minimal': Icons.lens_blur_rounded,
-      'arcade': Icons.sports_esports_rounded,
-      'nature': Icons.eco_rounded,
-      'mechanical': Icons.precision_manufacturing_rounded,
-      'bubble': Icons.bubble_chart_rounded,
-    };
-    final colorMap = {
-      'default': const Color(0xff10b981),
-      'minimal': const Color(0xff94a3b8),
-      'arcade': const Color(0xffe879f9),
-      'nature': const Color(0xff4ade80),
-      'mechanical': const Color(0xfffbbf24),
-      'bubble': const Color(0xff38bdf8),
-    };
-
-    String? playingTheme;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setDialogState) {
-          return AlertDialog(
-            backgroundColor: const Color(0xff1e293b),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text(
-              "Tema Efek Suara",
-              style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: AudioService.availableThemes.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 6),
-                itemBuilder: (_, idx) {
-                  final theme = AudioService.availableThemes[idx];
-                  final isSelected = appState.sfxTheme == theme;
-                  final isPlaying = playingTheme == theme;
-                  return ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    tileColor: isSelected ? const Color(0xff064e3b) : const Color(0xff0f172a),
-                    leading: Icon(
-                      iconMap[theme] ?? Icons.music_note_rounded,
-                      color: colorMap[theme] ?? Colors.white,
-                      size: 26,
-                    ),
-                    title: Text(
-                      AudioService.themeLabels[theme] ?? theme,
-                      style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      AudioService.themeDescriptions[theme] ?? '',
-                      style: TextStyle(fontFamily: 'Outfit', color: Colors.white.withOpacity(0.5), fontSize: 11),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            AudioService.previewTheme(theme, 'click');
-                            setDialogState(() { playingTheme = theme; });
-                            Future.delayed(const Duration(milliseconds: 800), () {
-                              if (playingTheme == theme) {
-                                setDialogState(() { playingTheme = null; });
-                              }
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: isPlaying
-                                  ? (colorMap[theme] ?? Colors.white).withOpacity(0.2)
-                                  : Colors.white.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              isPlaying ? Icons.volume_up_rounded : Icons.play_arrow_rounded,
-                              color: colorMap[theme],
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                        if (isSelected) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.check_circle_rounded, color: Color(0xff10b981), size: 22),
-                        ],
-                      ],
-                    ),
-                    onTap: () {
-                      appState.setSfxTheme(theme);
-                      AudioService.previewTheme(theme, 'click');
-                      setDialogState(() { playingTheme = theme; });
-                      Future.delayed(const Duration(milliseconds: 800), () {
-                        if (playingTheme == theme) {
-                          setDialogState(() { playingTheme = null; });
-                        }
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text("TUTUP", style: TextStyle(color: Color(0xff10b981), fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   void _showBgmPickerDialog(BuildContext context, AppState appState) {
     final iconMap = {
       'default': Icons.piano_rounded,
@@ -1418,14 +1301,6 @@ class _ProfileViewState extends State<ProfileView> {
                               ),
                             );
                           },
-                        ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
-                        _buildSettingItemTile(
-                          icon: Icons.equalizer_rounded,
-                          iconColor: const Color(0xfff59e0b),
-                          title: "Tema Efek Suara",
-                          trailingText: AudioService.themeLabels[appState.sfxTheme] ?? "Default",
-                          onTap: () => _showSfxThemePickerDialog(context, appState),
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingSwitchTile(

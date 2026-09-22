@@ -14,52 +14,21 @@ external void _jsStopTradeBgm();
 @JS('setTradeAudioMuted')
 external void _jsSetTradeAudioMuted(JSBoolean muted);
 
-@JS('setTradeAudioTheme')
-external void _jsSetTradeAudioTheme(JSString theme);
-
 @JS('setTradeBgmTrack')
 external void _jsSetTradeBgmTrack(JSString track);
 
+/// Contextual SFX engine — sounds auto-match the interaction type.
+/// Bubble sounds for casual UI taps, Arcade sounds for confirmations.
 class AudioService {
   static final AudioPlayer _mobileBgmPlayer = AudioPlayer();
   static bool _bgmPlaying = false;
   static bool _isAudioEnabled = true;
-  static String _currentTheme = 'default';
   static String _currentBgm = 'default';
-
-  // === SFX THEMES ===
-  static const List<String> availableThemes = [
-    'default', 'minimal', 'arcade', 'nature', 'mechanical', 'bubble',
-  ];
-
-  static const Map<String, String> themeLabels = {
-    'default': 'Default',
-    'minimal': 'Minimal',
-    'arcade': 'Arcade 8-Bit',
-    'nature': 'Nature',
-    'mechanical': 'Mechanical',
-    'bubble': 'Bubble Pop',
-  };
-
-  static const Map<String, String> themeDescriptions = {
-    'default': 'Gentle water droplet, standar bawaan',
-    'minimal': 'Ultra-halus, hampir tak terdengar',
-    'arcade': 'Retro 8-bit ala game klasik',
-    'nature': 'Organik: air, angin, kayu',
-    'mechanical': 'Mesin ketik & industrial',
-    'bubble': 'Gelembung sabun yang playful',
-  };
 
   // === BGM TRACKS ===
   static const List<String> availableBgms = [
-    'default',
-    'ambient_piano',
-    'gentle_piano',
-    'chill_piano',
-    'lofi_study',
-    'jazz_cafe',
-    'deep_space',
-    'rain_meditation',
+    'default', 'ambient_piano', 'gentle_piano', 'chill_piano',
+    'lofi_study', 'jazz_cafe', 'deep_space', 'rain_meditation',
   ];
 
   static const Map<String, String> bgmLabels = {
@@ -84,16 +53,7 @@ class AudioService {
     'rain_meditation': 'Pad ethereal untuk meditasi',
   };
 
-  static String get currentTheme => _currentTheme;
   static String get currentBgm => _currentBgm;
-
-  static void setTheme(String theme) {
-    if (!availableThemes.contains(theme)) return;
-    _currentTheme = theme;
-    if (kIsWeb) {
-      try { _jsSetTradeAudioTheme(theme.toJS); } catch (_) {}
-    }
-  }
 
   static void setBgmTrack(String track) {
     if (!availableBgms.contains(track)) return;
@@ -101,7 +61,6 @@ class AudioService {
     if (kIsWeb) {
       try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
     }
-    // If BGM is playing, restart with new track
     if (_bgmPlaying) {
       stopBgm().then((_) => startBgm());
     }
@@ -116,11 +75,13 @@ class AudioService {
     }
   }
 
-  static Future<void> _play(String name, double volume) async {
+  /// Play a sound by file name from a specific theme folder
+  static Future<void> _playFromTheme(String theme, String name, double volume) async {
     if (!_isAudioEnabled) return;
     if (kIsWeb) {
       try {
-        _jsPlayTradeSound(name.toJS, volume.toJS);
+        // Play via JS with theme prefix: "bubble/click" or "arcade/correct"
+        _jsPlayTradeSound('$theme/$name'.toJS, volume.toJS);
         return;
       } catch (e) {
         debugPrint("Web JS Audio error: $e");
@@ -129,54 +90,44 @@ class AudioService {
     try {
       final player = AudioPlayer();
       await player.setVolume(volume);
-      final themePath = _currentTheme == 'default'
-          ? 'audio/$name.mp3'
-          : 'audio/themes/$_currentTheme/$name.mp3';
-      await player.play(AssetSource(themePath));
+      await player.play(AssetSource('audio/themes/$theme/$name.mp3'));
       player.onPlayerComplete.listen((_) => player.dispose());
     } catch (e) {
       debugPrint("Native Audio error: $e");
     }
   }
 
-  // --- SOUND EFFECTS ---
-  static void playClick() => _play('click', 0.65);
-  static void playCorrect() => _play('correct', 0.85);
-  static void playWrong() => _play('wrong', 0.80);
-  static void playReward() => _play('reward', 0.90);
-  static void playTrade() => _play('trade', 0.85);
+  // ===================================================================
+  // CONTEXTUAL SFX — auto-picks the right sound for the interaction
+  // ===================================================================
 
-  /// Preview a SFX theme
-  static void previewTheme(String theme, String soundName) {
-    if (!_isAudioEnabled) return;
-    if (kIsWeb) {
-      try {
-        final oldTheme = _currentTheme;
-        _jsSetTradeAudioTheme(theme.toJS);
-        Future.delayed(const Duration(milliseconds: 50), () {
-          try { _jsPlayTradeSound(soundName.toJS, (0.4).toJS); } catch (_) {}
-          Future.delayed(const Duration(milliseconds: 600), () {
-            _currentTheme = oldTheme;
-            try { _jsSetTradeAudioTheme(oldTheme.toJS); } catch (_) {}
-          });
-        });
-        return;
-      } catch (_) {}
-    }
-    final oldTheme = _currentTheme;
-    _currentTheme = theme;
-    _play(soundName, 0.4).then((_) { _currentTheme = oldTheme; });
-  }
+  /// Casual UI tap: toggle, klik level, navigasi ringan → Bubble pop
+  static void playClick() => _playFromTheme('bubble', 'click', 0.50);
 
-  /// Preview a BGM track (play 8 seconds then stop)
+  /// Quiz: jawaban benar → Arcade coin collect!
+  static void playCorrect() => _playFromTheme('arcade', 'correct', 0.70);
+
+  /// Quiz: jawaban salah → Arcade game fail
+  static void playWrong() => _playFromTheme('arcade', 'wrong', 0.65);
+
+  /// Klaim hadiah, chest, daily reward → Arcade level up fanfare
+  static void playReward() => _playFromTheme('arcade', 'reward', 0.75);
+
+  /// Eksekusi order Beli/Jual → Arcade game bonus
+  static void playTrade() => _playFromTheme('arcade', 'trade', 0.70);
+
+  /// Konfirmasi aksi penting: Mulai Kuis, submit order → Arcade blip
+  static void playConfirm() => _playFromTheme('arcade', 'click', 0.60);
+
+  // ===================================================================
+  // BGM
+  // ===================================================================
+
   static void previewBgm(String track) {
     if (!_isAudioEnabled) return;
-    
-    // Force stop any current playback first
     _bgmPlaying = false;
     if (kIsWeb) {
       try { _jsStopTradeBgm(); } catch (_) {}
-      // Set new track and play directly via JS
       try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
       Future.delayed(const Duration(milliseconds: 100), () {
         try { _jsStartTradeBgm((0.35).toJS); } catch (_) {}
@@ -194,7 +145,6 @@ class AudioService {
     }
   }
 
-  /// Stop BGM preview explicitly
   static void stopPreview() {
     _bgmPlaying = false;
     if (kIsWeb) {
@@ -204,24 +154,17 @@ class AudioService {
     }
   }
 
-  // --- BACKGROUND MUSIC ---
   static Future<void> startBgm() async {
     if (!_isAudioEnabled || _bgmPlaying) return;
     _bgmPlaying = true;
-
     if (kIsWeb) {
-      try {
-        _jsStartTradeBgm((0.14).toJS);
-        return;
-      } catch (_) {}
+      try { _jsStartTradeBgm((0.14).toJS); return; } catch (_) {}
     }
-
     try {
       await _mobileBgmPlayer.setReleaseMode(ReleaseMode.loop);
       await _mobileBgmPlayer.setVolume(0.14);
       final bgmPath = _currentBgm == 'default'
-          ? 'audio/bgm.mp3'
-          : 'audio/bgm/$_currentBgm.mp3';
+          ? 'audio/bgm.mp3' : 'audio/bgm/$_currentBgm.mp3';
       await _mobileBgmPlayer.play(AssetSource(bgmPath));
     } catch (e) {
       debugPrint("Mobile BGM error: $e");

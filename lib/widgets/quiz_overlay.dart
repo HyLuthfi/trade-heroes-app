@@ -99,7 +99,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
   }
 
   void _nextQuestion(AppState appState) {
-    AudioService.playClick();
+    AudioService.playConfirm();
     if (_currentIndex + 1 < widget.questions.length) {
       setState(() {
         _currentIndex++;

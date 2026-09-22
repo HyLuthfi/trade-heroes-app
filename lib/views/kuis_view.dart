@@ -1991,7 +1991,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 onPressed: () {
-                                  AudioService.playClick();
+                                  AudioService.playConfirm();
                                   final qList = List<Map<String, dynamic>>.from(level['questions']);
                                   setState(() {
                                     _selectedLevelId = null;
