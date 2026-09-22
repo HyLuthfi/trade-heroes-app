@@ -116,24 +116,31 @@ class AudioService {
   static void playReward() => _play('reward', 0.90);
   static void playTrade() => _play('trade', 0.85);
 
-  /// Play a preview of a specific theme's sound
+  /// Play a preview of a specific theme's sound (immediate, no buffer dependency)
   static void previewTheme(String theme, String soundName) {
     if (!_isAudioEnabled) return;
-    final oldTheme = _currentTheme;
-    _currentTheme = theme;
     if (kIsWeb) {
       try {
+        // Temporarily switch theme, play via HTML5 fallback, restore
+        final oldTheme = _currentTheme;
         _jsSetTradeAudioTheme(theme.toJS);
-        _jsPlayTradeSound(soundName.toJS, (0.5).toJS);
-        // Restore after a short delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _currentTheme = oldTheme;
-          try { _jsSetTradeAudioTheme(oldTheme.toJS); } catch (_) {}
+        // Small delay to let theme switch register, then play
+        Future.delayed(const Duration(milliseconds: 50), () {
+          try {
+            _jsPlayTradeSound(soundName.toJS, (0.4).toJS);
+          } catch (_) {}
+          // Restore original theme after sound plays
+          Future.delayed(const Duration(milliseconds: 600), () {
+            _currentTheme = oldTheme;
+            try { _jsSetTradeAudioTheme(oldTheme.toJS); } catch (_) {}
+          });
         });
         return;
       } catch (_) {}
     }
-    _play(soundName, 0.5).then((_) {
+    final oldTheme = _currentTheme;
+    _currentTheme = theme;
+    _play(soundName, 0.4).then((_) {
       _currentTheme = oldTheme;
     });
   }
