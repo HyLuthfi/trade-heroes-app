@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import 'ad_overlay.dart';
 
@@ -81,9 +82,11 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
 
     if (correct) {
       _scoreCorrect++;
+      AudioService.playCorrect();
     } else {
       _wrongCount++;
       _triggerShake();
+      AudioService.playWrong();
       final hasLives = appState.deductPetir();
       if (!hasLives && !appState.isPremium) {
         // Lives ran out mid quiz
@@ -119,6 +122,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
     }
     
     appState.addXp(xpReward, context);
+    AudioService.playReward();
     
     Navigator.of(context).pop();
 

@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/audio_service.dart';
 import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -39,6 +39,7 @@ class AppState extends ChangeNotifier {
   bool _darkMode = true;
   bool _dailyReminder = true;
   bool _soundHaptic = true;
+  bool _bgmEnabled = false;
   String _language = "id";
 
   // Getters
@@ -65,6 +66,7 @@ class AppState extends ChangeNotifier {
   bool get darkMode => _darkMode;
   bool get dailyReminder => _dailyReminder;
   bool get soundHaptic => _soundHaptic;
+  bool get bgmEnabled => _bgmEnabled;
   String get language => _language;
 
   // Paper Trading Getters
@@ -204,6 +206,9 @@ class AppState extends ChangeNotifier {
     _darkMode = json['darkMode'] ?? true;
     _dailyReminder = json['dailyReminder'] ?? true;
     _soundHaptic = json['soundHaptic'] ?? true;
+    _bgmEnabled = json['bgmEnabled'] ?? false;
+    AudioService.setAudioEnabled(_soundHaptic);
+    if (_bgmEnabled) AudioService.startBgm();
     _language = json['language'] ?? "id";
     _role = json['role'] ?? (_userEmail == 'luthfirg2502@gmail.com' ? 'admin' : 'user');
     _virtualBalance = (json['virtualBalance'] as num?)?.toDouble() ?? 100000000.0;
@@ -296,6 +301,7 @@ class AppState extends ChangeNotifier {
       'darkMode': _darkMode,
       'dailyReminder': _dailyReminder,
       'soundHaptic': _soundHaptic,
+      'bgmEnabled': _bgmEnabled,
       'language': _language,
       'virtualBalance': _virtualBalance,
       'portfolio': _portfolio,
@@ -500,6 +506,18 @@ class AppState extends ChangeNotifier {
 
   void toggleSoundHaptic(bool val) {
     _soundHaptic = val;
+    AudioService.setAudioEnabled(val);
+    _saveState();
+    notifyListeners();
+  }
+
+  void toggleBgm(bool val) {
+    _bgmEnabled = val;
+    if (val) {
+      AudioService.startBgm();
+    } else {
+      AudioService.stopBgm();
+    }
     _saveState();
     notifyListeners();
   }
@@ -570,6 +588,7 @@ class AppState extends ChangeNotifier {
       'timestamp': timeStr,
     });
 
+    AudioService.playTrade();
     _saveState();
     notifyListeners();
     return {
@@ -631,6 +650,7 @@ class AppState extends ChangeNotifier {
       'timestamp': timeStr,
     });
 
+    AudioService.playTrade();
     _saveState();
     notifyListeners();
     return {
@@ -668,6 +688,7 @@ class AppState extends ChangeNotifier {
     if (!_isPremium) {
       _petir = (_petir + petirReward).clamp(0, 5);
     }
+    AudioService.playReward();
     _saveState();
     notifyListeners();
   }
@@ -679,6 +700,7 @@ class AppState extends ChangeNotifier {
   void claimChest(int chestLevelId, int xpReward, BuildContext context) {
     if (!_claimedChests.contains(chestLevelId)) {
       _claimedChests.add(chestLevelId);
+      AudioService.playReward();
       addXp(xpReward, context);
       _saveState();
       notifyListeners();

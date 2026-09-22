@@ -1166,6 +1166,23 @@ class _ProfileViewState extends State<ProfileView> {
                           },
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        _buildSettingSwitchTile(
+                          icon: Icons.music_note_rounded,
+                          iconColor: const Color(0xff06b6d4),
+                          title: "Musik Latar (Lo-Fi BGM)",
+                          subtitle: appState.bgmEnabled ? "Musik ambient santai aktif" : "Musik latar dinonaktifkan",
+                          value: appState.bgmEnabled,
+                          onChanged: (val) {
+                            appState.toggleBgm(val);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(val ? "Musik latar Lo-Fi diaktifkan" : "Musik latar dimatikan"),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                        ),
+                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingItemTile(
                           icon: Icons.language_rounded,
                           iconColor: const Color(0xff3b82f6),
