@@ -70,17 +70,20 @@
       });
 
       const soundBuffers = {};
-      const soundUrls = {
-        click: '/assets/assets/audio/click.mp3',
-        correct: '/assets/assets/audio/correct.mp3',
-        wrong: '/assets/assets/audio/wrong.mp3',
-        reward: '/assets/assets/audio/reward.mp3',
-        trade: '/assets/assets/audio/trade.mp3'
-      };
+      let currentTheme = 'default';
+      const soundNames = ['click', 'correct', 'wrong', 'reward', 'trade'];
+
+      function getSoundUrl(name, theme) {
+        if (!theme || theme === 'default') {
+          return '/assets/assets/audio/' + name + '.mp3';
+        }
+        return '/assets/assets/audio/themes/' + theme + '/' + name + '.mp3';
+      }
 
       function preloadSounds() {
-        for (const name in soundUrls) {
-          fetch(soundUrls[name])
+        soundNames.forEach(function(name) {
+          const url = getSoundUrl(name, currentTheme);
+          fetch(url)
             .then(function(res) { return res.arrayBuffer(); })
             .then(function(buf) {
               const ctx = getAudioContext();
@@ -92,7 +95,7 @@
               if (decoded) soundBuffers[name] = decoded;
             })
             .catch(function() {});
-        }
+        });
       }
 
       window.addEventListener('load', preloadSounds);
@@ -164,7 +167,7 @@
 
         // HTML5 Audio element fallback
         try {
-          const audio = new Audio(soundUrls[name] || ('/assets/assets/audio/' + name + '.mp3'));
+          const audio = new Audio(getSoundUrl(name, currentTheme));
           audio.volume = Math.min(1.0, Math.max(0.0, vol));
           audio.play().catch(function() {});
         } catch (e) {}
@@ -199,11 +202,19 @@
         }
       }
 
+      function setAudioThemeImpl(theme) {
+        currentTheme = theme || 'default';
+        // Clear cached buffers and re-preload with new theme
+        soundNames.forEach(function(name) { delete soundBuffers[name]; });
+        preloadSounds();
+      }
+
       // Expose globally across window, globalThis and dotted properties
       window.playTradeSound = globalThis.playTradeSound = window['window.playTradeSound'] = playSoundImpl;
       window.startTradeBgm = globalThis.startTradeBgm = window['window.startTradeBgm'] = startBgmImpl;
       window.stopTradeBgm = globalThis.stopTradeBgm = window['window.stopTradeBgm'] = stopBgmImpl;
       window.setTradeAudioMuted = globalThis.setTradeAudioMuted = window['window.setTradeAudioMuted'] = setAudioMutedImpl;
+      window.setTradeAudioTheme = globalThis.setTradeAudioTheme = window['window.setTradeAudioTheme'] = setAudioThemeImpl;
     })();
   </script>
   <!--

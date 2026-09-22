@@ -30,4 +30,10 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/
+    - assets/audio/themes/default/
+    - assets/audio/themes/minimal/
+    - assets/audio/themes/arcade/
+    - assets/audio/themes/nature/
+    - assets/audio/themes/mechanical/
+    - assets/audio/themes/bubble/
     - assets/Flash_Screen.mp4
