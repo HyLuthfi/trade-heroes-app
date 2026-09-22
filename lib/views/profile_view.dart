@@ -311,6 +311,8 @@ class _ProfileViewState extends State<ProfileView> {
       'bubble': const Color(0xff38bdf8),
     };
 
+    String? playingTheme;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -331,6 +333,7 @@ class _ProfileViewState extends State<ProfileView> {
                 itemBuilder: (_, idx) {
                   final theme = AudioService.availableThemes[idx];
                   final isSelected = appState.sfxTheme == theme;
+                  final isPlaying = playingTheme == theme;
                   return ListTile(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     tileColor: isSelected ? const Color(0xff064e3b) : const Color(0xff0f172a),
@@ -353,14 +356,26 @@ class _ProfileViewState extends State<ProfileView> {
                         GestureDetector(
                           onTap: () {
                             AudioService.previewTheme(theme, 'click');
+                            setDialogState(() { playingTheme = theme; });
+                            Future.delayed(const Duration(milliseconds: 800), () {
+                              if (playingTheme == theme) {
+                                setDialogState(() { playingTheme = null; });
+                              }
+                            });
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
+                              color: isPlaying
+                                  ? (colorMap[theme] ?? Colors.white).withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.play_arrow_rounded, color: colorMap[theme], size: 18),
+                            child: Icon(
+                              isPlaying ? Icons.volume_up_rounded : Icons.play_arrow_rounded,
+                              color: colorMap[theme],
+                              size: 18,
+                            ),
                           ),
                         ),
                         if (isSelected) ...[
@@ -372,7 +387,12 @@ class _ProfileViewState extends State<ProfileView> {
                     onTap: () {
                       appState.setSfxTheme(theme);
                       AudioService.previewTheme(theme, 'click');
-                      setDialogState(() {});
+                      setDialogState(() { playingTheme = theme; });
+                      Future.delayed(const Duration(milliseconds: 800), () {
+                        if (playingTheme == theme) {
+                          setDialogState(() { playingTheme = null; });
+                        }
+                      });
                     },
                   );
                 },
