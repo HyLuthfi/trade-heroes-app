@@ -103,7 +103,7 @@
       function playSynthClick(vol) {
         if (audioMuted) return;
         const nowMs = performance.now();
-        if (nowMs - lastClickTime < 70) return; // 70ms debounce avoids double sound
+        if (nowMs - lastClickTime < 70) return;
         lastClickTime = nowMs;
 
         const ctx = getAudioContext();
@@ -113,15 +113,15 @@
           const gain = ctx.createGain();
           const now = ctx.currentTime;
           osc.type = 'sine';
-          // Warm wooden tactile pop (900Hz down to 350Hz)
-          osc.frequency.setValueAtTime(950, now);
-          osc.frequency.exponentialRampToValueAtTime(350, now + 0.035);
-          gain.gain.setValueAtTime((vol || 0.5) * 0.4, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+          // Soft water droplet / gentle bubble (680Hz -> 320Hz)
+          osc.frequency.setValueAtTime(680, now);
+          osc.frequency.exponentialRampToValueAtTime(320, now + 0.045);
+          gain.gain.setValueAtTime((vol || 0.3) * 0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(now);
-          osc.stop(now + 0.045);
+          osc.stop(now + 0.055);
         } catch (e) {}
       }
 
