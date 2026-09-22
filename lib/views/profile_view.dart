@@ -458,19 +458,18 @@ class _ProfileViewState extends State<ProfileView> {
                           onTap: () {
                             if (isPreviewing) {
                               // Stop preview
-                              AudioService.stopBgm();
+                              AudioService.stopPreview();
                               setDialogState(() { previewingTrack = null; });
                             } else {
-                              // Stop any current preview first, then start new
-                              AudioService.stopBgm().then((_) {
-                                setDialogState(() { previewingTrack = track; });
-                                AudioService.previewBgm(track);
-                                // Auto-reset icon after 8s (preview duration)
-                                Future.delayed(const Duration(seconds: 9), () {
-                                  if (previewingTrack == track) {
-                                    setDialogState(() { previewingTrack = null; });
-                                  }
-                                });
+                              // Stop any current preview, start new one
+                              AudioService.stopPreview();
+                              setDialogState(() { previewingTrack = track; });
+                              AudioService.previewBgm(track);
+                              // Auto-reset icon after 8s (preview duration)
+                              Future.delayed(const Duration(seconds: 9), () {
+                                if (previewingTrack == track) {
+                                  setDialogState(() { previewingTrack = null; });
+                                }
                               });
                             }
                           },
@@ -514,7 +513,7 @@ class _ProfileViewState extends State<ProfileView> {
                 onPressed: () {
                   // Stop any preview when closing
                   if (previewingTrack != null) {
-                    AudioService.stopBgm();
+                    AudioService.stopPreview();
                   }
                   Navigator.of(ctx).pop();
                 },

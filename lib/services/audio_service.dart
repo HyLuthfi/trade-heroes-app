@@ -171,29 +171,37 @@ class AudioService {
   /// Preview a BGM track (play 8 seconds then stop)
   static void previewBgm(String track) {
     if (!_isAudioEnabled) return;
-    final wasPlaying = _bgmPlaying;
-    final oldTrack = _currentBgm;
-
-    // Stop current BGM first
-    stopBgm().then((_) {
-      _currentBgm = track;
-      if (kIsWeb) {
-        try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
-      }
-      startBgm().then((_) {
-        // Stop preview after 8 seconds
-        Future.delayed(const Duration(seconds: 8), () {
-          stopBgm().then((_) {
-            _currentBgm = oldTrack;
-            if (kIsWeb) {
-              try { _jsSetTradeBgmTrack(oldTrack.toJS); } catch (_) {}
-            }
-            // Restore if was playing
-            if (wasPlaying) startBgm();
-          });
-        });
+    
+    // Force stop any current playback first
+    _bgmPlaying = false;
+    if (kIsWeb) {
+      try { _jsStopTradeBgm(); } catch (_) {}
+      // Set new track and play directly via JS
+      try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
+      Future.delayed(const Duration(milliseconds: 100), () {
+        try { _jsStartTradeBgm((0.35).toJS); } catch (_) {}
+        _bgmPlaying = true;
       });
-    });
+    } else {
+      _mobileBgmPlayer.stop().then((_) {
+        _currentBgm = track;
+        _bgmPlaying = true;
+        _mobileBgmPlayer.setReleaseMode(ReleaseMode.loop);
+        _mobileBgmPlayer.setVolume(0.35);
+        final bgmPath = track == 'default' ? 'audio/bgm.mp3' : 'audio/bgm/$track.mp3';
+        _mobileBgmPlayer.play(AssetSource(bgmPath));
+      });
+    }
+  }
+
+  /// Stop BGM preview explicitly
+  static void stopPreview() {
+    _bgmPlaying = false;
+    if (kIsWeb) {
+      try { _jsStopTradeBgm(); } catch (_) {}
+    } else {
+      _mobileBgmPlayer.stop();
+    }
   }
 
   // --- BACKGROUND MUSIC ---
