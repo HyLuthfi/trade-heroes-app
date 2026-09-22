@@ -2,16 +2,16 @@ import 'dart:js_interop';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
-@JS('window.playTradeSound')
+@JS('playTradeSound')
 external void _jsPlayTradeSound(JSString name, JSNumber vol);
 
-@JS('window.startTradeBgm')
+@JS('startTradeBgm')
 external void _jsStartTradeBgm(JSNumber vol);
 
-@JS('window.stopTradeBgm')
+@JS('stopTradeBgm')
 external void _jsStopTradeBgm();
 
-@JS('window.setTradeAudioMuted')
+@JS('setTradeAudioMuted')
 external void _jsSetTradeAudioMuted(JSBoolean muted);
 
 class AudioService {
