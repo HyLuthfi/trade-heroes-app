@@ -192,16 +192,15 @@ class _LoginViewState extends State<LoginView> {
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          SizedBox(
+                        children: [
+                          Image.asset(
+                            'assets/images/google_logo.png',
                             width: 20,
                             height: 20,
-                            child: CustomPaint(
-                              painter: AuthenticGoogleLogoPainter(),
-                            ),
+                            fit: BoxFit.contain,
                           ),
-                          SizedBox(width: 10),
-                          Text(
+                          const SizedBox(width: 10),
+                          const Text(
                             "Lanjutkan dengan Google",
                             style: TextStyle(
                               fontFamily: 'Outfit',
@@ -514,55 +513,4 @@ class _LoginViewState extends State<LoginView> {
       ),
     );
   }
-}
-
-/// Custom Painter for Crisp 4-Color Official Google "G" Logo
-class AuthenticGoogleLogoPainter extends CustomPainter {
-  const AuthenticGoogleLogoPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final double stroke = w * 0.22;
-    final Rect rect = Rect.fromLTWH(stroke / 2, stroke / 2, w - stroke, h - stroke);
-
-    final Paint redPaint = Paint()
-      ..color = const Color(0xffea4335)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    final Paint yellowPaint = Paint()
-      ..color = const Color(0xfffbbc05)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    final Paint greenPaint = Paint()
-      ..color = const Color(0xff34a853)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    final Paint bluePaint = Paint()
-      ..color = const Color(0xff4285f4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.butt;
-
-    // Draw Google 4-Color Ring Segments
-    canvas.drawArc(rect, -2.2, 1.5, false, redPaint);
-    canvas.drawArc(rect, -3.7, 1.5, false, yellowPaint);
-    canvas.drawArc(rect, 0.7, 1.4, false, greenPaint);
-    canvas.drawArc(rect, -0.7, 1.4, false, bluePaint);
-
-    // Draw Blue Center Bar
-    final Paint blueFill = Paint()..color = const Color(0xff4285f4)..style = PaintingStyle.fill;
-    final Rect barRect = Rect.fromLTWH(w * 0.45, h * 0.40, w * 0.48, stroke * 0.9);
-    canvas.drawRect(barRect, blueFill);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
