@@ -125,12 +125,7 @@
         } catch (e) {}
       }
 
-      // Universal click feedback: any tap on document plays tactile pop
-      window.addEventListener('pointerdown', function() {
-        if (!audioMuted) {
-          playSynthClick(0.45);
-        }
-      }, { passive: true });
+      // Universal click feedback: REMOVED — only meaningful actions get SFX
 
       function playSoundImpl(name, volume) {
         if (audioMuted) return;

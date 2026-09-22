@@ -474,7 +474,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                AudioService.playClick();
                 setState(() {
                   _selectedTabIdx = idx;
                 });

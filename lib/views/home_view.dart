@@ -189,7 +189,6 @@ class _HomeViewState extends State<HomeView> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          AudioService.playClick();
           setState(() {
             _currentTabIndex = index;
           });
