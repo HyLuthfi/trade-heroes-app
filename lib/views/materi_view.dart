@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/ad_overlay.dart';
 import '../widgets/vip_pass_modal.dart';
@@ -442,9 +443,11 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                       child: GestureDetector(
                         onTap: () {
                           if (isLocked) {
+                            AudioService.playClick();
                             _showPremiumLockedDialog();
                             return;
                           }
+                          AudioService.playConfirm();
                           _openModuleContent(appState, mod);
                         },
                         child: Container(
@@ -624,6 +627,7 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   onPressed: () {
+                    AudioService.playReward();
                     Navigator.of(ctx).pop();
                     appState.completeModule(mod['id'], mod['xp'], context);
                     AdOverlay.show(context, () {});
@@ -689,6 +693,7 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
               const SizedBox(width: 12),
               GestureDetector(
                 onTap: () {
+                  AudioService.playClick();
                   appState.toggleFavorite(fav['levelId'], fav['qIndex'], fav['questionText']);
                 },
                 child: const Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 24),
@@ -780,9 +785,11 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                           ),
                           onPressed: () {
                             if (isLocked) {
+                              AudioService.playClick();
                               _showPremiumLockedDialog();
                               return;
                             }
+                            AudioService.playConfirm();
                             if (tip['isPdf']) {
                               _downloadPdf(tip);
                             } else {
@@ -918,6 +925,7 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                               IconButton(
                                 icon: const Icon(Icons.volume_up_rounded, color: Color(0xff10b981), size: 20),
                                 onPressed: () {
+                                  AudioService.playClick();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text("Mengucapkan: '${item['term']}' (dalam lafal bahasa Inggris)"),
