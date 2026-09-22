@@ -412,6 +412,8 @@ class _ProfileViewState extends State<ProfileView> {
       'rain_meditation': const Color(0xff22d3ee),
     };
 
+    String? previewingTrack;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -432,6 +434,7 @@ class _ProfileViewState extends State<ProfileView> {
                 itemBuilder: (_, idx) {
                   final track = AudioService.availableBgms[idx];
                   final isSelected = appState.bgmTrack == track;
+                  final isPreviewing = previewingTrack == track;
                   return ListTile(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     tileColor: isSelected ? const Color(0xff064e3b) : const Color(0xff0f172a),
@@ -453,15 +456,37 @@ class _ProfileViewState extends State<ProfileView> {
                       children: [
                         GestureDetector(
                           onTap: () {
-                            AudioService.previewBgm(track);
+                            if (isPreviewing) {
+                              // Stop preview
+                              AudioService.stopBgm();
+                              setDialogState(() { previewingTrack = null; });
+                            } else {
+                              // Stop any current preview first, then start new
+                              AudioService.stopBgm().then((_) {
+                                setDialogState(() { previewingTrack = track; });
+                                AudioService.previewBgm(track);
+                                // Auto-reset icon after 8s (preview duration)
+                                Future.delayed(const Duration(seconds: 9), () {
+                                  if (previewingTrack == track) {
+                                    setDialogState(() { previewingTrack = null; });
+                                  }
+                                });
+                              });
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
+                              color: isPreviewing
+                                  ? (colorMap[track] ?? Colors.white).withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.play_arrow_rounded, color: colorMap[track], size: 18),
+                            child: Icon(
+                              isPreviewing ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                              color: colorMap[track],
+                              size: 18,
+                            ),
                           ),
                         ),
                         if (isSelected) ...[
@@ -486,7 +511,13 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
+                onPressed: () {
+                  // Stop any preview when closing
+                  if (previewingTrack != null) {
+                    AudioService.stopBgm();
+                  }
+                  Navigator.of(ctx).pop();
+                },
                 child: const Text("TUTUP", style: TextStyle(color: Color(0xff10b981), fontWeight: FontWeight.bold)),
               ),
             ],
