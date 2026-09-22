@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 
@@ -179,16 +180,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         'prevClose': firstC,
         'volume': item['volStr'],
         'timeframesMap': timeframesMap,
-        'name': item['name'],
-        'sector': item['sector'],
-        'price': lastC,
-        'change': diff,
-        'changePct': double.parse(diffPct.toStringAsFixed(2)),
-        'open': firstC,
-        'high': candles.map((c) => c['h'] as double).reduce(max),
-        'low': candles.map((c) => c['l'] as double).reduce(min),
-        'prevClose': firstC,
-        'volume': item['volStr'],
         'value': item['valStr'],
         'marketCap': item['mcap'],
         'per': item['per'],
@@ -217,6 +208,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
     final filtered = _filteredStocks;
     final activeStock = filtered.isNotEmpty
         ? filtered[_selectedStockIdx.clamp(0, filtered.length - 1)]
@@ -232,24 +224,28 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             // 1. Interactive Real Search Bar & Sector Filter Chips
             _buildSearchBarAndFilters(),
 
-            // 3. Stock Watchlist Selector Carousel
+            // 2. Stock Watchlist Selector Carousel
             _buildStockWatchlistBar(filtered),
 
-            // 4. Pro Terminal Main Content Tabs
+            // 3. Pro Terminal Main Content Tabs
             _buildTerminalTabSelector(),
 
-            // 5. Tab Body Content
+            // 4. Tab Body Content
             Expanded(
               child: IndexedStack(
                 index: _selectedTabIdx,
                 children: [
                   _buildTradingViewUltraChartTab(activeStock, mainColor),
                   _buildOrderBookTab(activeStock),
+                  _buildPortfolioTab(appState),
                   _buildFinancialsTab(activeStock),
                   _buildNewsTab(activeStock),
                 ],
               ),
             ),
+
+            // 5. Sticky Bottom Trading Bar
+            _buildBottomTradingBar(activeStock, appState),
           ],
         ),
       ),
@@ -456,8 +452,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   // 4. Pro Terminal Tab Bar with Vector Material Icons
   Widget _buildTerminalTabSelector() {
     final tabs = [
-      {'label': 'Grafik & Teknikal', 'icon': Icons.candlestick_chart_rounded},
+      {'label': 'Grafik', 'icon': Icons.candlestick_chart_rounded},
       {'label': 'Order Book', 'icon': Icons.format_list_numbered_rounded},
+      {'label': 'Portofolio', 'icon': Icons.pie_chart_rounded},
       {'label': 'Finansial', 'icon': Icons.account_balance_wallet_rounded},
       {'label': 'Berita', 'icon': Icons.newspaper_rounded},
     ];
@@ -1089,6 +1086,944 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       },
     );
   }
+
+  // 6. Sticky Bottom Trading Bar
+  Widget _buildBottomTradingBar(Map<String, dynamic> stock, AppState appState) {
+    final holdingLots = appState.getHoldingLots(stock['ticker']);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xff0f172a),
+        border: Border(top: BorderSide(color: Color(0xff1e293b), width: 1.2)),
+      ),
+      child: Row(
+        children: [
+          // Cash & Holdings Indicator
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      "Kas: ",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff94a3b8)),
+                    ),
+                    Text(
+                      formatRupiah(appState.virtualBalance),
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xff10b981),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  holdingLots > 0 ? "Memiliki: $holdingLots Lot ${stock['ticker']}" : "Belum punya saham ini",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.5,
+                    color: holdingLots > 0 ? const Color(0xff60a5fa) : const Color(0xff64748b),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Jual Button
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xffdc2626),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            onPressed: () => _showOrderSheet(context, appState, stock, isBuy: false),
+            child: const Text(
+              "JUAL",
+              style: TextStyle(fontFamily: 'Outfit', fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Beli Button
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff059669),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            onPressed: () => _showOrderSheet(context, appState, stock, isBuy: true),
+            child: const Text(
+              "BELI",
+              style: TextStyle(fontFamily: 'Outfit', fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 7. Interactive Order Bottom Sheet
+  void _showOrderSheet(BuildContext context, AppState appState, Map<String, dynamic> stock, {required bool isBuy}) {
+    final currentPrice = (stock['price'] as num).toDouble();
+    final holdingLots = appState.getHoldingLots(stock['ticker']);
+    int lotCount = 1;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff0f172a),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: Color(0xff1e293b)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final int totalShares = lotCount * 100;
+            final double subtotal = currentPrice * totalShares;
+            final double feePct = isBuy ? 0.0015 : 0.0025;
+            final double fee = subtotal * feePct;
+            final double total = isBuy ? (subtotal + fee) : (subtotal - fee);
+            final bool canAfford = isBuy ? (appState.virtualBalance >= total) : (holdingLots >= lotCount);
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20,
+                right: 20,
+                top: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xff475569),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title & Ticker
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isBuy ? const Color(0xff065f46) : const Color(0xff7f1d1d),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isBuy ? "ORDER BELI" : "ORDER JUAL",
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: isBuy ? const Color(0xff34d399) : const Color(0xfff87171),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            stock['ticker'],
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        formatRupiah(currentPrice),
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    stock['name'] ?? '',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Lot Selector Controls
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff1e293b),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Jumlah Lot",
+                              style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            Text(
+                              "$totalShares Lembar",
+                              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff60a5fa)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            IconButton.filled(
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xff334155),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: lotCount > 1
+                                  ? () => setSheetState(() => lotCount--)
+                                  : null,
+                              icon: const Icon(Icons.remove_rounded, size: 18),
+                            ),
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  "$lotCount Lot",
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            IconButton.filled(
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xff334155),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => setSheetState(() => lotCount++),
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Quick buttons: +1, +5, +10, +50, MAX
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildQuickLotBtn("+1", () => setSheetState(() => lotCount += 1)),
+                            _buildQuickLotBtn("+5", () => setSheetState(() => lotCount += 5)),
+                            _buildQuickLotBtn("+10", () => setSheetState(() => lotCount += 10)),
+                            _buildQuickLotBtn("+50", () => setSheetState(() => lotCount += 50)),
+                            _buildQuickLotBtn("MAX", () {
+                              if (isBuy) {
+                                final pricePerLot = currentPrice * 100 * 1.0015;
+                                final maxLots = (appState.virtualBalance / pricePerLot).floor();
+                                setSheetState(() => lotCount = max(1, maxLots));
+                              } else {
+                                setSheetState(() => lotCount = max(1, holdingLots));
+                              }
+                            }),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Calculation Breakdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff1e293b).withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildCalcRow("Subtotal", formatRupiah(subtotal)),
+                        const SizedBox(height: 6),
+                        _buildCalcRow("Fee Sekuritas BEI (${isBuy ? '0.15%' : '0.25%'})", formatRupiah(fee)),
+                        const Divider(color: Color(0xff334155), height: 14),
+                        _buildCalcRow(
+                          isBuy ? "Total Pembayaran" : "Total Penerimaan Bersih",
+                          formatRupiah(total),
+                          isBold: true,
+                          valueColor: isBuy ? const Color(0xff34d399) : const Color(0xfff87171),
+                        ),
+                        const SizedBox(height: 6),
+                        _buildCalcRow(
+                          isBuy ? "Saldo Kas Tersedia" : "Lot Dimiliki Saat Ini",
+                          isBuy ? formatRupiah(appState.virtualBalance) : "$holdingLots Lot",
+                          valueColor: const Color(0xff94a3b8),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Action Confirm Button
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isBuy ? const Color(0xff059669) : const Color(0xffdc2626),
+                      disabledBackgroundColor: const Color(0xff334155),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 3,
+                    ),
+                    onPressed: (!canAfford || lotCount <= 0)
+                        ? null
+                        : () {
+                            Navigator.of(ctx).pop();
+                            if (isBuy) {
+                              final res = appState.buyStock(
+                                ticker: stock['ticker'],
+                                price: currentPrice,
+                                lots: lotCount,
+                              );
+                              if (appState.soundHaptic) HapticFeedback.mediumImpact();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: res['success'] ? const Color(0xff059669) : const Color(0xffdc2626),
+                                  content: Text(res['message']),
+                                ),
+                              );
+                            } else {
+                              final res = appState.sellStock(
+                                ticker: stock['ticker'],
+                                price: currentPrice,
+                                lots: lotCount,
+                              );
+                              if (appState.soundHaptic) HapticFeedback.mediumImpact();
+                              final pnl = res['pnl'] as double?;
+                              final pnlStr = pnl != null ? " (PnL: ${formatRupiah(pnl)})" : "";
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: res['success'] ? const Color(0xff059669) : const Color(0xffdc2626),
+                                  content: Text("${res['message']}$pnlStr"),
+                                ),
+                              );
+                            }
+                          },
+                    child: Text(
+                      !canAfford
+                          ? (isBuy ? "SALDO TIDAK CUKUP" : "LOT TIDAK MENCUKUPI")
+                          : (isBuy ? "KONFIRMASI BELI $lotCount LOT" : "KONFIRMASI JUAL $lotCount LOT"),
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 8. Pro Portfolio Tab View
+  Widget _buildPortfolioTab(AppState appState) {
+    double totalStockValue = 0.0;
+    double totalCostBasis = 0.0;
+
+    for (var pos in appState.portfolio) {
+      final ticker = pos['ticker'] as String;
+      final lots = (pos['lots'] as num).toInt();
+      final avgPrice = (pos['avgPrice'] as num).toDouble();
+
+      final stockMatch = _allStocks.firstWhere(
+        (st) => st['ticker'] == ticker,
+        orElse: () => {'price': avgPrice},
+      );
+      final currentPrice = (stockMatch['price'] as num).toDouble();
+      final shares = lots * 100;
+      totalStockValue += (currentPrice * shares);
+      totalCostBasis += (avgPrice * shares);
+    }
+
+    final totalEquity = appState.virtualBalance + totalStockValue;
+    final floatingPnl = totalStockValue - totalCostBasis;
+    final floatingPnlPct = totalCostBasis > 0 ? (floatingPnl / totalCostBasis) * 100 : 0.0;
+    final bool isOverallProfit = floatingPnl >= 0;
+
+    return ListView(
+      padding: const EdgeInsets.all(14),
+      children: [
+        // Total Portfolio Valuation Header Card
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xff1e293b), Color(0xff0f172a)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xff334155), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "TOTAL NILAI PORTOFOLIO",
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xff94a3b8),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => _showResetTradingConfirmation(context, appState),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff334155).withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.refresh_rounded, size: 12, color: Color(0xffcbd5e1)),
+                          SizedBox(width: 4),
+                          Text(
+                            "Reset Saldo",
+                            style: TextStyle(fontFamily: 'Outfit', fontSize: 10, color: Color(0xffcbd5e1)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                formatRupiah(totalEquity),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isOverallProfit ? const Color(0xff064e3b) : const Color(0xff450a0a),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isOverallProfit ? const Color(0xff10b981) : const Color(0xffef4444),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isOverallProfit ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                          size: 13,
+                          color: isOverallProfit ? const Color(0xff34d399) : const Color(0xfff87171),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${isOverallProfit ? '+' : ''}${formatRupiah(floatingPnl)} (${floatingPnlPct.toStringAsFixed(2)}%)",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            color: isOverallProfit ? const Color(0xff34d399) : const Color(0xfff87171),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Floating PnL",
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b)),
+                  ),
+                ],
+              ),
+              const Divider(color: Color(0xff334155), height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPortfolioStatTile(
+                      "Saldo Kas Virtual",
+                      formatRupiah(appState.virtualBalance),
+                      const Color(0xff10b981),
+                    ),
+                  ),
+                  Container(width: 1, height: 32, color: const Color(0xff334155)),
+                  Expanded(
+                    child: _buildPortfolioStatTile(
+                      "Nilai Pasar Saham",
+                      formatRupiah(totalStockValue),
+                      const Color(0xff60a5fa),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Holdings Section Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.pie_chart_rounded, color: Color(0xff10b981), size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  "Saham yang Dimiliki (${appState.portfolio.length})",
+                  style: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const Text(
+              "BEI Regular Market",
+              style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        if (appState.portfolio.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+            decoration: BoxDecoration(
+              color: const Color(0xff111827),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.06)),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.account_balance_wallet_outlined, size: 40, color: Color(0xff475569)),
+                SizedBox(height: 10),
+                Text(
+                  "Belum Ada Saham di Portofolio",
+                  style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  "Gunakan saldo kas virtual Rp 100 Juta Anda untuk membeli saham pilihan di tab Grafik atau Order Book.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8), height: 1.4),
+                ),
+              ],
+            ),
+          )
+        else
+          ...appState.portfolio.map((pos) {
+            final ticker = pos['ticker'] as String;
+            final lots = (pos['lots'] as num).toInt();
+            final avgPrice = (pos['avgPrice'] as num).toDouble();
+
+            final stockMatch = _allStocks.firstWhere(
+              (st) => st['ticker'] == ticker,
+              orElse: () => {'ticker': ticker, 'name': ticker, 'price': avgPrice, 'sector': 'Saham'},
+            );
+            final currentPrice = (stockMatch['price'] as num).toDouble();
+            final shares = lots * 100;
+            final totalVal = currentPrice * shares;
+            final cost = avgPrice * shares;
+            final pnl = totalVal - cost;
+            final pnlPct = cost > 0 ? (pnl / cost) * 100 : 0.0;
+            final isGreen = pnl >= 0;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xff111827),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.08)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            ticker,
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff1e293b),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              "$lots Lot",
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff60a5fa),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        "${isGreen ? '+' : ''}${formatRupiah(pnl)}",
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: isGreen ? const Color(0xff34d399) : const Color(0xfff87171),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Avg: ${formatRupiah(avgPrice)} • Saat ini: ${formatRupiah(currentPrice)}",
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xff94a3b8)),
+                      ),
+                      Text(
+                        "${isGreen ? '+' : ''}${pnlPct.toStringAsFixed(2)}%",
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: isGreen ? const Color(0xff34d399) : const Color(0xfff87171),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        "Total: ${formatRupiah(totalVal)}",
+                        style: const TextStyle(fontFamily: 'Outfit', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xffcbd5e1)),
+                      ),
+                      const Spacer(),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xffef4444),
+                          side: const BorderSide(color: Color(0xffef4444)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          minimumSize: const Size(0, 30),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => _showOrderSheet(context, appState, stockMatch, isBuy: false),
+                        child: const Text("JUAL", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xff10b981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          minimumSize: const Size(0, 30),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        onPressed: () => _showOrderSheet(context, appState, stockMatch, isBuy: true),
+                        child: const Text("BELI LAGI", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+
+        const SizedBox(height: 20),
+
+        // Trade History Section
+        Row(
+          children: [
+            const Icon(Icons.history_rounded, color: Color(0xfff59e0b), size: 18),
+            const SizedBox(width: 6),
+            Text(
+              "Riwayat Transaksi (${appState.tradeHistory.length})",
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        if (appState.tradeHistory.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            alignment: Alignment.center,
+            child: const Text(
+              "Belum ada riwayat transaksi",
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff64748b)),
+            ),
+          )
+        else
+          ...appState.tradeHistory.map((th) {
+            final isBuy = th['type'] == 'BUY';
+            final pnl = th['realizedPnl'] as double?;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xff111827),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.06)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isBuy ? const Color(0xff064e3b) : const Color(0xff450a0a),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isBuy ? "BELI" : "JUAL",
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: isBuy ? const Color(0xff34d399) : const Color(0xfff87171),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "${th['ticker']} • ${th['lots']} Lot @ ${formatRupiah(th['price'] as num)}",
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          th['timestamp'] as String? ?? '',
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff64748b)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        formatRupiah(th['total'] as num),
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (pnl != null)
+                        Text(
+                          "PnL: ${pnl >= 0 ? '+' : ''}${formatRupiah(pnl)}",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: pnl >= 0 ? const Color(0xff34d399) : const Color(0xfff87171),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  void _showResetTradingConfirmation(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff1e293b),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "Reset Portofolio Simulator?",
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        content: const Text(
+          "Seluruh posisi saham dan riwayat transaksi akan dihapus, dan saldo kas virtual akan dikembalikan ke Rp 100.000.000.",
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xffcbd5e1), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("Batal", style: TextStyle(color: Color(0xff94a3b8))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffdc2626)),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              appState.resetVirtualTrading();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: Color(0xff059669),
+                  content: Text("Portofolio simulator berhasil di-reset ke Rp 100 Juta!"),
+                ),
+              );
+            },
+            child: const Text("Reset", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortfolioStatTile(String label, String value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalcRow(String label, String val, {bool isBold = false, Color? valueColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: isBold ? Colors.white : const Color(0xff94a3b8),
+          ),
+        ),
+        Text(
+          val,
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: isBold ? 14 : 12.5,
+            fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
+            color: valueColor ?? Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickLotBtn(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xff334155),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+String formatRupiah(num number) {
+  final str = number.toInt().abs().toString();
+  final buffer = StringBuffer();
+  for (int i = 0; i < str.length; i++) {
+    if (i > 0 && (str.length - i) % 3 == 0) {
+      buffer.write('.');
+    }
+    buffer.write(str[i]);
+  }
+  final sign = number < 0 ? '-Rp ' : 'Rp ';
+  return '$sign$buffer';
 }
 
 // 30+ DENSE TRADINGVIEW ULTRA CANDLESTICK PAINTER WITH Y-AXIS PRICE LABELS & X-AXIS TIME LABELS & TOUCH CROSSHAIR

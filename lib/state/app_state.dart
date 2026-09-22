@@ -29,6 +29,11 @@ class AppState extends ChangeNotifier {
   String _userAvatar = "bull";
   String? _userId;
 
+  // Paper Trading Simulator State
+  double _virtualBalance = 100000000.0; // Default 100 Juta Rupiah
+  List<Map<String, dynamic>> _portfolio = []; // [{ 'ticker': 'BBCA', 'lots': 10, 'totalShares': 1000, 'avgPrice': 10250.0 }]
+  List<Map<String, dynamic>> _tradeHistory = []; // [{ 'ticker': 'BBCA', 'type': 'BUY', 'lots': 10, 'price': 10250.0, ... }]
+
   // Preferences
   bool _darkMode = true;
   bool _dailyReminder = true;
@@ -58,6 +63,27 @@ class AppState extends ChangeNotifier {
   bool get dailyReminder => _dailyReminder;
   bool get soundHaptic => _soundHaptic;
   String get language => _language;
+
+  // Paper Trading Getters
+  double get virtualBalance => _virtualBalance;
+  List<Map<String, dynamic>> get portfolio => _portfolio;
+  List<Map<String, dynamic>> get tradeHistory => _tradeHistory;
+
+  int getHoldingLots(String ticker) {
+    final idx = _portfolio.indexWhere((p) => p['ticker'] == ticker);
+    if (idx != -1) {
+      return (_portfolio[idx]['lots'] as num).toInt();
+    }
+    return 0;
+  }
+
+  double getHoldingAvgPrice(String ticker) {
+    final idx = _portfolio.indexWhere((p) => p['ticker'] == ticker);
+    if (idx != -1) {
+      return (_portfolio[idx]['avgPrice'] as num).toDouble();
+    }
+    return 0.0;
+  }
 
   Timer? _regenTimer;
   StreamSubscription<AuthState>? _authSubscription;
@@ -176,6 +202,13 @@ class AppState extends ChangeNotifier {
     _dailyReminder = json['dailyReminder'] ?? true;
     _soundHaptic = json['soundHaptic'] ?? true;
     _language = json['language'] ?? "id";
+    _virtualBalance = (json['virtualBalance'] as num?)?.toDouble() ?? 100000000.0;
+    if (json['portfolio'] != null && json['portfolio'] is List) {
+      _portfolio = List<Map<String, dynamic>>.from(json['portfolio']);
+    }
+    if (json['tradeHistory'] != null && json['tradeHistory'] is List) {
+      _tradeHistory = List<Map<String, dynamic>>.from(json['tradeHistory']);
+    }
   }
 
   void _applyProfileData(Map<String, dynamic> data) {
@@ -189,6 +222,15 @@ class AppState extends ChangeNotifier {
     if (data['is_premium'] != null) _isPremium = data['is_premium'];
     if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
     if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
+    if (data['virtual_balance'] != null) {
+      _virtualBalance = (data['virtual_balance'] as num).toDouble();
+    }
+    if (data['portfolio'] != null && data['portfolio'] is List) {
+      _portfolio = List<Map<String, dynamic>>.from(data['portfolio']);
+    }
+    if (data['trade_history'] != null && data['trade_history'] is List) {
+      _tradeHistory = List<Map<String, dynamic>>.from(data['trade_history']);
+    }
 
     if (data['completed_levels'] != null && data['completed_levels'] is List) {
       _completedLevels = List<int>.from(data['completed_levels']);
@@ -249,6 +291,9 @@ class AppState extends ChangeNotifier {
       'dailyReminder': _dailyReminder,
       'soundHaptic': _soundHaptic,
       'language': _language,
+      'virtualBalance': _virtualBalance,
+      'portfolio': _portfolio,
+      'tradeHistory': _tradeHistory,
     };
     await prefs.setString('trade_heroes_state', jsonEncode(data));
     await prefs.setBool('is_logged_in', _isLoggedIn);
@@ -276,6 +321,9 @@ class AppState extends ChangeNotifier {
       'last_daily_claim_date': _lastDailyClaimDate,
       'is_premium': _isPremium,
       'petir_last_used_time': _petirLastUsedTime,
+      'virtual_balance': _virtualBalance,
+      'portfolio': _portfolio,
+      'trade_history': _tradeHistory,
     };
 
     SupabaseService.saveProfile(user.id, cloudPayload).then((success) {
@@ -451,6 +499,144 @@ class AppState extends ChangeNotifier {
 
   void setLanguage(String lang) {
     _language = lang;
+    _saveState();
+    notifyListeners();
+  }
+
+  // --- PAPER TRADING SIMULATOR LOGIC ---
+
+  Map<String, dynamic> buyStock({
+    required String ticker,
+    required double price,
+    required int lots,
+  }) {
+    if (lots <= 0) {
+      return {'success': false, 'message': 'Jumlah lot harus lebih dari 0'};
+    }
+    final int totalShares = lots * 100;
+    final double subtotal = price * totalShares;
+    final double fee = subtotal * 0.0015; // 0.15% fee beli BEI
+    final double totalCost = subtotal + fee;
+
+    if (_virtualBalance < totalCost) {
+      return {
+        'success': false,
+        'message': 'Saldo kas virtual tidak cukup untuk beli $lots Lot $ticker',
+      };
+    }
+
+    _virtualBalance -= totalCost;
+
+    final existingIdx = _portfolio.indexWhere((p) => p['ticker'] == ticker);
+    if (existingIdx != -1) {
+      final oldLots = (_portfolio[existingIdx]['lots'] as num).toInt();
+      final oldShares = oldLots * 100;
+      final oldAvg = (_portfolio[existingIdx]['avgPrice'] as num).toDouble();
+
+      final newTotalShares = oldShares + totalShares;
+      final newAvg = ((oldAvg * oldShares) + subtotal) / newTotalShares;
+      final newLots = oldLots + lots;
+
+      _portfolio[existingIdx]['lots'] = newLots;
+      _portfolio[existingIdx]['totalShares'] = newTotalShares;
+      _portfolio[existingIdx]['avgPrice'] = double.parse(newAvg.toStringAsFixed(1));
+    } else {
+      _portfolio.add({
+        'ticker': ticker,
+        'lots': lots,
+        'totalShares': totalShares,
+        'avgPrice': double.parse(price.toStringAsFixed(1)),
+      });
+    }
+
+    final now = DateTime.now();
+    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
+
+    _tradeHistory.insert(0, {
+      'ticker': ticker,
+      'type': 'BUY',
+      'lots': lots,
+      'shares': totalShares,
+      'price': price,
+      'fee': fee,
+      'total': totalCost,
+      'timestamp': timeStr,
+    });
+
+    _saveState();
+    notifyListeners();
+    return {
+      'success': true,
+      'message': 'Berhasil beli $lots Lot $ticker @ Rp ${price.toInt()}',
+    };
+  }
+
+  Map<String, dynamic> sellStock({
+    required String ticker,
+    required double price,
+    required int lots,
+  }) {
+    if (lots <= 0) {
+      return {'success': false, 'message': 'Jumlah lot harus lebih dari 0'};
+    }
+
+    final existingIdx = _portfolio.indexWhere((p) => p['ticker'] == ticker);
+    if (existingIdx == -1) {
+      return {'success': false, 'message': 'Anda belum memiliki portofolio saham $ticker'};
+    }
+
+    final currentLots = (_portfolio[existingIdx]['lots'] as num).toInt();
+    if (currentLots < lots) {
+      return {
+        'success': false,
+        'message': 'Lot tidak cukup (Anda hanya memiliki $currentLots Lot $ticker)',
+      };
+    }
+
+    final avgPrice = (_portfolio[existingIdx]['avgPrice'] as num).toDouble();
+    final int totalShares = lots * 100;
+    final double subtotal = price * totalShares;
+    final double fee = subtotal * 0.0025; // 0.25% fee jual BEI
+    final double netProceeds = subtotal - fee;
+    final double realizedPnl = (price - avgPrice) * totalShares - fee;
+
+    _virtualBalance += netProceeds;
+
+    if (currentLots == lots) {
+      _portfolio.removeAt(existingIdx);
+    } else {
+      _portfolio[existingIdx]['lots'] = currentLots - lots;
+      _portfolio[existingIdx]['totalShares'] = (currentLots - lots) * 100;
+    }
+
+    final now = DateTime.now();
+    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
+
+    _tradeHistory.insert(0, {
+      'ticker': ticker,
+      'type': 'SELL',
+      'lots': lots,
+      'shares': totalShares,
+      'price': price,
+      'fee': fee,
+      'total': netProceeds,
+      'realizedPnl': realizedPnl,
+      'timestamp': timeStr,
+    });
+
+    _saveState();
+    notifyListeners();
+    return {
+      'success': true,
+      'message': 'Berhasil jual $lots Lot $ticker @ Rp ${price.toInt()}',
+      'pnl': realizedPnl,
+    };
+  }
+
+  void resetVirtualTrading() {
+    _virtualBalance = 100000000.0;
+    _portfolio = [];
+    _tradeHistory = [];
     _saveState();
     notifyListeners();
   }
