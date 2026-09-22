@@ -56,6 +56,14 @@ class SupabaseService {
     );
   }
 
+  // Sign In with Google OAuth
+  static Future<bool> signInWithGoogle({String? redirectTo}) async {
+    return await client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: redirectTo,
+    );
+  }
+
   // Sign Out
   static Future<void> signOut() async {
     await client.auth.signOut();

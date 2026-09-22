@@ -26,6 +26,23 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
+  Future<void> _handleGoogleLogin(AppState appState) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final error = await appState.signInWithGoogle();
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (error != null) {
+        setState(() {
+          _errorMessage = error;
+        });
+      }
+    }
+  }
+
   Future<void> _handleSubmit(AppState appState) async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -118,33 +135,33 @@ class _LoginViewState extends State<LoginView> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Brand Logo
                   Image.asset(
                     'assets/images/logo.png',
-                    height: 80,
+                    height: 76,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.trending_up_rounded, color: Color(0xff10b981), size: 68);
+                      return const Icon(Icons.trending_up_rounded, color: Color(0xff10b981), size: 64);
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
                   // App Title & Subtitle
                   const Text(
                     "TRADE HEROES",
                     style: TextStyle(
                       fontFamily: 'Outfit',
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: 2.0,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   const Text(
                     "Akademi Belajar Pasar Modal & Simulator Saham BEI",
                     textAlign: TextAlign.center,
@@ -154,11 +171,70 @@ class _LoginViewState extends State<LoginView> {
                       color: Color(0xff94a3b8),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
+
+                  // 1. Google Sign-In Button
+                  InkWell(
+                    onTap: _isLoading ? null : () => _handleGoogleLogin(appState),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CustomPaint(
+                              painter: AuthenticGoogleLogoPainter(),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            "Lanjutkan dengan Google",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xff111827),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.white.withOpacity(0.12), thickness: 1)),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          "atau akun email",
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xff64748b)),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.white.withOpacity(0.12), thickness: 1)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
 
                   // Tab Switcher (Masuk vs Daftar)
                   Container(
-                    height: 44,
+                    height: 42,
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       color: const Color(0xff1e293b),
@@ -222,7 +298,7 @@ class _LoginViewState extends State<LoginView> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Error Message Banner
                   if (_errorMessage != null) ...[
@@ -251,12 +327,12 @@ class _LoginViewState extends State<LoginView> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                   ],
 
                   // Form Container
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: const Color(0xff1e293b).withOpacity(0.65),
                       borderRadius: BorderRadius.circular(18),
@@ -346,13 +422,13 @@ class _LoginViewState extends State<LoginView> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
 
                         // Action Button
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xff059669),
-                            minimumSize: const Size(double.infinity, 48),
+                            minimumSize: const Size(double.infinity, 46),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             elevation: 3,
                           ),
@@ -388,7 +464,7 @@ class _LoginViewState extends State<LoginView> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
                   // Guest Mode (Coba Langsung)
                   TextButton.icon(
@@ -404,7 +480,7 @@ class _LoginViewState extends State<LoginView> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Cloud Integration Tag
                   Container(
@@ -438,4 +514,55 @@ class _LoginViewState extends State<LoginView> {
       ),
     );
   }
+}
+
+/// Custom Painter for Crisp 4-Color Official Google "G" Logo
+class AuthenticGoogleLogoPainter extends CustomPainter {
+  const AuthenticGoogleLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final double stroke = w * 0.22;
+    final Rect rect = Rect.fromLTWH(stroke / 2, stroke / 2, w - stroke, h - stroke);
+
+    final Paint redPaint = Paint()
+      ..color = const Color(0xffea4335)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    final Paint yellowPaint = Paint()
+      ..color = const Color(0xfffbbc05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    final Paint greenPaint = Paint()
+      ..color = const Color(0xff34a853)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    final Paint bluePaint = Paint()
+      ..color = const Color(0xff4285f4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    // Draw Google 4-Color Ring Segments
+    canvas.drawArc(rect, -2.2, 1.5, false, redPaint);
+    canvas.drawArc(rect, -3.7, 1.5, false, yellowPaint);
+    canvas.drawArc(rect, 0.7, 1.4, false, greenPaint);
+    canvas.drawArc(rect, -0.7, 1.4, false, bluePaint);
+
+    // Draw Blue Center Bar
+    final Paint blueFill = Paint()..color = const Color(0xff4285f4)..style = PaintingStyle.fill;
+    final Rect barRect = Rect.fromLTWH(w * 0.45, h * 0.40, w * 0.48, stroke * 0.9);
+    canvas.drawRect(barRect, blueFill);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

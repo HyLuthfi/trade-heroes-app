@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -48,10 +49,47 @@ class AppState extends ChangeNotifier {
   bool get isCloudSynced => SupabaseService.isAuthenticated;
 
   Timer? _regenTimer;
+  StreamSubscription<AuthState>? _authSubscription;
 
   AppState() {
     _initAndLoadState();
     _startRegenTimer();
+    _listenAuthChanges();
+  }
+
+  void _listenAuthChanges() {
+    try {
+      _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen((data) async {
+        final session = data.session;
+        final event = data.event;
+        if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+          if (session?.user != null) {
+            _isLoggedIn = true;
+            _userId = session!.user.id;
+            _userEmail = session.user.email ?? _userEmail;
+            final metaName = session.user.userMetadata?['name'] as String?;
+            if (metaName != null && metaName.isNotEmpty) {
+              _userName = metaName;
+            }
+            final cloudProfile = await SupabaseService.fetchProfile(_userId!);
+            if (cloudProfile != null) {
+              _applyProfileData(cloudProfile);
+            }
+            final prefs = await SharedPreferences.getInstance();
+            await _saveToLocalCache(prefs);
+            notifyListeners();
+          }
+        } else if (event == AuthChangeEvent.signedOut) {
+          _isLoggedIn = false;
+          _userId = null;
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('is_logged_in', false);
+          notifyListeners();
+        }
+      });
+    } catch (e) {
+      debugPrint("Auth subscription error: $e");
+    }
   }
 
   // Initialize state with SharedPreferences (Web + Native Safe) and Supabase Cloud Sync
@@ -293,6 +331,15 @@ class AppState extends ChangeNotifier {
         return null; // success
       }
       return "Login gagal, silakan periksa email dan kata sandi.";
+    } catch (e) {
+      return e.toString().replaceAll("Exception: ", "");
+    }
+  }
+
+  Future<String?> signInWithGoogle() async {
+    try {
+      await SupabaseService.signInWithGoogle();
+      return null;
     } catch (e) {
       return e.toString().replaceAll("Exception: ", "");
     }
@@ -692,6 +739,7 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _regenTimer?.cancel();
+    _authSubscription?.cancel();
     super.dispose();
   }
 }
