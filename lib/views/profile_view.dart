@@ -447,6 +447,39 @@ class ProfileView extends StatelessWidget {
                             color: Color(0xff94a3b8),
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        // Cloud Sync Indicator
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: appState.isCloudSynced ? const Color(0xff064e3b) : const Color(0xff334155),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: appState.isCloudSynced ? const Color(0xff10b981) : const Color(0xff64748b),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                appState.isCloudSynced ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                                size: 12,
+                                color: appState.isCloudSynced ? const Color(0xff34d399) : const Color(0xff94a3b8),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                appState.isCloudSynced ? "Supabase Cloud Terhubung" : "Penyimpanan Lokal",
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: appState.isCloudSynced ? const Color(0xff34d399) : const Color(0xffcbd5e1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 12),
 
                         // Prominent 3D Ganti Avatar Button

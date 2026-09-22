@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
   int _petir = 5;
@@ -17,13 +18,14 @@ class AppState extends ChangeNotifier {
   List<int> _claimedDailyDays = []; // Days claimed in current week (1-7)
   String _lastDailyClaimDate = ""; // YYYY-MM-DD
   bool _isPremium = false;
-  bool _isLoggedIn = true;
+  bool _isLoggedIn = false;
   String _lastActiveDate = ""; // YYYY-MM-DD
   int? _petirLastUsedTime; // timestamp in ms
 
   String _userName = "Calon Trader";
   String _userEmail = "user@kursussaham.com";
   String _userAvatar = "bull";
+  String? _userId;
 
   // Getters
   int get petir => _isPremium ? 999999 : _petir;
@@ -42,87 +44,298 @@ class AppState extends ChangeNotifier {
   String get userName => _userName;
   String get userEmail => _userEmail;
   String get userAvatar => _userAvatar;
+  String? get userId => _userId;
+  bool get isCloudSynced => SupabaseService.isAuthenticated;
 
   Timer? _regenTimer;
 
   AppState() {
-    _loadState();
+    _initAndLoadState();
     _startRegenTimer();
   }
 
-  // File Path for Local JSON Storage
-  Future<File> _getLocalFile() async {
-    final directory = await getApplicationDocumentsDirectory();
-    return File('${directory.path}/state.json');
-  }
-
-  // Load state from local storage
-  Future<void> _loadState() async {
+  // Initialize state with SharedPreferences (Web + Native Safe) and Supabase Cloud Sync
+  Future<void> _initAndLoadState() async {
     try {
-      final file = await _getLocalFile();
-      if (await file.exists()) {
-        final contents = await file.readAsString();
-        final json = jsonDecode(contents);
+      final prefs = await SharedPreferences.getInstance();
 
-        _petir = json['petir'] ?? 5;
-        _xp = json['xp'] ?? 0;
-        _dailyXp = json['dailyXp'] ?? 0;
-        _streak = json['streak'] ?? 0;
-        _completedLevels = List<int>.from(json['completedLevels'] ?? [1, 2, 3]);
-        if (_completedLevels.isEmpty) {
-          _completedLevels = [1, 2, 3];
+      // 1. Check Supabase Current Session
+      final currentSupabaseUser = SupabaseService.currentUser;
+      if (currentSupabaseUser != null) {
+        _isLoggedIn = true;
+        _userId = currentSupabaseUser.id;
+        _userEmail = currentSupabaseUser.email ?? _userEmail;
+        final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
+        if (metaName != null && metaName.isNotEmpty) {
+          _userName = metaName;
         }
-        _readModules = List<int>.from(json['readModules'] ?? []);
-        _favorites = List<Map<String, dynamic>>.from(json['favorites'] ?? []);
-        _unlockedBadges = List<String>.from(json['unlockedBadges'] ?? []);
-        _claimedChests = List<int>.from(json['claimedChests'] ?? []);
-        _claimedDailyDays = List<int>.from(json['claimedDailyDays'] ?? []);
-        _lastDailyClaimDate = json['lastDailyClaimDate'] ?? "";
-        _isPremium = json['isPremium'] ?? false;
-        _isLoggedIn = json['isLoggedIn'] ?? true;
-        _lastActiveDate = json['lastActiveDate'] ?? "";
-        _petirLastUsedTime = json['petirLastUsedTime'];
-        _userName = json['userName'] ?? "Calon Trader";
-        _userEmail = json['userEmail'] ?? "user@kursussaham.com";
-        _userAvatar = json['userAvatar'] ?? "bull";
-        
-        _checkDailyReset();
-        _checkPetirRegenOnLoad();
-        notifyListeners();
+
+        // Try load from Supabase Cloud Profile
+        final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id);
+        if (cloudProfile != null) {
+          _applyProfileData(cloudProfile);
+          await _saveToLocalCache(prefs);
+          _checkDailyReset();
+          _checkPetirRegenOnLoad();
+          notifyListeners();
+          return;
+        }
       }
+
+      // 2. Fallback to Local Cache (SharedPreferences)
+      final cachedJsonStr = prefs.getString('trade_heroes_state');
+      if (cachedJsonStr != null && cachedJsonStr.isNotEmpty) {
+        final json = jsonDecode(cachedJsonStr);
+        _applyLocalData(json);
+      } else {
+        // If guest session was saved
+        _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      }
+
+      _checkDailyReset();
+      _checkPetirRegenOnLoad();
+      notifyListeners();
     } catch (e) {
-      debugPrint("Error loading state: $e");
+      debugPrint("Error initializing AppState: $e");
     }
   }
 
-  // Save state to local storage
+  void _applyLocalData(Map<String, dynamic> json) {
+    _petir = json['petir'] ?? 5;
+    _xp = json['xp'] ?? 0;
+    _dailyXp = json['dailyXp'] ?? 0;
+    _streak = json['streak'] ?? 0;
+    _completedLevels = List<int>.from(json['completedLevels'] ?? [1, 2, 3]);
+    if (_completedLevels.isEmpty) {
+      _completedLevels = [1, 2, 3];
+    }
+    _readModules = List<int>.from(json['readModules'] ?? []);
+    _favorites = List<Map<String, dynamic>>.from(json['favorites'] ?? []);
+    _unlockedBadges = List<String>.from(json['unlockedBadges'] ?? []);
+    _claimedChests = List<int>.from(json['claimedChests'] ?? []);
+    _claimedDailyDays = List<int>.from(json['claimedDailyDays'] ?? []);
+    _lastDailyClaimDate = json['lastDailyClaimDate'] ?? "";
+    _isPremium = json['isPremium'] ?? false;
+    _isLoggedIn = json['isLoggedIn'] ?? false;
+    _lastActiveDate = json['lastActiveDate'] ?? "";
+    _petirLastUsedTime = json['petirLastUsedTime'];
+    _userName = json['userName'] ?? "Calon Trader";
+    _userEmail = json['userEmail'] ?? "user@kursussaham.com";
+    _userAvatar = json['userAvatar'] ?? "bull";
+    _userId = json['userId'];
+  }
+
+  void _applyProfileData(Map<String, dynamic> data) {
+    if (data['name'] != null) _userName = data['name'];
+    if (data['email'] != null) _userEmail = data['email'];
+    if (data['avatar'] != null) _userAvatar = data['avatar'];
+    if (data['petir'] != null) _petir = data['petir'];
+    if (data['xp'] != null) _xp = data['xp'];
+    if (data['daily_xp'] != null) _dailyXp = data['daily_xp'];
+    if (data['streak'] != null) _streak = data['streak'];
+    if (data['is_premium'] != null) _isPremium = data['is_premium'];
+    if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
+    if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
+
+    if (data['completed_levels'] != null && data['completed_levels'] is List) {
+      _completedLevels = List<int>.from(data['completed_levels']);
+      if (_completedLevels.isEmpty) _completedLevels = [1, 2, 3];
+    }
+    if (data['read_modules'] != null && data['read_modules'] is List) {
+      _readModules = List<int>.from(data['read_modules']);
+    }
+    if (data['unlocked_badges'] != null && data['unlocked_badges'] is List) {
+      _unlockedBadges = List<String>.from(data['unlocked_badges']);
+    }
+    if (data['claimed_chests'] != null && data['claimed_chests'] is List) {
+      _claimedChests = List<int>.from(data['claimed_chests']);
+    }
+    if (data['claimed_daily_days'] != null && data['claimed_daily_days'] is List) {
+      _claimedDailyDays = List<int>.from(data['claimed_daily_days']);
+    }
+    if (data['favorites'] != null) {
+      if (data['favorites'] is List) {
+        _favorites = List<Map<String, dynamic>>.from(data['favorites']);
+      }
+    }
+  }
+
+  // Save state to local storage & Supabase Cloud
   Future<void> _saveState() async {
     try {
-      final file = await _getLocalFile();
-      final data = {
-        'petir': _petir,
-        'xp': _xp,
-        'dailyXp': _dailyXp,
-        'streak': _streak,
-        'completedLevels': _completedLevels,
-        'readModules': _readModules,
-        'favorites': _favorites,
-        'unlockedBadges': _unlockedBadges,
-        'claimedChests': _claimedChests,
-        'claimedDailyDays': _claimedDailyDays,
-        'lastDailyClaimDate': _lastDailyClaimDate,
-        'isPremium': _isPremium,
-        'isLoggedIn': _isLoggedIn,
-        'lastActiveDate': _lastActiveDate,
-        'petirLastUsedTime': _petirLastUsedTime,
-        'userName': _userName,
-        'userEmail': _userEmail,
-        'userAvatar': _userAvatar,
-      };
-      await file.writeAsString(jsonEncode(data));
+      final prefs = await SharedPreferences.getInstance();
+      await _saveToLocalCache(prefs);
+      _syncToCloudBackground();
     } catch (e) {
       debugPrint("Error saving state: $e");
     }
+  }
+
+  Future<void> _saveToLocalCache(SharedPreferences prefs) async {
+    final data = {
+      'petir': _petir,
+      'xp': _xp,
+      'dailyXp': _dailyXp,
+      'streak': _streak,
+      'completedLevels': _completedLevels,
+      'readModules': _readModules,
+      'favorites': _favorites,
+      'unlockedBadges': _unlockedBadges,
+      'claimedChests': _claimedChests,
+      'claimedDailyDays': _claimedDailyDays,
+      'lastDailyClaimDate': _lastDailyClaimDate,
+      'isPremium': _isPremium,
+      'isLoggedIn': _isLoggedIn,
+      'lastActiveDate': _lastActiveDate,
+      'petirLastUsedTime': _petirLastUsedTime,
+      'userName': _userName,
+      'userEmail': _userEmail,
+      'userAvatar': _userAvatar,
+      'userId': _userId,
+    };
+    await prefs.setString('trade_heroes_state', jsonEncode(data));
+    await prefs.setBool('is_logged_in', _isLoggedIn);
+  }
+
+  void _syncToCloudBackground() {
+    if (!SupabaseService.isAuthenticated) return;
+    final user = SupabaseService.currentUser;
+    if (user == null) return;
+
+    final cloudPayload = {
+      'name': _userName,
+      'email': _userEmail,
+      'avatar': _userAvatar,
+      'petir': _petir,
+      'xp': _xp,
+      'daily_xp': _dailyXp,
+      'streak': _streak,
+      'completed_levels': _completedLevels,
+      'read_modules': _readModules,
+      'favorites': _favorites,
+      'unlocked_badges': _unlockedBadges,
+      'claimed_chests': _claimedChests,
+      'claimed_daily_days': _claimedDailyDays,
+      'last_daily_claim_date': _lastDailyClaimDate,
+      'is_premium': _isPremium,
+      'petir_last_used_time': _petirLastUsedTime,
+    };
+
+    SupabaseService.saveProfile(user.id, cloudPayload).then((success) {
+      if (kDebugMode && success) {
+        debugPrint("Successfully synced state to Supabase");
+      }
+    });
+  }
+
+  // --- AUTHENTICATION METHODS ---
+
+  Future<String?> signUpWithEmail({
+    required String email,
+    required String password,
+    String? name,
+  }) async {
+    try {
+      final res = await SupabaseService.signUp(
+        email: email,
+        password: password,
+        name: name,
+      );
+
+      final user = res.user;
+      if (user != null) {
+        _isLoggedIn = true;
+        _userId = user.id;
+        _userEmail = user.email ?? email;
+        _userName = name ?? (email.contains('@') ? email.split('@')[0] : email);
+        
+        await _saveState();
+        notifyListeners();
+        return null; // success
+      }
+      return "Pendaftaran gagal, silakan coba lagi.";
+    } catch (e) {
+      return e.toString().replaceAll("Exception: ", "");
+    }
+  }
+
+  Future<String?> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await SupabaseService.signIn(
+        email: email,
+        password: password,
+      );
+
+      final user = res.user;
+      if (user != null) {
+        _isLoggedIn = true;
+        _userId = user.id;
+        _userEmail = user.email ?? email;
+        
+        final metaName = user.userMetadata?['name'] as String?;
+        if (metaName != null && metaName.isNotEmpty) {
+          _userName = metaName;
+        } else {
+          _userName = email.contains('@') ? email.split('@')[0] : email;
+        }
+
+        // Fetch user data from cloud
+        final cloudProfile = await SupabaseService.fetchProfile(user.id);
+        if (cloudProfile != null) {
+          _applyProfileData(cloudProfile);
+        }
+
+        await _saveState();
+        notifyListeners();
+        return null; // success
+      }
+      return "Login gagal, silakan periksa email dan kata sandi.";
+    } catch (e) {
+      return e.toString().replaceAll("Exception: ", "");
+    }
+  }
+
+  void loginAsGuest({String name = "Tamu Trader"}) {
+    _isLoggedIn = true;
+    _userName = name;
+    _userEmail = "guest@tradeheroes.local";
+    _userAvatar = "bull";
+    _userId = null;
+    _saveState();
+    notifyListeners();
+  }
+
+  void login({required String name, required String email, String avatar = "bull"}) {
+    _isLoggedIn = true;
+    _userName = name;
+    _userEmail = email;
+    _userAvatar = avatar;
+    _saveState();
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    try {
+      if (SupabaseService.isAuthenticated) {
+        await SupabaseService.signOut();
+      }
+    } catch (e) {
+      debugPrint("Logout error: $e");
+    }
+    _isLoggedIn = false;
+    _userId = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_logged_in', false);
+    notifyListeners();
+  }
+
+  void updateAvatar(String newAvatar) {
+    _userAvatar = newAvatar;
+    _saveState();
+    notifyListeners();
   }
 
   // Daily Reward Claim Handler
@@ -145,28 +358,6 @@ class AppState extends ChangeNotifier {
     if (!_isPremium) {
       _petir = (_petir + petirReward).clamp(0, 5);
     }
-    _saveState();
-    notifyListeners();
-  }
-
-  // Login & Logout Handlers
-  void login({required String name, required String email, String avatar = "bull"}) {
-    _isLoggedIn = true;
-    _userName = name;
-    _userEmail = email;
-    _userAvatar = avatar;
-    _saveState();
-    notifyListeners();
-  }
-
-  void updateAvatar(String newAvatar) {
-    _userAvatar = newAvatar;
-    _saveState();
-    notifyListeners();
-  }
-
-  void logout() {
-    _isLoggedIn = false;
     _saveState();
     notifyListeners();
   }
@@ -210,7 +401,7 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final elapsedMs = now - _petirLastUsedTime!;
-    const regenMs = 60000; // 1 Menit per petir untuk demo
+    const regenMs = 60000;
 
     final earnedLives = elapsedMs ~/ regenMs;
     if (earnedLives > 0) {

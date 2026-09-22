@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'services/supabase_service.dart';
 import 'state/app_state.dart';
 import 'views/home_view.dart';
 import 'views/login_view.dart';
 import 'views/splash_view.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseService.initialize();
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppState(),
