@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -383,6 +384,32 @@ class AppState extends ChangeNotifier {
     _userAvatar = newAvatar;
     _saveState();
     notifyListeners();
+  }
+
+  Future<bool> uploadAndSetCustomAvatar(Uint8List bytes, String fileExt) async {
+    try {
+      if (SupabaseService.isAuthenticated && _userId != null) {
+        final publicUrl = await SupabaseService.uploadAvatar(
+          userId: _userId!,
+          bytes: bytes,
+          fileExt: fileExt,
+        );
+        if (publicUrl != null) {
+          _userAvatar = publicUrl;
+          await _saveState();
+          notifyListeners();
+          return true;
+        }
+      }
+      final b64 = base64Encode(bytes);
+      _userAvatar = 'data:image/$fileExt;base64,$b64';
+      await _saveState();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint("Error setting custom avatar: $e");
+      return false;
+    }
   }
 
   // Daily Reward Claim Handler

@@ -1,11 +1,19 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
-import '../widgets/avatar_picker_modal.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  bool _isUploadingAvatar = false;
 
   final List<Map<String, dynamic>> _badges = const [
     {
@@ -282,6 +290,104 @@ class ProfileView extends StatelessWidget {
     VipPassModal.show(context);
   }
 
+  Future<void> _pickAndUploadAvatar(BuildContext context, AppState appState) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() => _isUploadingAvatar = true);
+
+      final bytes = await image.readAsBytes();
+      final ext = image.name.split('.').last.toLowerCase();
+      final safeExt = ['png', 'jpg', 'jpeg', 'webp'].contains(ext) ? ext : 'png';
+
+      final success = await appState.uploadAndSetCustomAvatar(bytes, safeExt);
+
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xff059669),
+              content: Text("Foto profil berhasil diperbarui!"),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xffdc2626),
+              content: Text("Gagal mengunggah foto profil, silakan coba lagi."),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xffdc2626),
+            content: Text("Terjadi kesalahan: $e"),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildAvatarImage(String avatar, Color fallbackColor) {
+    if (avatar.startsWith('http')) {
+      return ClipOval(
+        child: Image.network(
+          avatar,
+          width: 86,
+          height: 86,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.person_rounded, color: fallbackColor, size: 42);
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2),
+              ),
+            );
+          },
+        ),
+      );
+    } else if (avatar.startsWith('data:image')) {
+      try {
+        final b64 = avatar.split(',').last;
+        final bytes = base64Decode(b64);
+        return ClipOval(
+          child: Image.memory(
+            bytes,
+            width: 86,
+            height: 86,
+            fit: BoxFit.cover,
+          ),
+        );
+      } catch (_) {
+        return Icon(Icons.person_rounded, color: fallbackColor, size: 42);
+      }
+    } else {
+      return Icon(
+        _getAvatarIcon(avatar),
+        color: fallbackColor,
+        size: 42,
+      );
+    }
+  }
+
   IconData _getAvatarIcon(String avatarId) {
     switch (avatarId) {
       case 'bear':
@@ -301,6 +407,9 @@ class ProfileView extends StatelessWidget {
   }
 
   Color _getAvatarColor(String avatarId) {
+    if (avatarId.startsWith('http') || avatarId.startsWith('data:image')) {
+      return const Color(0xff10b981);
+    }
     switch (avatarId) {
       case 'bear':
         return const Color(0xfff87171);
@@ -372,9 +481,9 @@ class ProfileView extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        // Avatar Circle with Custom Material Vector Icon
+                        // Avatar Circle with Custom Photo Picker
                         GestureDetector(
-                          onTap: () => AvatarPickerModal.show(context),
+                          onTap: _isUploadingAvatar ? null : () => _pickAndUploadAvatar(context, appState),
                           child: Stack(
                             children: [
                               Container(
@@ -401,11 +510,13 @@ class ProfileView extends StatelessWidget {
                                     color: Color(0xff1e293b),
                                   ),
                                   alignment: Alignment.center,
-                                  child: Icon(
-                                    _getAvatarIcon(appState.userAvatar),
-                                    color: _getAvatarColor(appState.userAvatar),
-                                    size: 44,
-                                  ),
+                                  child: _isUploadingAvatar
+                                      ? const SizedBox(
+                                          width: 32,
+                                          height: 32,
+                                          child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2.5),
+                                        )
+                                      : _buildAvatarImage(appState.userAvatar, _getAvatarColor(appState.userAvatar)),
                                 ),
                               ),
                               Positioned(
@@ -420,7 +531,7 @@ class ProfileView extends StatelessWidget {
                                     border: Border.all(color: Colors.white, width: 1.5),
                                   ),
                                   alignment: Alignment.center,
-                                  child: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
+                                  child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
                                 ),
                               ),
                             ],
@@ -482,11 +593,11 @@ class ProfileView extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
 
-                        // Prominent 3D Ganti Avatar Button
+                        // Prominent Custom Photo Upload Button
                         GestureDetector(
-                          onTap: () => AvatarPickerModal.show(context),
+                          onTap: _isUploadingAvatar ? null : () => _pickAndUploadAvatar(context, appState),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: const Color(0xff059669),
                               borderRadius: BorderRadius.circular(12),
@@ -498,16 +609,20 @@ class ProfileView extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.theater_comedy_rounded, color: Colors.white, size: 15),
-                                SizedBox(width: 6),
+                                Icon(
+                                  _isUploadingAvatar ? Icons.hourglass_top_rounded : Icons.photo_camera_rounded,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 6),
                                 Text(
-                                  "GANTI AVATAR 3D 🎭",
-                                  style: TextStyle(
+                                  _isUploadingAvatar ? "MENGUNGGAH FOTO..." : "PILIH FOTO PROFIL",
+                                  style: const TextStyle(
                                     fontFamily: 'Outfit',
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                     letterSpacing: 0.5,
