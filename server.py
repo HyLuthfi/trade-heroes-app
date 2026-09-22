@@ -35,6 +35,10 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD')
         self.send_header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Range')
         self.send_header('X-Content-Type-Options', 'nosniff')
+        # Prevent browser & PWA caching stale JS during development
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         super().end_headers()
 
     def do_OPTIONS(self):
