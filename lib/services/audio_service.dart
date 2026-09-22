@@ -2,7 +2,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 class AudioService {
-  static final AudioPlayer _sfxPlayer = AudioPlayer();
   static final AudioPlayer _bgmPlayer = AudioPlayer();
   static bool _bgmPlaying = false;
   static bool _isAudioEnabled = true;
@@ -14,49 +13,45 @@ class AudioService {
     }
   }
 
-  // Play Sound Effects
-  static Future<void> playCorrect() async {
+  static Source _getSource(String file) {
+    if (kIsWeb) {
+      // In Flutter Web, direct absolute URL source works 100% reliably with browser HTML5 Audio
+      return UrlSource('assets/assets/audio/$file');
+    } else {
+      return AssetSource('audio/$file');
+    }
+  }
+
+  static Future<void> _playSfx(String file, double volume) async {
     if (!_isAudioEnabled) return;
     try {
-      await _sfxPlayer.stop();
-      await _sfxPlayer.setVolume(0.7);
-      await _sfxPlayer.play(AssetSource('audio/correct.mp3'));
+      final player = AudioPlayer();
+      await player.setVolume(volume);
+      await player.play(_getSource(file));
+      // Auto dispose player after playback
+      player.onPlayerComplete.listen((_) {
+        player.dispose();
+      });
     } catch (e) {
-      debugPrint("Audio playCorrect error: $e");
+      debugPrint("Audio _playSfx ($file) error: $e");
     }
+  }
+
+  // Play Sound Effects
+  static Future<void> playCorrect() async {
+    await _playSfx('correct.mp3', 0.85);
   }
 
   static Future<void> playWrong() async {
-    if (!_isAudioEnabled) return;
-    try {
-      await _sfxPlayer.stop();
-      await _sfxPlayer.setVolume(0.65);
-      await _sfxPlayer.play(AssetSource('audio/wrong.mp3'));
-    } catch (e) {
-      debugPrint("Audio playWrong error: $e");
-    }
+    await _playSfx('wrong.mp3', 0.80);
   }
 
   static Future<void> playReward() async {
-    if (!_isAudioEnabled) return;
-    try {
-      await _sfxPlayer.stop();
-      await _sfxPlayer.setVolume(0.75);
-      await _sfxPlayer.play(AssetSource('audio/reward.mp3'));
-    } catch (e) {
-      debugPrint("Audio playReward error: $e");
-    }
+    await _playSfx('reward.mp3', 0.90);
   }
 
   static Future<void> playTrade() async {
-    if (!_isAudioEnabled) return;
-    try {
-      await _sfxPlayer.stop();
-      await _sfxPlayer.setVolume(0.7);
-      await _sfxPlayer.play(AssetSource('audio/trade.mp3'));
-    } catch (e) {
-      debugPrint("Audio playTrade error: $e");
-    }
+    await _playSfx('trade.mp3', 0.85);
   }
 
   // Background Lo-Fi Ambient Chill Music
@@ -64,8 +59,8 @@ class AudioService {
     if (!_isAudioEnabled || _bgmPlaying) return;
     try {
       await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgmPlayer.setVolume(0.18); // Soft, non-distracting ambient level
-      await _bgmPlayer.play(AssetSource('audio/bgm.mp3'));
+      await _bgmPlayer.setVolume(0.20); // Soft, non-distracting ambient level
+      await _bgmPlayer.play(_getSource('bgm.mp3'));
       _bgmPlaying = true;
     } catch (e) {
       debugPrint("Audio startBgm error: $e");
@@ -73,7 +68,6 @@ class AudioService {
   }
 
   static Future<void> stopBgm() async {
-    if (!_bgmPlaying) return;
     try {
       await _bgmPlayer.stop();
       _bgmPlaying = false;

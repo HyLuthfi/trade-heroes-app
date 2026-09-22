@@ -62,8 +62,14 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         clean_path = self.path.split('?')[0].split('#')[0]
         local_fs_path = os.path.normpath(os.path.join(WEB_DIR, clean_path.lstrip('/')))
 
-        # If requested path does not exist on disk and is not a sub-file with extension, fallback to index.html (SPA)
+        # Handle Flutter Web asset path aliasing (/assets/audio/... -> /assets/assets/audio/...)
         if not os.path.exists(local_fs_path):
+            if clean_path.startswith('/assets/'):
+                nested_path = os.path.normpath(os.path.join(WEB_DIR, 'assets', clean_path.lstrip('/')))
+                if os.path.exists(nested_path):
+                    self.path = '/assets' + clean_path
+                    return super().do_GET()
+
             _, ext = os.path.splitext(clean_path)
             if not ext:
                 self.path = '/index.html'
