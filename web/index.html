@@ -138,14 +138,14 @@
               const src = ctx.createBufferSource();
               const gain = ctx.createGain();
               src.buffer = soundBuffers['click'];
-              gain.gain.value = vol;
+              gain.gain.value = 0.15;
               src.connect(gain);
               gain.connect(ctx.destination);
               src.start(0);
               return;
             } catch (e) {}
           }
-          playSynthClick(vol);
+          playSynthClick(0.3);
           return;
         }
 
@@ -154,7 +154,7 @@
             const src = ctx.createBufferSource();
             const gain = ctx.createGain();
             src.buffer = soundBuffers[name];
-            gain.gain.value = vol;
+            gain.gain.value = Math.min(vol, 0.5);
             src.connect(gain);
             gain.connect(ctx.destination);
             src.start(0);
