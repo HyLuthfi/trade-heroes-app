@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
@@ -288,6 +289,271 @@ class _ProfileViewState extends State<ProfileView> {
 
   void _showPremiumUpgradeModal(BuildContext context, AppState appState) {
     VipPassModal.show(context);
+  }
+
+  void _showLanguageSelectorDialog(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff1e293b),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          "Pilih Bahasa Aplikasi",
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tileColor: appState.language == 'id' ? const Color(0xff064e3b) : null,
+              title: const Text("Bahasa Indonesia", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
+              trailing: appState.language == 'id' ? const Icon(Icons.check_circle_rounded, color: Color(0xff10b981)) : null,
+              onTap: () {
+                appState.setLanguage('id');
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Bahasa disetel ke Bahasa Indonesia")),
+                );
+              },
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tileColor: appState.language == 'en' ? const Color(0xff064e3b) : null,
+              title: const Text("English (US)", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
+              trailing: appState.language == 'en' ? const Icon(Icons.check_circle_rounded, color: Color(0xff10b981)) : null,
+              onTap: () {
+                appState.setLanguage('en');
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Language set to English (US)")),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFaqModal(BuildContext context) {
+    final faqs = [
+      {
+        'q': "Bagaimana cara kerja Sistem Nyawa Petir?",
+        'a': "Pengguna memiliki 5 nyawa petir. Menjawab salah kuis akan mengurangi 1 petir. Petir pulih otomatis 1 poin setiap 60 detik atau dapat diisi ulang instan lewat tontonan iklan simulasi / VIP Pass."
+      },
+      {
+        'q': "Apa saja keuntungan VIP Gold Pass?",
+        'a': "VIP Gold Pass memberikan Nyawa Tak Terbatas (∞ Petir), bebas dari penayangan iklan pop-up, serta akses eksklusif ke seluruh modul analisis materi."
+      },
+      {
+        'q': "Apakah simulator pasar saham ini menggunakan uang sungguhan?",
+        'a': "Tidak. Trade Heroes adalah platform simulasi dan edukasi pasar modal murni. Seluruh transaksi, saldo kas virtual, dan kuis tidak melibatkan uang atau risiko finansial nyata."
+      },
+      {
+        'q': "Bagaimana cara mempertahankan Streak Belajar?",
+        'a': "Selesaikan minimal 1 kuis atau selesaikan membaca 1 modul materi setiap hari sebelum pukul 23:59 WIB untuk mempertahankan dan menaikkan streak berturut-turut Anda."
+      },
+      {
+        'q': "Bagaimana data saya tersimpan?",
+        'a': "Data progress, XP, streak, dan medali Anda otomatis tersimpan di cloud terenkripsi Supabase sehingga dapat diakses antar-perangkat kapan saja."
+      }
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff0f172a),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scrollController) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xff475569),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Icon(Icons.help_outline_rounded, color: Color(0xffec4899), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    "Pusat Bantuan & FAQ",
+                    style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Pertanyaan umum seputar fitur & panduan Trade Heroes",
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8)),
+              ),
+              const SizedBox(height: 16),
+              ...faqs.map((f) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xff1e293b),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                  title: Text(
+                    f['q']!,
+                    style: const TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  children: [
+                    Text(
+                      f['a']!,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.45),
+                    ),
+                  ],
+                ),
+              )),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xff064e3b),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xff10b981), width: 1.2),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.mail_outline_rounded, color: Color(0xff34d399), size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Butuh bantuan lain? Hubungi Tim Support kami di support@tradeheroes.app",
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xffa7f3d0)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff0f172a),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scrollController) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xff475569),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Icon(Icons.privacy_tip_outlined, color: Color(0xff94a3b8), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    "Kebijakan Privasi & Syarat Ketentuan",
+                    style: TextStyle(fontFamily: 'Outfit', fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xff1e293b),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "1. Penyangkalan Tanggung Jawab Finansial (Disclaimer)",
+                      style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xfff59e0b)),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Seluruh materi, simulasi trading, grafik candlestick, dan data pasar modal yang disajikan dalam aplikasi Trade Heroes bersifat semata-mata untuk tujuan edukasi dan literasi keuangan. Aplikasi ini TIDAK menyediakan saran investasi, rekomendasi saham tertentu, maupun ajakan membeli/menjual efek resmi di BEI.",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+                    ),
+                    SizedBox(height: 14),
+                    Text(
+                      "2. Pengumpulan & Keamanan Data Pengguna",
+                      style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff34d399)),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Kami menghormati privasi Anda. Data profil, alamat email, dan progres kuis disimpan secara aman menggunakan enkripsi Row Level Security (RLS) di server Supabase. Kami tidak menjual atau membagikan data pribadi Anda kepada pihak ketiga manapun untuk tujuan periklanan.",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+                    ),
+                    SizedBox(height: 14),
+                    Text(
+                      "3. Hak Cipta & Konten Edukasi",
+                      style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff60a5fa)),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Seluruh kurikulum soal kuis, modul materi pasar modal, dan ilustrasi visual dilindungi oleh hak cipta pengembang platform Trade Heroes. Penggunaan konten tanpa izin untuk kepentingan komersial tidak diperkenankan.",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff059669),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(double.infinity, 44),
+                ),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text("SAYA MENGERTI", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _pickAndUploadAvatar(BuildContext context, AppState appState) async {
@@ -784,35 +1050,60 @@ class _ProfileViewState extends State<ProfileView> {
                           icon: Icons.dark_mode_rounded,
                           iconColor: const Color(0xff8b5cf6),
                           title: "Mode Gelap (Theme)",
-                          subtitle: "Tampilan dark glassmorphic pro active",
-                          value: true,
-                          onChanged: (_) {},
+                          subtitle: appState.darkMode ? "Tampilan slate dark glassmorphic pro aktif" : "Mode terang diaktifkan",
+                          value: appState.darkMode,
+                          onChanged: (val) {
+                            appState.toggleDarkMode(val);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(val ? "Mode Gelap diaktifkan" : "Mode Terang diaktifkan"),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingSwitchTile(
                           icon: Icons.notifications_active_rounded,
                           iconColor: const Color(0xfff59e0b),
                           title: "Notifikasi Belajar Harian",
-                          subtitle: "Pengingat streak jam 19:00 WIB",
-                          value: true,
-                          onChanged: (_) {},
+                          subtitle: appState.dailyReminder ? "Pengingat streak jam 19:00 WIB aktif" : "Pengingat dinonaktifkan",
+                          value: appState.dailyReminder,
+                          onChanged: (val) {
+                            appState.toggleDailyReminder(val);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(val ? "Pengingat belajar aktif (19:00 WIB)" : "Pengingat belajar dinonaktifkan"),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingSwitchTile(
                           icon: Icons.volume_up_rounded,
                           iconColor: const Color(0xff10b981),
                           title: "Efek Suara & Haptik",
-                          subtitle: "Suara jawaban kuis & getaran",
-                          value: true,
-                          onChanged: (_) {},
+                          subtitle: appState.soundHaptic ? "Suara kuis & getaran sentuhan aktif" : "Efek suara & getaran nonaktif",
+                          value: appState.soundHaptic,
+                          onChanged: (val) {
+                            appState.toggleSoundHaptic(val);
+                            if (val) HapticFeedback.lightImpact();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(val ? "Efek suara & haptik diaktifkan" : "Efek suara & haptik dinonaktifkan"),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingItemTile(
                           icon: Icons.language_rounded,
                           iconColor: const Color(0xff3b82f6),
                           title: "Bahasa Aplikasi",
-                          trailingText: "Bahasa Indonesia 🇮🇩",
-                          onTap: () {},
+                          trailingText: appState.language == 'id' ? "Bahasa Indonesia" : "English (US)",
+                          onTap: () => _showLanguageSelectorDialog(context, appState),
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingItemTile(
@@ -820,7 +1111,7 @@ class _ProfileViewState extends State<ProfileView> {
                           iconColor: const Color(0xffec4899),
                           title: "Pusat Bantuan & FAQ",
                           trailingText: "Bantuan",
-                          onTap: () {},
+                          onTap: () => _showFaqModal(context),
                         ),
                         Divider(color: Colors.white.withOpacity(0.08), height: 1),
                         _buildSettingItemTile(
@@ -828,7 +1119,7 @@ class _ProfileViewState extends State<ProfileView> {
                           iconColor: const Color(0xff94a3b8),
                           title: "Kebijakan Privasi & Syarat",
                           trailingText: "Legal",
-                          onTap: () {},
+                          onTap: () => _showPrivacyPolicyModal(context),
                         ),
                       ],
                     ),

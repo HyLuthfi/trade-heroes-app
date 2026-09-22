@@ -29,6 +29,12 @@ class AppState extends ChangeNotifier {
   String _userAvatar = "bull";
   String? _userId;
 
+  // Preferences
+  bool _darkMode = true;
+  bool _dailyReminder = true;
+  bool _soundHaptic = true;
+  String _language = "id";
+
   // Getters
   int get petir => _isPremium ? 999999 : _petir;
   int get xp => _xp;
@@ -48,6 +54,10 @@ class AppState extends ChangeNotifier {
   String get userAvatar => _userAvatar;
   String? get userId => _userId;
   bool get isCloudSynced => SupabaseService.isAuthenticated;
+  bool get darkMode => _darkMode;
+  bool get dailyReminder => _dailyReminder;
+  bool get soundHaptic => _soundHaptic;
+  String get language => _language;
 
   Timer? _regenTimer;
   StreamSubscription<AuthState>? _authSubscription;
@@ -162,6 +172,10 @@ class AppState extends ChangeNotifier {
     _userEmail = json['userEmail'] ?? "user@kursussaham.com";
     _userAvatar = json['userAvatar'] ?? "bull";
     _userId = json['userId'];
+    _darkMode = json['darkMode'] ?? true;
+    _dailyReminder = json['dailyReminder'] ?? true;
+    _soundHaptic = json['soundHaptic'] ?? true;
+    _language = json['language'] ?? "id";
   }
 
   void _applyProfileData(Map<String, dynamic> data) {
@@ -231,6 +245,10 @@ class AppState extends ChangeNotifier {
       'userEmail': _userEmail,
       'userAvatar': _userAvatar,
       'userId': _userId,
+      'darkMode': _darkMode,
+      'dailyReminder': _dailyReminder,
+      'soundHaptic': _soundHaptic,
+      'language': _language,
     };
     await prefs.setString('trade_heroes_state', jsonEncode(data));
     await prefs.setBool('is_logged_in', _isLoggedIn);
@@ -410,6 +428,31 @@ class AppState extends ChangeNotifier {
       debugPrint("Error setting custom avatar: $e");
       return false;
     }
+  }
+
+  // Settings & Preferences Handlers
+  void toggleDarkMode(bool val) {
+    _darkMode = val;
+    _saveState();
+    notifyListeners();
+  }
+
+  void toggleDailyReminder(bool val) {
+    _dailyReminder = val;
+    _saveState();
+    notifyListeners();
+  }
+
+  void toggleSoundHaptic(bool val) {
+    _soundHaptic = val;
+    _saveState();
+    notifyListeners();
+  }
+
+  void setLanguage(String lang) {
+    _language = lang;
+    _saveState();
+    notifyListeners();
   }
 
   // Daily Reward Claim Handler
