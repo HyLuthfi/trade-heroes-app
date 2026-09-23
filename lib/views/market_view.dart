@@ -805,7 +805,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     final q = question.trim();
     if (q.isEmpty || _isAiResponding) return;
 
-    AudioService.playConfirm();
+    AudioService.playClick();
     _chatController.clear();
 
     setState(() {
