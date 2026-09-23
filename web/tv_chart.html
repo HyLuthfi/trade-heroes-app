@@ -44,18 +44,21 @@
       const urlParams = new URLSearchParams(window.location.search);
       let rawTicker = (urlParams.get('ticker') || 'BBCA').toUpperCase().split('_')[0].replace('.JK', '');
       let tf = (urlParams.get('tf') || '1D').toUpperCase();
+      let paramInv = urlParams.get('interval');
 
-      // Convert Trade Heroes timeframe to TradingView interval:
-      // 1D -> 5-minute interval ('5') for intraday
-      // 1W -> 15-minute interval ('15')
-      // 1M -> Daily ('D')
-      // 3M -> Daily ('D')
-      // 1Y -> Weekly ('W')
-      let interval = 'D';
-      if (tf === '1D') interval = '5';
-      else if (tf === '1W') interval = '15';
-      else if (tf === '1M' || tf === '3M') interval = 'D';
-      else if (tf === '1Y') interval = 'W';
+      // 1D (Daily) is 100% free on BEI/IDX in TradingView.
+      // Intraday (1m, 5m, 15m) requires paid real-time subscription.
+      // Direct initial load must ALWAYS be 'D' (1D)!
+      function getInterval(timeframe, explicitInterval) {
+        if (explicitInterval && (explicitInterval === 'D' || explicitInterval === 'W' || explicitInterval === 'M')) {
+          return explicitInterval;
+        }
+        if (timeframe === '1W') return 'W';
+        if (timeframe === '1M') return 'M';
+        return 'D'; // Default directly to 'D' (1D - Daily)
+      }
+
+      let interval = getInterval(tf, paramInv);
 
       function renderWidget(ticker, inv) {
         const container = document.getElementById('tv_chart_target');
@@ -123,11 +126,7 @@
           if (msg.action === 'loadStock') {
             const nextTicker = (msg.ticker || rawTicker).toUpperCase().split('_')[0].replace('.JK', '');
             const nextTf = (msg.timeframe || tf).toUpperCase();
-            let nextInv = 'D';
-            if (nextTf === '1D') nextInv = '5';
-            else if (nextTf === '1W') nextInv = '15';
-            else if (nextTf === '1M' || nextTf === '3M') nextInv = 'D';
-            else if (nextTf === '1Y') nextInv = 'W';
+            const nextInv = getInterval(nextTf, msg.interval);
 
             rawTicker = nextTicker;
             tf = nextTf;

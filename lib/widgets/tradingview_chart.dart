@@ -2,16 +2,18 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 
-/// Professional TradingView Lightweight Charts iframe widget for Flutter Web.
+/// Professional TradingView Official Chart iframe widget for Flutter Web.
 class TradingViewChart extends StatefulWidget {
   final String ticker;
   final String timeframe;
+  final String interval;
   final List<Map<String, dynamic>>? candles;
 
   const TradingViewChart({
     Key? key,
     required this.ticker,
     this.timeframe = '1D',
+    this.interval = 'D',
     this.candles,
   }) : super(key: key);
 
@@ -33,7 +35,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
   void _registerView() {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     _iframe = html.IFrameElement()
-      ..src = '/tv_chart.html?v=real_tv_1&ticker=$cleanTicker&tf=${widget.timeframe}'
+      ..src = '/tv_chart.html?v=tv_1d_final&ticker=$cleanTicker&tf=${widget.timeframe}&interval=${widget.interval}'
       ..style.border = 'none'
       ..style.width = '100%'
       ..style.height = '100%'
@@ -52,8 +54,11 @@ class _TradingViewChartState extends State<TradingViewChart> {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     final oldCleanTicker = oldWidget.ticker.split('_').first.toUpperCase();
 
-    if (cleanTicker != oldCleanTicker || widget.timeframe != oldWidget.timeframe) {
-      _iframe?.src = '/tv_chart.html?v=real_tv_1&ticker=$cleanTicker&tf=${widget.timeframe}';
+    if (cleanTicker != oldCleanTicker ||
+        widget.timeframe != oldWidget.timeframe ||
+        widget.interval != oldWidget.interval) {
+      _iframe?.src =
+          '/tv_chart.html?v=tv_1d_final&ticker=$cleanTicker&tf=${widget.timeframe}&interval=${widget.interval}';
     }
   }
 
