@@ -27,33 +27,13 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   // Real Market Stocks Database with Generated 30+ Dense Historical Candles
   final List<Map<String, dynamic>> _allStocks = [];
 
-  // Pro Order Book Data
-  final List<Map<String, dynamic>> _bids = [
-    {'price': 10250, 'vol': 18450, 'pct': 0.85},
-    {'price': 10225, 'vol': 24120, 'pct': 1.00},
-    {'price': 10200, 'vol': 19800, 'pct': 0.82},
-    {'price': 10175, 'vol': 12350, 'pct': 0.51},
-    {'price': 10150, 'vol': 8900, 'pct': 0.36},
-  ];
+  // AI Stock Analyst Chatbot State
+  final List<Map<String, dynamic>> _chatMessages = [];
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  bool _isAiResponding = false;
+  String? _lastChatTicker;
 
-  final List<Map<String, dynamic>> _offers = [
-    {'price': 10275, 'vol': 15200, 'pct': 0.63},
-    {'price': 10300, 'vol': 28900, 'pct': 1.00},
-    {'price': 10325, 'vol': 19400, 'pct': 0.67},
-    {'price': 10350, 'vol': 11200, 'pct': 0.38},
-    {'price': 10375, 'vol': 7500, 'pct': 0.25},
-  ];
-
-  // Live Running Trade Logs
-  final List<Map<String, dynamic>> _runningTrade = [
-    {'time': '14:46:12', 'ticker': 'BBCA', 'price': 10250, 'vol': 100, 'type': 'BUY'},
-    {'time': '14:46:10', 'ticker': 'BBRI', 'price': 5450, 'vol': 250, 'type': 'BUY'},
-    {'time': '14:46:08', 'ticker': 'AMMN', 'price': 11450, 'vol': 300, 'type': 'BUY'},
-    {'time': '14:46:05', 'ticker': 'TLKM', 'price': 3820, 'vol': 50, 'type': 'SELL'},
-    {'time': '14:46:00', 'ticker': 'GOTO', 'price': 68, 'vol': 5000, 'type': 'BUY'},
-  ];
-
-  Timer? _liveTickTimer;
   Timer? _realDataRefreshTimer;
   bool _isLoadingRealData = false;
   final Random _rnd = Random();
@@ -67,27 +47,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     // Refresh data real-time setiap 30 detik
     _realDataRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _fetchRealMarketData(silent: true);
-    });
-
-    _liveTickTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) {
-        setState(() {
-          final idx = _rnd.nextInt(_allStocks.length);
-          final delta = (_rnd.nextDouble() - 0.48) * (_allStocks[idx]['price'] * 0.003);
-          _allStocks[idx]['price'] = double.parse((_allStocks[idx]['price'] + delta).toStringAsFixed(1));
-          
-          final now = DateTime.now();
-          final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
-          _runningTrade.insert(0, {
-            'time': timeStr,
-            'ticker': _allStocks[idx]['ticker'],
-            'price': _allStocks[idx]['price'].toInt(),
-            'vol': (_rnd.nextInt(50) + 1) * 10,
-            'type': delta >= 0 ? 'BUY' : 'SELL',
-          });
-          if (_runningTrade.length > 20) _runningTrade.removeLast();
-        });
-      }
     });
   }
 
@@ -137,9 +96,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               activeStock['open'] = openVal;
               activeStock['high'] = highVal;
               activeStock['low'] = lowVal;
-
-              // Auto-generate realistic order book around real price
-              _updateOrderBookAroundPrice(realPrice);
             }
           });
         }
@@ -171,25 +127,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       if (mounted && !silent) {
         setState(() => _isLoadingRealData = false);
       }
-    }
-  }
-
-  void _updateOrderBookAroundPrice(double price) {
-    int step = price > 5000 ? 25 : (price > 2000 ? 10 : (price > 500 ? 5 : 1));
-    int baseInt = (price / step).round() * step;
-
-    _bids.clear();
-    for (int i = 0; i < 5; i++) {
-      int p = baseInt - (i * step);
-      int vol = (_rnd.nextInt(150) + 50) * 100;
-      _bids.add({'price': p, 'vol': vol, 'pct': (5 - i) / 5.0});
-    }
-
-    _offers.clear();
-    for (int i = 0; i < 5; i++) {
-      int p = baseInt + ((i + 1) * step);
-      int vol = (_rnd.nextInt(150) + 50) * 100;
-      _offers.add({'price': p, 'vol': vol, 'pct': (5 - i) / 5.0});
     }
   }
 
@@ -301,7 +238,8 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   @override
   void dispose() {
     _searchController.dispose();
-    _liveTickTimer?.cancel();
+    _chatController.dispose();
+    _chatScrollController.dispose();
     _realDataRefreshTimer?.cancel();
     super.dispose();
   }
@@ -354,7 +292,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   index: _selectedTabIdx.clamp(0, 2),
                   children: [
                     _buildTradingViewUltraChartTab(activeStock, mainColor),
-                    _buildOrderBookTab(activeStock),
+                    _buildAiChatbotTab(activeStock),
                     _buildNewsTab(activeStock),
                   ],
                 ),
@@ -605,7 +543,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   Widget _buildTerminalTabSelector() {
     final tabs = [
       {'label': 'Grafik', 'icon': Icons.candlestick_chart_rounded},
-      {'label': 'Order Book', 'icon': Icons.format_list_numbered_rounded},
+      {'label': 'Tanya AI', 'icon': Icons.smart_toy_rounded},
       {'label': 'Berita', 'icon': Icons.newspaper_rounded},
     ];
 
@@ -840,152 +778,168 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     );
   }
 
-  // TAB 2: ORDER BOOK
-  Widget _buildOrderBookTab(Map<String, dynamic> stock) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "ORDER BOOK (5-LEVEL BID / OFFER DEPTH)",
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xff111827),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xff059669).withOpacity(0.4)),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        decoration: const BoxDecoration(
-                          color: Color(0xff064e3b),
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text("BID (BELI)", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xff34d399))),
-                      ),
-                      ..._bids.map((b) => _buildProOrderBookRow((b['price'] as num).toInt(), (b['vol'] as num).toInt(), (b['pct'] as num).toDouble(), true)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xff111827),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xffef4444).withOpacity(0.4)),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        decoration: const BoxDecoration(
-                          color: Color(0xff78350f),
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text("OFFER (JUAL)", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xfff87171))),
-                      ),
-                      ..._offers.map((o) => _buildProOrderBookRow((o['price'] as num).toInt(), (o['vol'] as num).toInt(), (o['pct'] as num).toDouble(), false)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          const Text(
-            "RUNNING TRADE (LIVE EXECUTION FEED)",
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xff111827),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: min(7, _runningTrade.length),
-              separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.05), height: 1),
-              itemBuilder: (context, idx) {
-                final rt = _runningTrade[idx];
-                final isBuy = rt['type'] == 'BUY';
-                final col = isBuy ? const Color(0xff34d399) : const Color(0xfff87171);
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(rt['time'], style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b))),
-                      Text(rt['ticker'], style: const TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
-                      Text("Rp ${rt['price']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: col)),
-                      Text("${rt['vol']} Lot", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold, color: col)),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  // TAB 2: AI STOCK ANALYST CHATBOT
+  void _initChatForStock(Map<String, dynamic> stock) {
+    final ticker = stock['ticker']?.toString() ?? 'BBCA';
+    if (_lastChatTicker == ticker && _chatMessages.isNotEmpty) return;
+    _lastChatTicker = ticker;
+    _chatMessages.clear();
+    final p = stock['price'] != null ? "Rp ${(stock['price'] as num).toInt()}" : "-";
+    final chg = stock['changePct'] != null ? "${(stock['changePct'] as num) >= 0 ? '+' : ''}${stock['changePct']}%" : "";
+    _chatMessages.add({
+      'isUser': false,
+      'time': _formatCurrentTime(),
+      'text': "Halo! Saya **Trade Heroes AI Assistant** 🤖.\n\nKamu sedang memantau saham **$ticker** (${stock['name'] ?? ''}) di harga **$p** ($chg).\n\nAda yang ingin kamu tanyakan mengenai analisa teknikal, valuasi fundamental, atau strategi trading untuk saham ini?",
+    });
   }
 
-  Widget _buildProOrderBookRow(int price, int vol, double pct, bool isBid) {
-    final barColor = isBid ? const Color(0xff059669).withOpacity(0.25) : const Color(0xffdc2626).withOpacity(0.25);
-    final textColor = isBid ? const Color(0xff34d399) : const Color(0xfff87171);
+  String _formatCurrentTime() {
+    final now = DateTime.now();
+    return "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+  }
 
-    return Container(
-      height: 32,
-      margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-      child: Stack(
+  void _sendChatMessage(String question, Map<String, dynamic> stock) {
+    final q = question.trim();
+    if (q.isEmpty || _isAiResponding) return;
+
+    AudioService.playConfirm();
+    _chatController.clear();
+
+    setState(() {
+      _chatMessages.add({
+        'isUser': true,
+        'time': _formatCurrentTime(),
+        'text': q,
+      });
+      _isAiResponding = true;
+    });
+
+    _scrollToChatBottom();
+
+    // Generate intelligent contextual response
+    Future.delayed(const Duration(milliseconds: 550), () {
+      if (!mounted) return;
+      final answer = _generateAiAnswer(q, stock);
+      setState(() {
+        _chatMessages.add({
+          'isUser': false,
+          'time': _formatCurrentTime(),
+          'text': answer,
+        });
+        _isAiResponding = false;
+      });
+      _scrollToChatBottom();
+    });
+  }
+
+  void _scrollToChatBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutQuad,
+        );
+      }
+    });
+  }
+
+  String _generateAiAnswer(String question, Map<String, dynamic> stock) {
+    final qLower = question.toLowerCase();
+    final ticker = stock['ticker']?.toString() ?? 'BBCA';
+    final name = stock['name']?.toString() ?? '';
+    final price = stock['price'] != null ? (stock['price'] as num).toDouble() : 1000.0;
+    final pInt = price.toInt();
+    final per = stock['per']?.toString() ?? '15.0';
+    final pbv = stock['pbv']?.toString() ?? '2.0';
+    final sector = stock['sector']?.toString() ?? 'Umum';
+
+    // Support and resistance levels
+    final r2 = (price * 1.05).round();
+    final r1 = (price * 1.025).round();
+    final s1 = (price * 0.975).round();
+    final s2 = (price * 0.95).round();
+
+    if (qLower.contains('support') || qLower.contains('resistance') || qLower.contains('snr') || qLower.contains('level')) {
+      return "🎯 **Level Kunci Teknikal $ticker:**\n\n"
+          "• **Resistance 2 (Target Kuat):** Rp $r2 (+5.0%)\n"
+          "• **Resistance 1 (Uji Breakout):** Rp $r1 (+2.5%)\n"
+          "• **Harga Saat Ini:** Rp $pInt\n"
+          "• **Support 1 (Area Rebound):** Rp $s1 (-2.5%)\n"
+          "• **Support 2 (Batas Stop Loss):** Rp $s2 (-5.0%)\n\n"
+          "💡 **Saran Aksi:** Jika harga mampu bertahan di atas Rp $s1 dengan volume transaksi yang meningkat, saham ini memiliki peluang teknikal untuk menguji Resistance Rp $r1.";
+    }
+
+    if (qLower.contains('valuasi') || qLower.contains('rasio') || qLower.contains('per') || qLower.contains('pbv') || qLower.contains('murah') || qLower.contains('mahal')) {
+      return "📊 **Ringkasan Valuasi Fundamental $ticker:**\n\n"
+          "• **Sektor:** $sector\n"
+          "• **P/E Ratio (PER):** ${per}x\n"
+          "• **P/BV Ratio (PBV):** ${pbv}x\n"
+          "• **Kapitalisasi Pasar:** ${stock['mcap'] ?? '-'}\n"
+          "• **Foreign Flow:** ${stock['foreignNet'] ?? '-'}\n\n"
+          "📌 **Catatan Analis:** Di sektor $sector, PER ${per}x mencerminkan ekspektasi pertumbuhan laba yang solid. Sebagai emiten market leader, $ticker kerap diperdagangkan dengan *premium valuation* karena kualitas neraca yang stabil.";
+    }
+
+    if (qLower.contains('masuk') || qLower.contains('keluar') || qLower.contains('beli') || qLower.contains('jual') || qLower.contains('strategi') || qLower.contains('target') || qLower.contains('sl')) {
+      return "⚡ **Trading Plan & Strategi Eksekusi $ticker:**\n\n"
+          "1. **Area Buy / Entry:** Sekitar Rp $s1 - Rp $pInt saat terjadi konfirmasi pantulan.\n"
+          "2. **Target Profit (TP 1):** Rp $r1 (+2.5%)\n"
+          "3. **Target Profit (TP 2):** Rp $r2 (+5.0%)\n"
+          "4. **Stop Loss (SL):** Rp $s2 (disiplin cut loss jika breakdown di bawah support untuk membatasi risiko).\n\n"
+          "🛡️ **Money Management:** Gunakan alokasi maksimal 10-15% dari total portofolio untuk satu emiten agar risiko terkontrol.";
+    }
+
+    if (qLower.contains('pemula') || qLower.contains('tips') || qLower.contains('nabung') || qLower.contains('dca') || qLower.contains('aman')) {
+      return "📚 **Panduan & Tips Pemula untuk Saham $ticker:**\n\n"
+          "1. **Karakter Emiten:** $ticker ($name) merupakan saham kategori **Blue Chip (LQ45)** dengan likuiditas tinggi, sehingga relatif lebih aman dan tidak mudah digerakkan oleh spekulan.\n"
+          "2. **Metode Akumulasi:** Sangat cocok menggunakan strategi **Dollar Cost Averaging (DCA)** — membeli secara rutin tiap bulan tanpa pusing menebak titik terendah pasar.\n"
+          "3. **Dividen Tahunan:** Perusahaan ini konsisten membagikan dividen tunai kepada pemegang saham setiap tahun buku.\n\n"
+          "💡 **Langkah Awal:** Cukup beli 1 lot (100 lembar) terlebih dahulu untuk membiasakan diri memantau fluktuasi harga.";
+    }
+
+    // Default Prospek Analysis
+    return "💡 **Analisa Prospek Bisnis & Tren $ticker:**\n\n"
+        "• **Model Bisnis:** Sebagai pemain dominan di sektor $sector, $name memiliki *economic moat* yang kuat dan basis pelanggan yang loyal.\n"
+        "• **Arus Dana Institusi:** Aktivitas net foreign tercatat ${stock['foreignNet'] ?? '-'}, menandakan minat investor institusi tetap aktif.\n"
+        "• **Sentimen Pasar:** Tren harga di Rp $pInt menunjukkan konsolidasi sehat di area support teknikal.\n\n"
+        "🎯 **Kesimpulan AI:** Saham ini menarik untuk dijadikan fondasi portofolio jangka menengah-panjang. Silakan manfaatkan koreksi wajar di area Rp $s1 untuk akumulasi bertahap.";
+  }
+
+  Widget _buildAiThinkingBubble() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FractionallySizedBox(
-            widthFactor: pct.clamp(0.1, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: barColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xff10b981).withOpacity(0.15),
+              shape: BoxShape.circle,
             ),
+            child: const Icon(Icons.auto_awesome_rounded, color: Color(0xff10b981), size: 14),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xff1e293b),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xff334155)),
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("${(vol / 1000).toStringAsFixed(1)}K", style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xffcbd5e1))),
-                Text("$price", style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: textColor)),
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xff10b981)),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  "AI sedang menganalisis data pasar...",
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff94a3b8)),
+                ),
               ],
             ),
           ),
@@ -994,64 +948,268 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     );
   }
 
-  // TAB 3: FINANCIALS & VALUATION
-  Widget _buildFinancialsTab(Map<String, dynamic> stock) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(14),
-      child: Column(
+  Widget _buildChatMessageItem(Map<String, dynamic> msg) {
+    final isUser = msg['isUser'] == true;
+    final text = msg['text']?.toString() ?? '';
+    final time = msg['time']?.toString() ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "KEY FINANCIAL RATIOS & VALUATION",
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 0.5,
+          if (!isUser) ...[
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: const Color(0xff10b981).withOpacity(0.15),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xff10b981).withOpacity(0.3)),
+              ),
+              child: const Icon(Icons.smart_toy_rounded, color: Color(0xff10b981), size: 15),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: isUser ? const Color(0xff064e3b) : const Color(0xff1e293b),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: isUser ? const Radius.circular(14) : const Radius.circular(2),
+                  bottomRight: isUser ? const Radius.circular(2) : const Radius.circular(14),
+                ),
+                border: Border.all(
+                  color: isUser ? const Color(0xff10b981).withOpacity(0.4) : const Color(0xff334155),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      color: Colors.white,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    time,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 9.5,
+                      color: isUser ? const Color(0xff6ee7b7) : const Color(0xff64748b),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          _buildValuationCard(stock),
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: const Color(0xff059669).withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_rounded, color: Colors.white, size: 15),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildValuationCard(Map<String, dynamic> stock) {
+  Widget _buildAiChatbotTab(Map<String, dynamic> stock) {
+    _initChatForStock(stock);
+
+    final quickChips = [
+      "Analisa Prospek",
+      "Support & Resistance",
+      "Valuasi & Rasio",
+      "Strategi Masuk/Keluar",
+      "Tips Pemula",
+    ];
+
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xff111827),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+      color: const Color(0xff0b0f19),
       child: Column(
         children: [
-          _buildRatioRow("Market Capitalization", stock['marketCap']),
-          const Divider(color: Color(0xff1e293b)),
-          _buildRatioRow("Price to Earnings Ratio (PER)", "${stock['per']}x"),
-          const Divider(color: Color(0xff1e293b)),
-          _buildRatioRow("Price to Book Value (PBV)", "${stock['pbv']}x"),
-          const Divider(color: Color(0xff1e293b)),
-          _buildRatioRow("Foreign Net Buy / Sell", stock['foreignNet']),
+          // Header Info Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Color(0xff0f172a),
+              border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff10b981).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xff10b981).withOpacity(0.3)),
+                  ),
+                  child: const Icon(Icons.auto_awesome_rounded, color: Color(0xff10b981), size: 16),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            "AI Market Analyst",
+                            style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff064e3b),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text("ONLINE", style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xff34d399))),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        "Analisa cerdas saham ${stock['ticker']} • Terhubung ke data pasar BEI",
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff94a3b8)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Quick Question Chips Carousel
+          Container(
+            height: 38,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              itemCount: quickChips.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, i) {
+                final label = quickChips[i];
+                return GestureDetector(
+                  onTap: () => _sendChatMessage(label, stock),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff1e293b),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xff334155)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xffcbd5e1),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Chat Messages List
+          Expanded(
+            child: ListView.builder(
+              controller: _chatScrollController,
+              padding: const EdgeInsets.all(14),
+              itemCount: _chatMessages.length + (_isAiResponding ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _chatMessages.length && _isAiResponding) {
+                  return _buildAiThinkingBubble();
+                }
+                final msg = _chatMessages[index];
+                return _buildChatMessageItem(msg);
+              },
+            ),
+          ),
+
+          // Bottom Input Bar
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: const BoxDecoration(
+              color: Color(0xff0f172a),
+              border: Border(top: BorderSide(color: Color(0xff1e293b))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xff1e293b),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xff334155)),
+                    ),
+                    child: TextField(
+                      controller: _chatController,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Colors.white),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (val) => _sendChatMessage(val, stock),
+                      decoration: InputDecoration(
+                        hintText: "Tanya AI tentang ${stock['ticker']}...",
+                        hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff64748b)),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _sendChatMessage(_chatController.text, stock),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xff10b981), Color(0xff059669)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xff10b981).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRatioRow(String label, String val) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8))),
-          Text(val, style: const TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
-        ],
-      ),
-    );
-  }
+
+
+
 
   // TAB 4: MARKET NEWS WITH VECTOR MATERIAL ICONS
   Widget _buildNewsTab(Map<String, dynamic> stock) {
