@@ -33,7 +33,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
   void _registerView() {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     _iframe = html.IFrameElement()
-      ..src = '/tv_chart.html?ticker=$cleanTicker&tf=${widget.timeframe}'
+      ..src = '/tv_chart.html?v=real_tv_1&ticker=$cleanTicker&tf=${widget.timeframe}'
       ..style.border = 'none'
       ..style.width = '100%'
       ..style.height = '100%'
@@ -53,7 +53,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
     final oldCleanTicker = oldWidget.ticker.split('_').first.toUpperCase();
 
     if (cleanTicker != oldCleanTicker || widget.timeframe != oldWidget.timeframe) {
-      _iframe?.src = '/tv_chart.html?ticker=$cleanTicker&tf=${widget.timeframe}';
+      _iframe?.src = '/tv_chart.html?v=real_tv_1&ticker=$cleanTicker&tf=${widget.timeframe}';
     }
   }
 
