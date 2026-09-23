@@ -934,6 +934,22 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           "💡 **Langkah Awal:** Cukup beli 1 lot (100 lembar) terlebih dahulu untuk membiasakan diri memantau fluktuasi harga.";
     }
 
+    if (qLower.contains('smc') || qLower.contains('fvg') || qLower.contains('imbalance') || qLower.contains('smart money') || qLower.contains('order block')) {
+      return "🏛️ **Smart Money Concepts (SMC) & FVG $ticker:**\n\n"
+          "• **Konsep Dasar:** SMC melacak jejak transaksi investor institusi besar melalui area ketidakseimbangan likuiditas (*Fair Value Gap / FVG*).\n"
+          "• **Zona Imbalance (FVG):** Celah harga yang ditinggalkan saat ada pembelian/penjualan agresif satu arah. Celah ini cenderung menjadi magnet yang akan dikunjungi kembali oleh harga.\n"
+          "• **Order Block (Demand/Supply):** Area harga di mana institusi menumpuk order akumulasi sebelum terjadi kenaikan tajam.\n\n"
+          "💡 **Tips Pemula:** Jangan buru-buru membeli saat harga melesat meninggalkan FVG. Tunggu harga melakukan *pullback* (koreksi sehat) kembali ke area bantalan support untuk rasio *risk-to-reward* terbaik.";
+    }
+
+    if (qLower.contains('zerolag') || qLower.contains('zero-lag') || qLower.contains('momentum') || qLower.contains('jenuh') || qLower.contains('volatilitas')) {
+      return "⚡ **Zero-Lag Momentum & Volatilitas $ticker:**\n\n"
+          "• **Prinsip Zero-Lag:** Indikator pergerakan harga tanpa keterlambatan (*lag-free*), mengukur apakah dorongan harga didukung oleh volume institusi nyata atau spekulasi sesaat.\n"
+          "• **Kondisi Pasar:** Harga saat ini di Rp $pInt bergerak dalam pita volatilitas yang sehat.\n"
+          "• **Status Akumulasi:** Momentum menunjukkan fase konsolidasi terarah, menandakan pergerakan harga sedang mengumpulkan tenaga sebelum menentukan arah ekspansi.\n\n"
+          "💡 **Strategi Edukatif:** Saat volatilitas sedang kompresi (menyempit), hindari trading agresif. Tunggu konfirmasi penembusan (*breakout*) dengan lonjakan volume.";
+    }
+
     // Default Prospek Analysis
     return "💡 **Analisa Prospek Bisnis & Tren $ticker:**\n\n"
         "• **Model Bisnis:** Sebagai pemain dominan di sektor $sector, $name memiliki *economic moat* yang kuat dan basis pelanggan yang loyal.\n"
@@ -1126,7 +1142,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
     final quickChips = [
       "Analisa Prospek",
-      "Support & Resistance",
+      "Support & Resistance (SNR)",
+      "Smart Money (SMC / FVG)",
+      "Momentum Zero-Lag",
       "Valuasi & Rasio",
       "Strategi Masuk/Keluar",
       "Tips Pemula",

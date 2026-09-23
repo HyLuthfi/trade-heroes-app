@@ -3,6 +3,13 @@ import sys
 import mimetypes
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
+# Import in-repo quantitative trading knowledge engine
+try:
+    from engine.quant_hub import analyze_stock_quant
+except Exception as _e:
+    analyze_stock_quant = None
+    print(f"Notice: engine.quant_hub import status: {_e}")
+
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build', 'web')
 
 def get_router_key():
@@ -195,9 +202,18 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"Warning: Live tick fetch failed for {ticker}: {e}")
 
-        # 2. Build contextual real-time prompt
+        # 2. Run in-repo Quant Engine (SNR Channels + SMC Fair Value Gaps + ZeroLag Momentum)
+        quant_context = ""
+        if analyze_stock_quant:
+            try:
+                qres = analyze_stock_quant(ticker)
+                quant_context = qres.get("prompt_context", "")
+            except Exception as q_err:
+                print(f"Quant analysis error for {ticker}: {q_err}")
+
+        # 3. Build contextual real-time prompt with full quant insights
         system_prompt = (
-            f"Kamu adalah SAI Tech AI Chatbot, asisten cerdas analis pasar modal Indonesia (BEI) di platform Trade Heroes.\n"
+            f"Kamu adalah SAI Tech AI Chatbot, asisten cerdas analis pasar modal Indonesia (BEI) di platform edukasi Trade Heroes.\n"
             f"Karakter: Analis kuantitatif & edukator saham profesional, ramah, to-the-point, dan zero basa-basi.\n"
             f"Saham yang sedang aktif: {ticker} ({name}) • Sektor: {sector}\n\n"
             f"DATA REAL-TIME BURSA EFEK INDONESIA (BEI) HARI INI:\n"
@@ -206,11 +222,12 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             f"- Volume Perdagangan: {day_vol} lembar saham\n"
             f"- Tren Penutupan 5 Hari Terakhir: {trend_5d if trend_5d else 'Stabil'}\n"
             f"- PER: {stock.get('per', '15.0')}x | PBV: {stock.get('pbv', '2.0')}x | Market Cap: {stock.get('mcap', '-')}\n\n"
-            f"Petunjuk Format Output:\n"
+            f"{quant_context}\n\n"
+            f"Petunjuk Format Output & Edukasi:\n"
             f"- Gunakan Markdown Prettier yang rapi (bold **...** untuk angka/harga/level kunci, bullet points, dan judul ringkas).\n"
-            f"- Hubungkan analisamu langsung dengan data real-time di atas (harga terkini Rp {live_price}, rentang high-low hari ini, dan trennya).\n"
-            f"- Berikan analisa yang taktis (Level Support & Resistance aktual di sekitar Rp {live_price}, Katalis Bisnis, dan Strategi Trading/Investasi yang jelas).\n"
-            f"- Jangan gunakan kalimat klise pembuka seperti 'Tentu, saya bisa bantu'. Langsung sajikan analisa tajam dan berkualitas tinggi."
+            f"- Jika pertanyaan relevan dengan Support & Resistance, Smart Money (SMC / FVG), atau Momentum Volatilitas, jelaskan konsep edukatifnya menggunakan data kuantitatif nyata di atas.\n"
+            f"- Berikan edukasi yang taktis (Level Support & Resistance aktual, Imbalance harga, dan Strategi Trading/Investasi yang jelas).\n"
+            f"- Jangan gunakan kalimat klise pembuka seperti 'Tentu, saya bisa bantu'. Langsung sajikan analisa tajam, edukatif, dan bernilai tinggi."
         )
 
         key = get_router_key()
