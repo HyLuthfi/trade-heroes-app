@@ -810,51 +810,13 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 12),
 
-          // Timeframe & Indicator Selector Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: ["1D", "1W", "1M", "3M", "1Y"].map((tf) {
-                  final isSel = _selectedTimeframe == tf;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedTimeframe = tf;
-                      });
-                      _fetchRealMarketData();
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isSel ? const Color(0xff059669) : const Color(0xff1e293b),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        tf,
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: isSel ? Colors.white : const Color(0xff94a3b8),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
           // TRADINGVIEW OFFICIAL ADVANCED REAL-TIME CHART
           SizedBox(
-            height: 500,
+            height: 520,
             child: TradingViewChart(
-              key: ValueKey('${stock['ticker']}_$_selectedTimeframe'),
+              key: ValueKey('${stock['ticker']}'),
               ticker: stock['ticker']?.toString() ?? 'BBCA',
-              timeframe: _selectedTimeframe,
+              timeframe: '1D',
             ),
           ),
         ],
