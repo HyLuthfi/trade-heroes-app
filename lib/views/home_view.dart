@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
+import '../widgets/rank_progression_modal.dart';
 import 'kuis_view.dart';
 import 'materi_view.dart';
 import 'profile_view.dart';
@@ -116,29 +117,43 @@ class _HomeViewState extends State<HomeView> {
               ),
               const SizedBox(width: 10),
 
-              // XP Stat
-              Tooltip(
-                message: "Total XP Terkumpul",
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff1e293b),
-                    border: Border.all(color: const Color(0xff334155)),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.star, color: Color(0xfff59e0b), size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        "${appState.xp}",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xfff59e0b),
-                        ),
+              // XP & Rank Stat Pill (tappable to view roadmap)
+              GestureDetector(
+                onTap: () {
+                  AudioService.playClick();
+                  RankProgressionModal.show(context);
+                },
+                child: Tooltip(
+                  message: "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff1e293b),
+                      border: Border.all(
+                        color: (appState.currentRank['color'] as Color).withOpacity(0.5),
+                        width: 1.2,
                       ),
-                    ],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          appState.currentRank['icon'] as IconData,
+                          color: appState.currentRank['color'] as Color,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          "${appState.xp} XP",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            color: appState.currentRank['color'] as Color,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

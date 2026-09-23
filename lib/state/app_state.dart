@@ -71,6 +71,102 @@ class AppState extends ChangeNotifier {
   String get language => _language;
   String get bgmTrack => _bgmTrack;
 
+  // Trader Rank Progression (Tier I - V based on Total XP)
+  static const List<Map<String, dynamic>> traderRanks = [
+    {
+      'tier': 1,
+      'title': 'Investor Pemula',
+      'roman': 'I',
+      'minXp': 0,
+      'maxXp': 150,
+      'color': Color(0xff94a3b8),
+      'icon': Icons.school_rounded,
+      'desc': 'Memulai langkah pertama memahami fondasi pasar modal & saham.',
+      'perk': 'Akses 10 level dasar & 5 Nyawa Petir',
+    },
+    {
+      'tier': 2,
+      'title': 'Trader Ritel Aktif',
+      'roman': 'II',
+      'minXp': 150,
+      'maxXp': 450,
+      'color': Color(0xfff59e0b),
+      'icon': Icons.trending_up_rounded,
+      'desc': 'Mulai aktif menganalisis pergerakan harga dan tren pasar.',
+      'perk': 'Simpan materi favorit tanpa batas & badge perunggu',
+    },
+    {
+      'tier': 3,
+      'title': 'Analis Saham Muda',
+      'roman': 'III',
+      'minXp': 450,
+      'maxXp': 900,
+      'color': Color(0xff38bdf8),
+      'icon': Icons.query_stats_rounded,
+      'desc': 'Mampu membaca chart candlestick dan level Support/Resistance.',
+      'perk': 'Akses analisis teknikal mendalam & badge perak',
+    },
+    {
+      'tier': 4,
+      'title': 'Swing Specialist',
+      'roman': 'IV',
+      'minXp': 900,
+      'maxXp': 1600,
+      'color': Color(0xff10b981),
+      'icon': Icons.psychology_rounded,
+      'desc': 'Menguasai Smart Money Concepts (SMC) & manajemen risiko.',
+      'perk': 'Penguasaan instrumen institusi & badge emas',
+    },
+    {
+      'tier': 5,
+      'title': 'Market Maestro',
+      'roman': 'V',
+      'minXp': 1600,
+      'maxXp': 2500,
+      'color': Color(0xffa855f7),
+      'icon': Icons.workspace_premium_rounded,
+      'desc': 'Trader berpengetahuan komprehensif, disiplin dan bermental baja.',
+      'perk': 'Gelar prestise tertinggi & frame profil ungu',
+    },
+  ];
+
+  Map<String, dynamic> get currentRank {
+    for (final r in traderRanks) {
+      if (_xp < (r['maxXp'] as int)) {
+        return r;
+      }
+    }
+    return traderRanks.last;
+  }
+
+  Map<String, dynamic>? get nextRank {
+    final cur = currentRank;
+    final curTier = cur['tier'] as int;
+    if (curTier < traderRanks.length) {
+      return traderRanks[curTier];
+    }
+    return null;
+  }
+
+  double get rankProgress {
+    final cur = currentRank;
+    final min = cur['minXp'] as int;
+    final max = cur['maxXp'] as int;
+    if (_xp >= max) {
+      if (cur['tier'] == traderRanks.length) return 1.0;
+    }
+    final range = max - min;
+    if (range <= 0) return 1.0;
+    final inRange = (_xp - min).clamp(0, range);
+    return inRange / range;
+  }
+
+  int get xpToNextRank {
+    final cur = currentRank;
+    final max = cur['maxXp'] as int;
+    return (max - _xp).clamp(0, max);
+  }
+
   // Paper Trading Getters
   double get virtualBalance => _virtualBalance;
   List<Map<String, dynamic>> get portfolio => _portfolio;
@@ -938,6 +1034,19 @@ class AppState extends ChangeNotifier {
     if (_completedLevels.length == 10 && !_unlockedBadges.contains("pakar_saham")) {
       newlyUnlocked.add("pakar_saham");
     }
+    // XP Milestones
+    if (_xp >= 150 && !_unlockedBadges.contains("trader_tier_2")) {
+      newlyUnlocked.add("trader_tier_2");
+    }
+    if (_xp >= 450 && !_unlockedBadges.contains("trader_tier_3")) {
+      newlyUnlocked.add("trader_tier_3");
+    }
+    if (_xp >= 900 && !_unlockedBadges.contains("trader_tier_4")) {
+      newlyUnlocked.add("trader_tier_4");
+    }
+    if (_xp >= 1600 && !_unlockedBadges.contains("trader_tier_5")) {
+      newlyUnlocked.add("trader_tier_5");
+    }
 
     if (newlyUnlocked.isNotEmpty) {
       for (var badgeId in newlyUnlocked) {
@@ -1020,6 +1129,10 @@ class AppState extends ChangeNotifier {
       case "kolektor_ilmu": return "Kolektor Ilmu";
       case "premium_member": return "Premium Member";
       case "pakar_saham": return "Pakar Saham";
+      case "trader_tier_2": return "Trader Ritel Aktif";
+      case "trader_tier_3": return "Analis Saham Muda";
+      case "trader_tier_4": return "Swing Specialist";
+      case "trader_tier_5": return "Market Maestro";
       default: return "";
     }
   }
@@ -1032,6 +1145,10 @@ class AppState extends ChangeNotifier {
       case "kolektor_ilmu": return "📚";
       case "premium_member": return "👑";
       case "pakar_saham": return "🎓";
+      case "trader_tier_2": return "📈";
+      case "trader_tier_3": return "📊";
+      case "trader_tier_4": return "🧠";
+      case "trader_tier_5": return "💎";
       default: return "🏆";
     }
   }
@@ -1044,6 +1161,10 @@ class AppState extends ChangeNotifier {
       case "kolektor_ilmu": return "Menyimpan minimal 3 soal ke daftar favorit.";
       case "premium_member": return "Upgrade akun Anda ke Premium Plan.";
       case "pakar_saham": return "Menyelesaikan seluruh 10 level Trade Heroes.";
+      case "trader_tier_2": return "Mencapai 150 XP dan naik pangkat ke Tier II.";
+      case "trader_tier_3": return "Mencapai 450 XP dan naik pangkat ke Tier III.";
+      case "trader_tier_4": return "Mencapai 900 XP dan naik pangkat ke Tier IV.";
+      case "trader_tier_5": return "Mencapai 1.600 XP dan meraih gelar tertinggi Tier V!";
       default: return "";
     }
   }

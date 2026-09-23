@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
+import '../widgets/rank_progression_modal.dart';
 import 'admin_console_view.dart';
 
 class ProfileView extends StatefulWidget {
@@ -60,7 +61,35 @@ class _ProfileViewState extends State<ProfileView> {
       'desc': "Menyelesaikan seluruh 10 level Trade Heroes.",
       'iconData': Icons.school_rounded,
       'color': Color(0xffec4899),
-    }
+    },
+    {
+      'id': "trader_tier_2",
+      'name': "Trader Ritel",
+      'desc': "Mencapai 150 XP dan naik pangkat ke Tier II.",
+      'iconData': Icons.trending_up_rounded,
+      'color': Color(0xfff59e0b),
+    },
+    {
+      'id': "trader_tier_3",
+      'name': "Analis Muda",
+      'desc': "Mencapai 450 XP dan naik pangkat ke Tier III.",
+      'iconData': Icons.query_stats_rounded,
+      'color': Color(0xff38bdf8),
+    },
+    {
+      'id': "trader_tier_4",
+      'name': "Specialist",
+      'desc': "Mencapai 900 XP dan naik pangkat ke Tier IV.",
+      'iconData': Icons.psychology_rounded,
+      'color': Color(0xff10b981),
+    },
+    {
+      'id': "trader_tier_5",
+      'name': "Maestro",
+      'desc': "Mencapai 1.600 XP dan meraih gelar tertinggi Tier V!",
+      'iconData': Icons.workspace_premium_rounded,
+      'color': Color(0xffa855f7),
+    },
   ];
 
   final List<Map<String, dynamic>> _avatars = const [
@@ -962,7 +991,147 @@ class _ProfileViewState extends State<ProfileView> {
                             color: Color(0xff94a3b8),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 10),
+
+                        // Trader Rank Pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (appState.currentRank['color'] as Color).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: (appState.currentRank['color'] as Color).withOpacity(0.5),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                appState.currentRank['icon'] as IconData,
+                                color: appState.currentRank['color'] as Color,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "TIER ${appState.currentRank['roman']} • ${(appState.currentRank['title'] as String).toUpperCase()}",
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: appState.currentRank['color'] as Color,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Trader Rank & XP Progression Card
+                        GestureDetector(
+                          onTap: () {
+                            AudioService.playClick();
+                            RankProgressionModal.show(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff161f30),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: (appState.currentRank['color'] as Color).withOpacity(0.35),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.military_tech_rounded,
+                                          color: appState.currentRank['color'] as Color,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Text(
+                                          "Jenjang Karier Trader",
+                                          style: TextStyle(
+                                            fontFamily: 'Outfit',
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "${appState.xp} XP",
+                                          style: TextStyle(
+                                            fontFamily: 'Outfit',
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: appState.currentRank['color'] as Color,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.chevron_right_rounded,
+                                          color: Color(0xff94a3b8),
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(5),
+                                  child: LinearProgressIndicator(
+                                    value: appState.rankProgress.clamp(0.0, 1.0),
+                                    minHeight: 6,
+                                    backgroundColor: const Color(0xff0b0f19),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      appState.currentRank['color'] as Color,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      appState.currentRank['title'] as String,
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 10.5,
+                                        color: Color(0xff94a3b8),
+                                      ),
+                                    ),
+                                    Text(
+                                      appState.nextRank != null
+                                          ? "Kurang ${appState.xpToNextRank} XP lagi (${(appState.rankProgress * 100).toInt()}%)"
+                                          : "Gelar Tertinggi ✓",
+                                      style: TextStyle(
+                                        fontFamily: 'Outfit',
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: appState.currentRank['color'] as Color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
 
                         // Premium Plan Banner Card Widget
                         GestureDetector(
@@ -1063,7 +1232,17 @@ class _ProfileViewState extends State<ProfileView> {
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.45,
                     children: [
-                      _buildStatCard("Total XP", "${appState.xp} XP", iconData: Icons.monetization_on_rounded, color: const Color(0xfff59e0b)),
+                      _buildStatCard(
+                        "Total XP",
+                        "${appState.xp} XP",
+                        iconData: appState.currentRank['icon'] as IconData,
+                        color: appState.currentRank['color'] as Color,
+                        subtitle: "Tier ${appState.currentRank['roman']} • ${appState.currentRank['title']}",
+                        onTap: () {
+                          AudioService.playClick();
+                          RankProgressionModal.show(context);
+                        },
+                      ),
                       _buildStatCard("XP Hari Ini", "${appState.dailyXp} / 50", iconData: Icons.track_changes_rounded, color: const Color(0xff3b82f6)),
                       _buildStatCard("Streak Belajar", "${appState.streak} Hari", iconData: Icons.local_fire_department_rounded, color: const Color(0xffef4444)),
                       _buildStatCard("Level Selesai", "${appState.completedLevels.length} / 10", iconData: Icons.emoji_events_rounded, color: const Color(0xff10b981)),
@@ -1394,66 +1573,78 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, {required IconData iconData, required Color color}) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          top: 3.5,
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xff022c22),
-              borderRadius: BorderRadius.circular(16),
+  Widget _buildStatCard(
+    String label,
+    String value, {
+    required IconData iconData,
+    required Color color,
+    VoidCallback? onTap,
+    String? subtitle,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            top: 3.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xff022c22),
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(bottom: 3.5),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xff0f172a).withOpacity(0.92),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.4), width: 1.2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(iconData, color: color, size: 20),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color,
-                      boxShadow: [
-                        BoxShadow(color: color.withOpacity(0.6), blurRadius: 4),
-                      ],
+          Container(
+            margin: const EdgeInsets.only(bottom: 3.5),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xff0f172a).withOpacity(0.92),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Icon(iconData, color: color, size: 20),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: color,
+                        boxShadow: [
+                          BoxShadow(color: color.withOpacity(0.6), blurRadius: 4),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: color,
+                  ],
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xffcbd5e1)),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle ?? label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xffcbd5e1)),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
