@@ -789,7 +789,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     _chatMessages.add({
       'isUser': false,
       'time': _formatCurrentTime(),
-      'text': "Halo! Saya **Trade Heroes AI Assistant** 🤖.\n\nKamu sedang memantau saham **$ticker** (${stock['name'] ?? ''}) di harga **$p** ($chg).\n\nAda yang ingin kamu tanyakan mengenai analisa teknikal, valuasi fundamental, atau strategi trading untuk saham ini?",
+      'text': "Halo! Saya **SAI Tech AI Chatbot** 🤖.\n\nKamu sedang memantau saham **$ticker** (${stock['name'] ?? ''}) di harga **$p** ($chg).\n\nAda yang ingin kamu tanyakan mengenai analisa teknikal, valuasi fundamental, atau strategi trading untuk saham ini?",
     });
   }
 
@@ -1044,52 +1044,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         children: [
           // Header Info Banner
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
               color: Color(0xff0f172a),
               border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff10b981).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xff10b981).withOpacity(0.3)),
-                  ),
-                  child: const Icon(Icons.auto_awesome_rounded, color: Color(0xff10b981), size: 16),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            "AI Market Analyst",
-                            style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xff064e3b),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text("ONLINE", style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xff34d399))),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        "Analisa cerdas saham ${stock['ticker']} • Terhubung ke data pasar BEI",
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff94a3b8)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            alignment: Alignment.centerLeft,
+            child: const Text(
+              "SAI Tech AI Chatbot",
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
 
