@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../services/market_data_service.dart';
@@ -989,13 +990,70 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.5,
-                      color: Colors.white,
-                      height: 1.45,
+                  MarkdownBody(
+                    data: text,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: Colors.white,
+                        height: 1.5,
+                      ),
+                      strong: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: isUser ? const Color(0xffa7f3d0) : const Color(0xff34d399),
+                      ),
+                      em: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontStyle: FontStyle.italic,
+                        color: Color(0xffcbd5e1),
+                      ),
+                      listBullet: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: Color(0xff10b981),
+                      ),
+                      h1: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                      h2: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                      h3: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xff38bdf8),
+                      ),
+                      code: const TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 11.5,
+                        color: Color(0xff38bdf8),
+                        backgroundColor: Color(0xff0f172a),
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: const Color(0xff0f172a),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xff334155)),
+                      ),
+                      blockquote: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: Color(0xff94a3b8),
+                      ),
+                      blockquoteDecoration: const BoxDecoration(
+                        border: Border(left: BorderSide(color: Color(0xff10b981), width: 3)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
