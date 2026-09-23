@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../services/market_data_service.dart';
 import '../state/app_state.dart';
+import '../widgets/tradingview_chart.dart';
 
 class MarketView extends StatefulWidget {
   const MarketView({Key? key}) : super(key: key);
@@ -18,15 +19,10 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   int _selectedStockIdx = 0;
   String _selectedTimeframe = "1D";
   String _selectedSector = "Semua";
-  bool _showMA = true;
-  int _selectedTabIdx = 0; // 0: Chart, 1: Order Book, 2: Finansial, 3: Berita
+  int _selectedTabIdx = 0;
   
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
-
-  // Interactive Crosshair Touch Offset
-  Offset? _touchOffset;
-  int? _hoveredCandleIdx;
 
   // Real Market Stocks Database with Generated 30+ Dense Historical Candles
   final List<Map<String, dynamic>> _allStocks = [];
@@ -551,8 +547,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             onTap: () {
               setState(() {
                 _selectedStockIdx = idx;
-                _touchOffset = null;
-                _hoveredCandleIdx = null;
               });
               _fetchRealMarketData();
             },
@@ -850,123 +844,35 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   );
                 }).toList(),
               ),
-
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showMA = !_showMA;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _showMA ? const Color(0xff78350f).withOpacity(0.4) : const Color(0xff1e293b),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _showMA ? const Color(0xfff59e0b) : Colors.transparent),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.show_chart_rounded, color: _showMA ? const Color(0xfff59e0b) : const Color(0xff94a3b8), size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        "EMA20",
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: _showMA ? const Color(0xfffbbf24) : const Color(0xff94a3b8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 10),
 
-          // INTERACTIVE CROSSHAIR TOOLTIP HEADER
-          if (_hoveredCandleIdx != null && candles.isNotEmpty && _hoveredCandleIdx! < candles.length) ...[
-            Builder(builder: (context) {
-              final c = candles[_hoveredCandleIdx!];
-              final isCUp = (c['c'] as num) >= (c['o'] as num);
-              final cColor = isCUp ? const Color(0xff34d399) : const Color(0xfff87171);
-
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xff1e293b),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xff10b981).withOpacity(0.5)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Time: ${c['time']}", style: const TextStyle(fontFamily: 'Outfit', fontSize: 10.5, color: Colors.white)),
-                    Text("O: ${c['o']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
-                    Text("H: ${c['h']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
-                    Text("L: ${c['l']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
-                    Text("C: ${c['c']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
-                  ],
-                ),
-              );
-            }),
-          ],
-
-          // REAL 30+ DENSE TRADINGVIEW ULTRA CANDLESTICK ENGINE
-          GestureDetector(
-            onPanUpdate: (details) {
-              setState(() {
-                _touchOffset = details.localPosition;
-              });
-            },
-            onPanEnd: (_) {
-              setState(() {
-                _touchOffset = null;
-                _hoveredCandleIdx = null;
-              });
-            },
-            onTapDown: (details) {
-              setState(() {
-                _touchOffset = details.localPosition;
-              });
-            },
-            child: Container(
-              height: 340,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xff0f172a),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xff10b981).withOpacity(0.3), width: 1.2),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: TradingViewUltraPainter(
-                      candles: candles,
-                      stockPrice: (stock['price'] as num?)?.toDouble() ?? 0.0,
-                      highPrice: (stock['high'] as num?)?.toDouble() ?? 0.0,
-                      lowPrice: (stock['low'] as num?)?.toDouble() ?? 0.0,
-                      showMA: _showMA,
-                      touchOffset: _touchOffset,
-                      onHoverIndex: (idx) {
-                        if (_hoveredCandleIdx != idx) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              setState(() {
-                                _hoveredCandleIdx = idx;
-                              });
-                            }
-                          });
-                        }
-                      },
+          // TRADINGVIEW LIGHTWEIGHT CHARTS
+          SizedBox(
+            height: 380,
+            child: candles.isNotEmpty
+                ? TradingViewChart(
+                    candles: candles,
+                    ticker: '${stock['ticker'] ?? 'BBCA'}_$_selectedTimeframe',
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xff0f172a),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xff10b981).withOpacity(0.3)),
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2),
+                          SizedBox(height: 12),
+                          Text("Memuat data chart...", style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8))),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -2222,235 +2128,4 @@ String formatRupiah(num number) {
   }
   final sign = number < 0 ? '-Rp ' : 'Rp ';
   return '$sign$buffer';
-}
-
-// 30+ DENSE TRADINGVIEW ULTRA CANDLESTICK PAINTER WITH Y-AXIS PRICE LABELS & X-AXIS TIME LABELS & TOUCH CROSSHAIR
-class TradingViewUltraPainter extends CustomPainter {
-  final List<Map<String, dynamic>> candles;
-  final double stockPrice;
-  final double highPrice;
-  final double lowPrice;
-  final bool showMA;
-  final Offset? touchOffset;
-  final Function(int) onHoverIndex;
-
-  TradingViewUltraPainter({
-    required this.candles,
-    required this.stockPrice,
-    required this.highPrice,
-    required this.lowPrice,
-    required this.showMA,
-    required this.touchOffset,
-    required this.onHoverIndex,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const yAxisWidth = 48.0;
-    const xAxisHeight = 22.0;
-
-    final chartWidth = size.width - yAxisWidth;
-    final chartHeight = size.height - xAxisHeight;
-
-    final candlePaneHeight = chartHeight * 0.74;
-    final volPaneHeight = chartHeight * 0.22;
-
-    // 1. Draw Grid Lines
-    final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.04)
-      ..strokeWidth = 1;
-
-    final textStyle = TextStyle(
-      fontFamily: 'Outfit',
-      fontSize: 9,
-      fontWeight: FontWeight.bold,
-      color: Colors.white.withOpacity(0.45),
-    );
-
-    // Draw Horizontal Y-Axis Price Grid Lines & Labels
-    final rawLow = lowPrice > 0
-        ? lowPrice
-        : (candles.isNotEmpty ? candles.map((c) => (c['l'] as num).toDouble()).reduce(min) : 100.0);
-    final rawHigh = highPrice > rawLow
-        ? highPrice
-        : (candles.isNotEmpty ? candles.map((c) => (c['h'] as num).toDouble()).reduce(max) : rawLow + 10.0);
-    final minP = rawLow * 0.99;
-    final maxP = (rawHigh * 1.01) > minP ? (rawHigh * 1.01) : (minP + 1.0);
-    final rangeP = (maxP - minP) > 0 ? (maxP - minP) : 1.0;
-    final pStep = rangeP / 4;
-
-    for (int i = 0; i <= 4; i++) {
-      final priceVal = maxP - (pStep * i);
-      final y = (candlePaneHeight / 4) * i;
-      canvas.drawLine(Offset(0, y), Offset(chartWidth, y), gridPaint);
-
-      // Y-Axis Price Text Label
-      final tp = TextPainter(
-        text: TextSpan(text: priceVal.toInt().toString(), style: textStyle),
-        textDirection: TextDirection.ltr,
-      );
-      tp.layout();
-      tp.paint(canvas, Offset(chartWidth + 6, y - 6));
-    }
-
-    if (candles.isEmpty) return;
-
-    final candleWidth = chartWidth / candles.length;
-    final maPoints = <Offset>[];
-
-    // 2. Draw Candlesticks & Volume Histogram Bars
-    for (int i = 0; i < candles.length; i++) {
-      final c = candles[i];
-      final x = i * candleWidth + (candleWidth * 0.15);
-
-      final openP = (c['o'] as num).toDouble();
-      final closeP = (c['c'] as num).toDouble();
-      final highP = (c['h'] as num).toDouble();
-      final lowP = (c['l'] as num).toDouble();
-
-      final openY = candlePaneHeight * (1.0 - ((openP - minP) / rangeP));
-      final closeY = candlePaneHeight * (1.0 - ((closeP - minP) / rangeP));
-      final highY = candlePaneHeight * (1.0 - ((highP - minP) / rangeP));
-      final lowY = candlePaneHeight * (1.0 - ((lowP - minP) / rangeP));
-
-      final isGreen = closeP >= openP;
-      final candleColor = isGreen ? const Color(0xff10b981) : const Color(0xffef4444);
-
-      // Draw High/Low Wick Line
-      final wickPaint = Paint()
-        ..color = candleColor
-        ..strokeWidth = 1.4;
-      canvas.drawLine(Offset(x + (candleWidth * 0.35), highY), Offset(x + (candleWidth * 0.35), lowY), wickPaint);
-
-      // Draw Candle Body
-      final bodyPaint = Paint()..color = candleColor;
-      final topY = min(openY, closeY);
-      final bottomY = max(openY, closeY);
-      final height = max(3.0, (bottomY - topY));
-
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x, topY, candleWidth * 0.7, height),
-          const Radius.circular(1.5),
-        ),
-        bodyPaint,
-      );
-
-      // Draw Volume Bar
-      final vol = (c['vol'] as num).toDouble();
-      final volH = (volPaneHeight * (vol / 100000.0)).clamp(3.0, volPaneHeight);
-      final volY = chartHeight - volH;
-      final volPaint = Paint()..color = candleColor.withOpacity(0.4);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x, volY, candleWidth * 0.7, volH),
-          const Radius.circular(1.5),
-        ),
-        volPaint,
-      );
-
-      maPoints.add(Offset(x + (candleWidth * 0.35), (openY + closeY) / 2));
-
-      // Draw X-Axis Time Labels every 6 candles
-      if (i % 6 == 0 && c['time'] != null) {
-        final tp = TextPainter(
-          text: TextSpan(text: c['time'], style: textStyle),
-          textDirection: TextDirection.ltr,
-        );
-        tp.layout();
-        tp.paint(canvas, Offset(x, chartHeight + 4));
-      }
-    }
-
-    // 3. Draw Moving Average (EMA20) Smooth Curve
-    if (showMA && maPoints.length > 1) {
-      final maPaint = Paint()
-        ..color = const Color(0xfff59e0b) // Amber MA Line
-        ..strokeWidth = 2.2
-        ..style = PaintingStyle.stroke;
-
-      final maPath = Path();
-      maPath.moveTo(maPoints[0].dx, maPoints[0].dy);
-      for (int i = 1; i < maPoints.length; i++) {
-        maPath.lineTo(maPoints[i].dx, maPoints[i].dy);
-      }
-      canvas.drawPath(maPath, maPaint);
-    }
-
-    // 4. Current Price Horizontal Dashed Line
-    final lastCandle = candles.last;
-    final lastPriceY = candlePaneHeight * (1.0 - (((lastCandle['c'] as num) - minP) / rangeP));
-    final dashPaint = Paint()
-      ..color = const Color(0xff10b981).withOpacity(0.7)
-      ..strokeWidth = 1.0;
-
-    for (double dx = 0; dx < chartWidth; dx += 8) {
-      canvas.drawLine(Offset(dx, lastPriceY), Offset(dx + 4, lastPriceY), dashPaint);
-    }
-
-    // Latest Price Pill on Y-Axis
-    final priceBadgePaint = Paint()..color = const Color(0xff10b981);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(chartWidth + 2, lastPriceY - 8, 44, 16),
-        const Radius.circular(4),
-      ),
-      priceBadgePaint,
-    );
-
-    final lastPriceText = TextPainter(
-      text: TextSpan(
-        text: "${(lastCandle['c'] as num).toInt()}",
-        style: const TextStyle(fontFamily: 'Outfit', fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    lastPriceText.layout();
-    lastPriceText.paint(canvas, Offset(chartWidth + 6, lastPriceY - 6));
-
-    // 5. INTERACTIVE TOUCH CROSSHAIR INSPECTION TOOL
-    if (touchOffset != null) {
-      final crosshairX = touchOffset!.dx.clamp(0.0, chartWidth);
-      final crosshairY = touchOffset!.dy.clamp(0.0, candlePaneHeight);
-
-      final crossPaint = Paint()
-        ..color = const Color(0xfff59e0b).withOpacity(0.85)
-        ..strokeWidth = 1.0
-        ..style = PaintingStyle.stroke;
-
-      // Draw Crosshair Lines
-      canvas.drawLine(Offset(0, crosshairY), Offset(chartWidth, crosshairY), crossPaint);
-      canvas.drawLine(Offset(crosshairX, 0), Offset(crosshairX, chartHeight), crossPaint);
-
-      // Hovered Candle Index
-      int hoveredIdx = (crosshairX / candleWidth).floor().clamp(0, candles.length - 1);
-      onHoverIndex(hoveredIdx);
-
-      // Y-Axis Touch Price Tooltip Badge
-      final touchPrice = maxP - ((crosshairY / candlePaneHeight) * rangeP);
-      final touchPillPaint = Paint()..color = const Color(0xfff59e0b);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(chartWidth + 2, crosshairY - 9, 44, 18),
-          const Radius.circular(4),
-        ),
-        touchPillPaint,
-      );
-
-      final touchPriceText = TextPainter(
-        text: TextSpan(
-          text: touchPrice.toInt().toString(),
-          style: const TextStyle(fontFamily: 'Outfit', fontSize: 9.5, fontWeight: FontWeight.w900, color: Colors.black),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      touchPriceText.layout();
-      touchPriceText.paint(canvas, Offset(chartWidth + 6, crosshairY - 7));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant TradingViewUltraPainter oldDelegate) {
-    return oldDelegate.touchOffset != touchOffset || oldDelegate.stockPrice != stockPrice;
-  }
 }
