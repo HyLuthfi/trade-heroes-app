@@ -848,9 +848,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 10),
 
-          // TRADINGVIEW LIGHTWEIGHT CHARTS
+          // TRADINGVIEW OFFICIAL ADVANCED REAL-TIME CHART
           SizedBox(
-            height: 400,
+            height: 500,
             child: TradingViewChart(
               ticker: stock['ticker']?.toString() ?? 'BBCA',
               timeframe: _selectedTimeframe,
