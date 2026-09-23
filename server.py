@@ -137,7 +137,7 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             self.wfile.write(b'{"error":"proxy failed"}')
 
     def _handle_ai_chat(self):
-        """Proxy AI Chat requests to 9Router with fastest model (ag/gemini-3.8-flash-low)"""
+        """Proxy AI Chat requests to 9Router with live real-time market data from Yahoo Finance"""
         import urllib.request, urllib.error, json
         try:
             content_len = int(self.headers.get('Content-Length', 0))
@@ -151,31 +151,66 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             return
 
         prompt = req_data.get('prompt', '')
-        ticker = req_data.get('ticker', 'BBCA')
+        ticker = req_data.get('ticker', 'BBCA').upper().replace('.JK', '')
         stock = req_data.get('stock', {})
         name = stock.get('name', ticker)
-        price = stock.get('price', '-')
-        change_pct = stock.get('changePct', '-')
         sector = stock.get('sector', 'Umum')
-        per = stock.get('per', '-')
-        pbv = stock.get('pbv', '-')
-        mcap = stock.get('mcap', '-')
-        foreign = stock.get('foreignNet', '-')
 
+        # 1. Fetch freshest live tick data from Yahoo Finance BEI
+        live_price = stock.get('price', '-')
+        live_chg_pct = stock.get('changePct', '-')
+        day_high = '-'
+        day_low = '-'
+        day_vol = '-'
+        trend_5d = ''
+
+        try:
+            yf_url = f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}.JK?interval=1d&range=5d'
+            yf_req = urllib.request.Request(yf_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(yf_req, timeout=3) as yf_resp:
+                yf_data = json.loads(yf_resp.read().decode('utf-8'))
+                res0 = yf_data.get('chart', {}).get('result', [{}])[0]
+                meta = res0.get('meta', {})
+                quotes = res0.get('indicators', {}).get('quote', [{}])[0]
+                closes = quotes.get('close', [])
+
+                if meta.get('regularMarketPrice'):
+                    live_price = f"{meta['regularMarketPrice']:,.0f}".replace(',', '.')
+                prev_c = meta.get('previousClose') or meta.get('chartPreviousClose')
+                cur_p = meta.get('regularMarketPrice')
+                if cur_p and prev_c:
+                    diff = cur_p - prev_c
+                    pct = (diff / prev_c) * 100
+                    live_chg_pct = f"{'+' if pct >= 0 else ''}{pct:.2f}%"
+                if meta.get('regularMarketDayHigh'):
+                    day_high = f"{meta['regularMarketDayHigh']:,.0f}".replace(',', '.')
+                if meta.get('regularMarketDayLow'):
+                    day_low = f"{meta['regularMarketDayLow']:,.0f}".replace(',', '.')
+                if meta.get('regularMarketVolume'):
+                    day_vol = f"{meta['regularMarketVolume']:,}".replace(',', '.')
+                if closes:
+                    valid_closes = [int(c) for c in closes if c is not None]
+                    if valid_closes:
+                        trend_5d = " -> ".join([f"Rp {c}" for c in valid_closes[-5:]])
+        except Exception as e:
+            print(f"Warning: Live tick fetch failed for {ticker}: {e}")
+
+        # 2. Build contextual real-time prompt
         system_prompt = (
             f"Kamu adalah SAI Tech AI Chatbot, asisten cerdas analis pasar modal Indonesia (BEI) di platform Trade Heroes.\n"
             f"Karakter: Analis kuantitatif & edukator saham profesional, ramah, to-the-point, dan zero basa-basi.\n"
-            f"Saham yang sedang aktif: {ticker} ({name})\n"
-            f"Data Real-Time Pasar BEI:\n"
-            f"- Harga Terkini: Rp {price} ({change_pct}%)\n"
-            f"- Sektor: {sector}\n"
-            f"- PER: {per}x | PBV: {pbv}x\n"
-            f"- Market Cap: {mcap}\n"
-            f"- Foreign Flow: {foreign}\n\n"
+            f"Saham yang sedang aktif: {ticker} ({name}) • Sektor: {sector}\n\n"
+            f"DATA REAL-TIME BURSA EFEK INDONESIA (BEI) HARI INI:\n"
+            f"- Harga Terkini: Rp {live_price} ({live_chg_pct})\n"
+            f"- Rentang Hari Ini: Low Rp {day_low} — High Rp {day_high}\n"
+            f"- Volume Perdagangan: {day_vol} lembar saham\n"
+            f"- Tren Penutupan 5 Hari Terakhir: {trend_5d if trend_5d else 'Stabil'}\n"
+            f"- PER: {stock.get('per', '15.0')}x | PBV: {stock.get('pbv', '2.0')}x | Market Cap: {stock.get('mcap', '-')}\n\n"
             f"Petunjuk Format Output:\n"
-            f"- Gunakan Markdown Prettier yang rapi (gunakan bold **...** untuk angka/harga/level kunci, bullet points, dan judul ringkas).\n"
-            f"- Berikan analisa yang taktis (Level Support & Resistance, Katalis Bisnis, dan Strategi Trading/Investasi yang jelas).\n"
-            f"- Jangan gunakan kalimat klise pembuka seperti 'Tentu, saya bisa bantu'. Langsung sajikan analisa berkualitas tinggi."
+            f"- Gunakan Markdown Prettier yang rapi (bold **...** untuk angka/harga/level kunci, bullet points, dan judul ringkas).\n"
+            f"- Hubungkan analisamu langsung dengan data real-time di atas (harga terkini Rp {live_price}, rentang high-low hari ini, dan trennya).\n"
+            f"- Berikan analisa yang taktis (Level Support & Resistance aktual di sekitar Rp {live_price}, Katalis Bisnis, dan Strategi Trading/Investasi yang jelas).\n"
+            f"- Jangan gunakan kalimat klise pembuka seperti 'Tentu, saya bisa bantu'. Langsung sajikan analisa tajam dan berkualitas tinggi."
         )
 
         key = get_router_key()
