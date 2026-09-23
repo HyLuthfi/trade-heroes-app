@@ -64,7 +64,7 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_HEAD(self):
-        if self.path.startswith('/api/yahoo/'):
+        if self.path.startswith('/api/yahoo/') or self.path.startswith('/api/news'):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -95,6 +95,11 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        # --- Real-Time Financial News API ---
+        if self.path.startswith('/api/news'):
+            self._handle_news()
+            return
+
         # --- Yahoo Finance API Proxy (avoids CORS for Flutter Web) ---
         if self.path.startswith('/api/yahoo/'):
             self._proxy_yahoo()
@@ -142,6 +147,25 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(b'{"error":"proxy failed"}')
+
+    def _handle_news(self):
+        """Fetch real-time Indonesian financial news via Google News RSS for stock ticker"""
+        import urllib.parse, json
+        query = urllib.parse.urlparse(self.path).query
+        params = urllib.parse.parse_qs(query)
+        ticker = params.get('ticker', ['BBCA'])[0].upper().replace('.JK', '').strip()
+
+        try:
+            from engine.news_service import fetch_stock_news
+            articles = fetch_stock_news(ticker)
+        except Exception as e:
+            articles = []
+            print(f"News fetch error for {ticker}: {e}")
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(json.dumps({'ticker': ticker, 'articles': articles}).encode('utf-8'))
 
     def _handle_ai_chat(self):
         """Proxy AI Chat requests to 9Router with live real-time market data from Yahoo Finance"""

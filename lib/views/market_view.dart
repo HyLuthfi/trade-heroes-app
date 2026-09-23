@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:html' as html;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +37,12 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   final ScrollController _chatScrollController = ScrollController();
   bool _isAiResponding = false;
   String? _lastChatTicker;
+
+  // Live Market News State
+  List<Map<String, dynamic>> _liveNews = [];
+  bool _isLoadingNews = false;
+  String _selectedNewsCategory = "Semua";
+  String? _loadedNewsTicker;
 
   Timer? _realDataRefreshTimer;
   bool _isLoadingRealData = false;
@@ -1305,82 +1312,375 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
 
 
-  // TAB 4: MARKET NEWS WITH VECTOR MATERIAL ICONS
+  // TAB 3: REAL-TIME MARKET NEWS WITH AI IMPACT ANALYSIS
+  Future<void> _fetchRealNews(String ticker, {bool force = false}) async {
+    final cleanTicker = ticker.split('_').first.toUpperCase().replaceAll('.JK', '');
+    if (!force && _loadedNewsTicker == cleanTicker && _liveNews.isNotEmpty) return;
+
+    if (mounted) setState(() => _isLoadingNews = true);
+    try {
+      final res = await http.get(Uri.parse('/api/news?ticker=$cleanTicker')).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['articles'] != null && data['articles'] is List) {
+          if (mounted) {
+            setState(() {
+              _liveNews = List<Map<String, dynamic>>.from(data['articles']);
+              _loadedNewsTicker = cleanTicker;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching real news: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingNews = false);
+    }
+  }
+
+  void _analyzeNewsImpactWithAi(Map<String, dynamic> newsItem, Map<String, dynamic> stock) {
+    AudioService.playClick();
+    final cleanTicker = stock['ticker']?.toString() ?? 'BBCA';
+    final headline = newsItem['title'] ?? '';
+    final source = newsItem['source'] ?? '';
+
+    // Switch to Tanya AI tab (index 1)
+    setState(() {
+      _selectedTabIdx = 1;
+    });
+
+    final prompt = "Analisa dampak berita dari $source berikut ini untuk saham $cleanTicker:\n\n"
+        "\"$headline\"\n\n"
+        "Tolong jelaskan secara terstruktur:\n"
+        "1. Makna berita ini dengan bahasa sederhana yang mudah dipahami pemula.\n"
+        "2. Apakah ini katalis positif atau sentimen waspada, dan bagaimana dampaknya ke tren harga & level support/resistance saat ini?\n"
+        "3. Saran strategi taktis bagi trader & investor.";
+
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (mounted) {
+        _sendChatMessage(prompt, stock);
+      }
+    });
+  }
+
+  void _openNewsUrl(String url) {
+    AudioService.playClick();
+    if (url.isNotEmpty) {
+      try {
+        html.window.open(url, '_blank');
+      } catch (e) {
+        debugPrint("Error opening news url: $e");
+      }
+    }
+  }
+
   Widget _buildNewsTab(Map<String, dynamic> stock) {
-    final newsList = [
-      {
-        'title': "${stock['ticker']} Catat Pertumbuhan Laba Bersih Kuartal II Naik 14.5% YoY",
-        'source': "Market Insider • 25 menit lalu",
-        'sentiment': "BULLISH",
-        'isBullish': true,
-      },
-      {
-        'title': "Investor Asing Kembali Net Buy Saham ${stock['ticker']} Sebesar Rp 142 Miliar",
-        'source': "Financial Times • 2 jam lalu",
-        'sentiment': "BULLISH",
-        'isBullish': true,
-      },
-      {
-        'title': "Analisis Teknikal: ${stock['ticker']} Menguji Level Resistance Psikologis Utama",
-        'source': "Trade Heroes Research • 4 jam lalu",
-        'sentiment': "NETRAL",
-        'isBullish': false,
-      },
-    ];
+    final cleanTicker = stock['ticker']?.toString() ?? 'BBCA';
+    if (_loadedNewsTicker != cleanTicker && !_isLoadingNews) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchRealNews(cleanTicker);
+      });
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(14),
-      itemCount: newsList.length,
-      itemBuilder: (context, idx) {
-        final n = newsList[idx];
-        final bool isB = n['isBullish'] as bool;
-        final Color sentColor = isB ? const Color(0xff34d399) : const Color(0xff94a3b8);
+    final categories = ["Semua", "Dividen & Kinerja", "Aksi Korporasi", "Sentimen Pasar", "Analisa Pasar"];
+    final filteredNews = _selectedNewsCategory == "Semua"
+        ? _liveNews
+        : _liveNews.where((n) => n['category'] == _selectedNewsCategory).toList();
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xff111827),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(n['source'] as String, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff64748b))),
-                  Container(
+    return Container(
+      color: const Color(0xff0b0f19),
+      child: Column(
+        children: [
+          // Header info strip with real-time status & manual refresh
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Color(0xff0f172a),
+              border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xff10b981),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Berita Bursa Terkini • $cleanTicker",
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () => _fetchRealNews(cleanTicker, force: true),
+                  child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isB ? const Color(0xff064e3b) : const Color(0xff1e293b),
+                      color: const Color(0xff1e293b),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: sentColor.withOpacity(0.4)),
+                      border: Border.all(color: const Color(0xff334155)),
                     ),
                     child: Row(
-                      children: [
-                        Icon(
-                          isB ? Icons.trending_up_rounded : Icons.horizontal_rule_rounded,
-                          color: sentColor,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 4),
+                      children: const [
+                        Icon(Icons.refresh_rounded, size: 12, color: Color(0xff94a3b8)),
+                        SizedBox(width: 4),
                         Text(
-                          n['sentiment'] as String,
-                          style: TextStyle(fontFamily: 'Outfit', fontSize: 9.5, fontWeight: FontWeight.w900, color: sentColor),
+                          "Perbarui",
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff94a3b8)),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(n['title'] as String, style: const TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.w900, color: Colors.white, height: 1.3)),
-            ],
+                ),
+              ],
+            ),
           ),
-        );
-      },
+
+          // Category Filter Chips Carousel
+          Container(
+            height: 38,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              itemCount: categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, i) {
+                final cat = categories[i];
+                final isSel = _selectedNewsCategory == cat;
+                return GestureDetector(
+                  onTap: () {
+                    AudioService.playClick();
+                    setState(() => _selectedNewsCategory = cat);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSel ? const Color(0xff064e3b) : const Color(0xff1e293b),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSel ? const Color(0xff10b981) : const Color(0xff334155),
+                        width: 1.0,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      cat,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: isSel ? const Color(0xff34d399) : const Color(0xff94a3b8),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // News Article List or Loading / Empty state
+          Expanded(
+            child: _isLoadingNews && _liveNews.isEmpty
+                ? const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2.2),
+                    ),
+                  )
+                : filteredNews.isEmpty
+                    ? Center(
+                        child: Text(
+                          "Tidak ada artikel untuk kategori $_selectedNewsCategory.",
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff64748b)),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+                        itemCount: filteredNews.length,
+                        itemBuilder: (context, idx) {
+                          final n = filteredNews[idx];
+                          final sent = (n['sentiment'] ?? 'NETRAL').toString();
+                          final isPos = sent == 'POSITIF';
+                          final isNeg = sent == 'WASPADA';
+
+                          Color sentColor = const Color(0xff94a3b8);
+                          Color sentBg = const Color(0xff1e293b);
+                          Color sentBorder = const Color(0xff334155);
+
+                          if (isPos) {
+                            sentColor = const Color(0xff34d399);
+                            sentBg = const Color(0xff064e3b);
+                            sentBorder = const Color(0xff059669);
+                          } else if (isNeg) {
+                            sentColor = const Color(0xfff87171);
+                            sentBg = const Color(0xff451a1a);
+                            sentBorder = const Color(0xff991b1b);
+                          }
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(13),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff111827),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xff1e293b)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Top row: Source badge, category, sentiment
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xff1e293b),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(color: const Color(0xff334155)),
+                                      ),
+                                      child: Text(
+                                        n['source']?.toString() ?? 'Media',
+                                        style: const TextStyle(
+                                          fontFamily: 'Outfit',
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "• ${n['category'] ?? 'Analisa'}",
+                                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff64748b)),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: sentBg,
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(color: sentBorder, width: 0.8),
+                                      ),
+                                      child: Text(
+                                        sent,
+                                        style: TextStyle(
+                                          fontFamily: 'Outfit',
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: sentColor,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Headline title
+                                Text(
+                                  n['title']?.toString() ?? '',
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Bottom row: Relative time & action buttons
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      n['timeAgo']?.toString() ?? 'Baru saja',
+                                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff64748b)),
+                                    ),
+                                    Row(
+                                      children: [
+                                        // Baca button
+                                        GestureDetector(
+                                          onTap: () => _openNewsUrl(n['url']?.toString() ?? ''),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xff1e293b),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xff334155)),
+                                            ),
+                                            child: Row(
+                                              children: const [
+                                                Icon(Icons.open_in_new_rounded, size: 11, color: Color(0xffcbd5e1)),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  "Baca",
+                                                  style: TextStyle(
+                                                    fontFamily: 'Outfit',
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xffcbd5e1),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+
+                                        // Analisa Dampak button
+                                        GestureDetector(
+                                          onTap: () => _analyzeNewsImpactWithAi(n, stock),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xff10b981).withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
+                                            ),
+                                            child: Row(
+                                              children: const [
+                                                Icon(Icons.auto_awesome_rounded, size: 12, color: Color(0xff34d399)),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  "Analisa Dampak",
+                                                  style: TextStyle(
+                                                    fontFamily: 'Outfit',
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: Color(0xff34d399),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
