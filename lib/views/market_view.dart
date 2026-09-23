@@ -850,29 +850,11 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
           // TRADINGVIEW LIGHTWEIGHT CHARTS
           SizedBox(
-            height: 380,
-            child: candles.isNotEmpty
-                ? TradingViewChart(
-                    candles: candles,
-                    ticker: '${stock['ticker'] ?? 'BBCA'}_$_selectedTimeframe',
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xff0f172a),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xff10b981).withOpacity(0.3)),
-                    ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2),
-                          SizedBox(height: 12),
-                          Text("Memuat data chart...", style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8))),
-                        ],
-                      ),
-                    ),
-                  ),
+            height: 400,
+            child: TradingViewChart(
+              ticker: stock['ticker']?.toString() ?? 'BBCA',
+              timeframe: _selectedTimeframe,
+            ),
           ),
         ],
       ),

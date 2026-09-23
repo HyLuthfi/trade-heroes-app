@@ -36,10 +36,18 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Range')
         self.send_header('X-Content-Type-Options', 'nosniff')
         # Prevent browser & PWA caching stale JS during development
-        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
         self.send_header('Pragma', 'no-cache')
         self.send_header('Expires', '0')
         super().end_headers()
+
+    def do_HEAD(self):
+        if self.path.startswith('/api/yahoo/'):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            return
+        super().do_HEAD()
 
     def do_OPTIONS(self):
         self.send_response(200, "OK")

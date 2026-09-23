@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TradingView Chart</title>
+  <script src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0f19;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #94a3b8;
+    }
+    #chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Top Legend Bar */
+    #legend-bar {
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      right: 12px;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.3;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+    .legend-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-live {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #10b981;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      letter-spacing: 0.3px;
+    }
+    .legend-values {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #94a3b8;
+    }
+    .val-item span {
+      color: #64748b;
+      margin-right: 2px;
+    }
+    .val-item b {
+      font-weight: 600;
+    }
+    .up { color: #10b981 !important; }
+    .down { color: #ef4444 !important; }
+    .ma-val { color: #f59e0b !important; }
+
+    /* Watermark */
+    #watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 54px;
+      color: rgba(255, 255, 255, 0.025);
+      letter-spacing: 2px;
+      pointer-events: none;
+      z-index: 1;
+      white-space: nowrap;
+    }
+
+    /* Chart Container */
+    #chart-container {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Loading overlay */
+    #loader {
+      position: absolute;
+      inset: 0;
+      background: #0b0f19;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 20;
+      transition: opacity 0.25s ease;
+    }
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(16, 185, 129, 0.15);
+      border-top-color: #10b981;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loader-text {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="chart-wrapper">
+    <!-- Top Floating Legend -->
+    <div id="legend-bar">
+      <div class="legend-title">
+        <span id="leg-ticker">BBCA</span>
+        <span class="badge-live">LIVE BEI</span>
+      </div>
+      <div class="legend-values" id="leg-values">
+        <span class="val-item"><span>O</span><b id="leg-o">-</b></span>
+        <span class="val-item"><span>H</span><b id="leg-h">-</b></span>
+        <span class="val-item"><span>L</span><b id="leg-l">-</b></span>
+        <span class="val-item"><span>C</span><b id="leg-c">-</b></span>
+        <span class="val-item"><b id="leg-chg" class="up">-</b></span>
+        <span class="val-item"><span>Vol</span><b id="leg-v">-</b></span>
+        <span class="val-item"><span>EMA20</span><b id="leg-ma" class="ma-val">-</b></span>
+      </div>
+    </div>
+
+    <!-- Background Watermark -->
+    <div id="watermark">TRADE HEROES</div>
+
+    <!-- Chart Canvas -->
+    <div id="chart-container"></div>
+
+    <!-- Loading State -->
+    <div id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text" id="loader-msg">MEMUAT CHART BEI...</div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let ticker = (urlParams.get('ticker') || 'BBCA').toUpperCase();
+      let timeframe = urlParams.get('tf') || '1D';
+
+      document.getElementById('leg-ticker').innerText = ticker + ' • ' + timeframe;
+      document.getElementById('watermark').innerText = ticker + ' • BEI';
+
+      const container = document.getElementById('chart-container');
+      const loader = document.getElementById('loader');
+
+      // Create TradingView Lightweight Chart
+      const chart = LightweightCharts.createChart(container, {
+        autoSize: true,
+        layout: {
+          background: { type: 'solid', color: '#0b0f19' },
+          textColor: '#94a3b8',
+          fontFamily: "'JetBrains Mono', 'Outfit', sans-serif",
+          fontSize: 11,
+        },
+        grid: {
+          vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
+          horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
+        },
+        crosshair: {
+          mode: 0,
+          vertLine: {
+            color: '#f59e0b',
+            width: 1,
+            style: 2,
+            labelBackgroundColor: '#f59e0b',
+          },
+          horzLine: {
+            color: '#f59e0b',
+            width: 1,
+            style: 2,
+            labelBackgroundColor: '#f59e0b',
+          },
+        },
+        timeScale: {
+          borderColor: '#1e293b',
+          timeVisible: true,
+          secondsVisible: false,
+          barSpacing: 10,
+          minBarSpacing: 4,
+          fixLeftEdge: false,
+          fixRightEdge: true,
+        },
+        rightPriceScale: {
+          borderColor: '#1e293b',
+          scaleMargins: {
+            top: 0.12,
+            bottom: 0.22,
+          },
+          autoScale: true,
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        },
+      });
+
+      // 1. Candlestick Series (emerald green / coral red)
+      const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+        upColor: '#10b981',
+        downColor: '#ef4444',
+        borderUpColor: '#10b981',
+        borderDownColor: '#ef4444',
+        wickUpColor: '#10b981',
+        wickDownColor: '#ef4444',
+        priceFormat: {
+          type: 'price',
+          precision: 0,
+          minMove: 1,
+        },
+      });
+
+      // 2. EMA20 Line (Amber)
+      const emaSeries = chart.addSeries(LightweightCharts.LineSeries, {
+        color: '#f59e0b',
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 3,
+      });
+
+      // 3. Volume Histogram Series (Bottom overlay)
+      const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'vol_pane',
+      });
+
+      chart.priceScale('vol_pane').applyOptions({
+        scaleMargins: {
+          top: 0.78,
+          bottom: 0,
+        },
+      });
+
+      // Calculate EMA
+      function calculateEMA(data, period = 20) {
+        if (!data || data.length === 0) return [];
+        const k = 2 / (period + 1);
+        const emaData = [];
+        let ema = data[0].close;
+
+        for (let i = 0; i < data.length; i++) {
+          const val = data[i].close;
+          if (i === 0) {
+            ema = val;
+          } else {
+            ema = (val * k) + (ema * (1 - k));
+          }
+          emaData.push({
+            time: data[i].time,
+            value: Math.round(ema * 100) / 100,
+          });
+        }
+        return emaData;
+      }
+
+      function formatNumber(num) {
+        if (num === undefined || num === null || isNaN(num)) return '-';
+        return Number(num).toLocaleString('id-ID');
+      }
+
+      function formatVolume(val) {
+        if (!val || isNaN(val)) return '-';
+        if (val >= 1000000000) return (val / 1000000000).toFixed(1) + 'B';
+        if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+        if (val >= 1000) return (val / 1000).toFixed(1) + 'K';
+        return String(val);
+      }
+
+      let lastBarData = null;
+      let lastEmaData = null;
+
+      function updateLegend(bar, prevClose, emaVal) {
+        if (!bar) return;
+        document.getElementById('leg-o').innerText = formatNumber(bar.open);
+        document.getElementById('leg-h').innerText = formatNumber(bar.high);
+        document.getElementById('leg-l').innerText = formatNumber(bar.low);
+        document.getElementById('leg-c').innerText = formatNumber(bar.close);
+
+        const diff = bar.close - (prevClose || bar.open);
+        const diffPct = (prevClose ? (diff / prevClose) * 100 : 0).toFixed(2);
+        const sign = diff >= 0 ? '+' : '';
+        const chgEl = document.getElementById('leg-chg');
+        chgEl.innerText = `${sign}${formatNumber(diff)} (${sign}${diffPct}%)`;
+        chgEl.className = diff >= 0 ? 'up' : 'down';
+
+        document.getElementById('leg-v').innerText = formatVolume(bar.volume || bar.value);
+        document.getElementById('leg-ma').innerText = emaVal ? formatNumber(emaVal) : '-';
+      }
+
+      // Crosshair Hover Listener
+      chart.subscribeCrosshairMove(param => {
+        if (!param || !param.time || !param.seriesData) {
+          if (lastBarData) {
+            updateLegend(lastBarData, lastBarData.prevClose, lastEmaData);
+          }
+          return;
+        }
+
+        const bar = param.seriesData.get(candleSeries);
+        const ema = param.seriesData.get(emaSeries);
+        const vol = param.seriesData.get(volumeSeries);
+
+        if (bar) {
+          const item = {
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close,
+            volume: vol ? vol.value : 0,
+            prevClose: lastBarData ? lastBarData.prevClose : bar.open,
+          };
+          updateLegend(item, item.prevClose, ema ? ema.value : null);
+        }
+      });
+
+      // Data rendering pipeline
+      function applyData(candles) {
+        if (!candles || candles.length === 0) return;
+
+        // Ensure sorted by timestamp and deduplicated
+        const sorted = candles.slice().sort((a, b) => a.time - b.time);
+        const cleanCandles = [];
+        const cleanVolumes = [];
+        const seen = {};
+
+        for (let i = 0; i < sorted.length; i++) {
+          const c = sorted[i];
+          if (seen[c.time]) continue;
+          seen[c.time] = true;
+
+          cleanCandles.push({
+            time: c.time,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+          });
+
+          const isUp = c.close >= c.open;
+          cleanVolumes.push({
+            time: c.time,
+            value: c.vol || c.volume || 0,
+            color: isUp ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+          });
+        }
+
+        if (cleanCandles.length === 0) return;
+
+        candleSeries.setData(cleanCandles);
+        volumeSeries.setData(cleanVolumes);
+
+        const emaVals = calculateEMA(cleanCandles, 20);
+        emaSeries.setData(emaVals);
+
+        const lastBar = cleanCandles[cleanCandles.length - 1];
+        const prevC = cleanCandles.length > 1 ? cleanCandles[cleanCandles.length - 2].close : lastBar.open;
+        lastBar.prevClose = prevC;
+        lastBar.volume = cleanVolumes[cleanVolumes.length - 1].value;
+        lastBarData = lastBar;
+        lastEmaData = emaVals.length > 0 ? emaVals[emaVals.length - 1].value : null;
+
+        updateLegend(lastBar, prevC, lastEmaData);
+        chart.timeScale().fitContent();
+
+        loader.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; }, 260);
+      }
+
+      // Timeframe to Yahoo Finance interval mapping
+      const tfMap = {
+        '1D': { interval: '5m', range: '1d' },
+        '1W': { interval: '15m', range: '5d' },
+        '1M': { interval: '1d', range: '1mo' },
+        '3M': { interval: '1d', range: '3mo' },
+        '1Y': { interval: '1wk', range: '1y' },
+      };
+
+      // Fetch from local Yahoo Finance proxy
+      async function loadRealData(sym, tf) {
+        loader.style.display = 'flex';
+        loader.style.opacity = '1';
+        document.getElementById('loader-msg').innerText = `MEMUAT DATA ${sym} (${tf})...`;
+
+        const conf = tfMap[tf] || tfMap['1D'];
+        const symbol = sym.includes('.') ? sym : `${sym}.JK`;
+        const url = `/api/yahoo/chart/${symbol}?interval=${conf.interval}&range=${conf.range}`;
+
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const json = await resp.json();
+          const res = json?.chart?.result?.[0];
+          if (!res) throw new Error('Data chart tidak ditemukan');
+
+          const ts = res.timestamp || [];
+          const quote = res.indicators?.quote?.[0] || {};
+          const opens = quote.open || [];
+          const highs = quote.high || [];
+          const lows = quote.low || [];
+          const closes = quote.close || [];
+          const vols = quote.volume || [];
+
+          const candles = [];
+          for (let i = 0; i < ts.length; i++) {
+            if (closes[i] === null || closes[i] === undefined) continue;
+            candles.push({
+              time: ts[i],
+              open: Math.round((opens[i] || closes[i]) * 10) / 10,
+              high: Math.round((highs[i] || closes[i]) * 10) / 10,
+              low: Math.round((lows[i] || closes[i]) * 10) / 10,
+              close: Math.round(closes[i] * 10) / 10,
+              vol: vols[i] || 0,
+            });
+          }
+
+          if (candles.length > 0) {
+            applyData(candles);
+            return;
+          }
+          throw new Error('Data candle kosong');
+        } catch (e) {
+          console.warn('Real data fetch failed, using fallback:', e);
+          document.getElementById('loader-msg').innerText = `MODE SIMULASI (PASAR TUTUP)`;
+          generateFallback(sym, tf);
+        }
+      }
+
+      // Smooth fallback if Yahoo Finance is offline / market closed
+      function generateFallback(sym, tf) {
+        const basePrices = {
+          'BBCA': 10250, 'BBRI': 5450, 'BMRI': 6850, 'TLKM': 3820,
+          'ASII': 5175, 'GOTO': 68, 'AMMN': 11450, 'ICBP': 11200, 'UNVR': 2450
+        };
+        const baseP = basePrices[sym] || 5000;
+        const count = tf === '1D' ? 65 : (tf === '1W' ? 45 : 60);
+        const intervalSec = tf === '1D' ? 300 : (tf === '1W' ? 1800 : 86400);
+        const now = Math.floor(Date.now() / 1000);
+
+        let currP = baseP * 0.96;
+        const candles = [];
+
+        for (let i = count; i >= 0; i--) {
+          const t = now - (i * intervalSec);
+          const chg = (Math.random() - 0.48) * (baseP * 0.012);
+          const o = currP;
+          const c = o + chg;
+          const h = Math.max(o, c) + (Math.random() * baseP * 0.006);
+          const l = Math.min(o, c) - (Math.random() * baseP * 0.006);
+          const v = Math.floor(Math.random() * 80000) + 15000;
+
+          candles.push({
+            time: t,
+            open: Math.round(o),
+            high: Math.round(h),
+            low: Math.round(l),
+            close: Math.round(c),
+            vol: v,
+          });
+          currP = c;
+        }
+        applyData(candles);
+      }
+
+      // Initial load
+      loadRealData(ticker, timeframe);
+
+      // Listen for postMessage from Flutter app
+      window.addEventListener('message', function(event) {
+        try {
+          const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (!msg || !msg.action) return;
+
+          if (msg.action === 'loadStock') {
+            ticker = (msg.ticker || ticker).toUpperCase();
+            timeframe = msg.timeframe || timeframe;
+            document.getElementById('leg-ticker').innerText = ticker + ' • ' + timeframe;
+            document.getElementById('watermark').innerText = ticker + ' • BEI';
+
+            if (msg.candles && msg.candles.length > 0) {
+              applyData(msg.candles);
+            } else {
+              loadRealData(ticker, timeframe);
+            }
+          } else if (msg.action === 'setData') {
+            if (msg.candles) applyData(msg.candles);
+          }
+        } catch (e) {
+          console.error('postMessage error:', e);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
