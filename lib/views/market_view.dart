@@ -238,15 +238,11 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 children: [
                   _buildTradingViewUltraChartTab(activeStock, mainColor),
                   _buildOrderBookTab(activeStock),
-                  _buildPortfolioTab(appState),
-                  _buildFinancialsTab(activeStock),
                   _buildNewsTab(activeStock),
                 ],
               ),
             ),
 
-            // 5. Sticky Bottom Trading Bar
-            _buildBottomTradingBar(activeStock, appState),
           ],
         ),
       ),
@@ -455,8 +451,6 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     final tabs = [
       {'label': 'Grafik', 'icon': Icons.candlestick_chart_rounded},
       {'label': 'Order Book', 'icon': Icons.format_list_numbered_rounded},
-      {'label': 'Portofolio', 'icon': Icons.pie_chart_rounded},
-      {'label': 'Finansial', 'icon': Icons.account_balance_wallet_rounded},
       {'label': 'Berita', 'icon': Icons.newspaper_rounded},
     ];
 
