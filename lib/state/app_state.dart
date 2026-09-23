@@ -103,34 +103,49 @@ class AppState extends ChangeNotifier {
 
   void _listenAuthChanges() {
     try {
-      _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen((data) async {
-        final session = data.session;
-        final event = data.event;
-        if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
-          if (session?.user != null) {
-            _isLoggedIn = true;
-            _userId = session!.user.id;
-            _userEmail = session.user.email ?? _userEmail;
-            final metaName = session.user.userMetadata?['name'] as String?;
-            if (metaName != null && metaName.isNotEmpty) {
-              _userName = metaName;
+      _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen(
+        (data) async {
+          final session = data.session;
+          final event = data.event;
+          if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+            if (session?.user != null) {
+              _isLoggedIn = true;
+              _userId = session!.user.id;
+              _userEmail = session.user.email ?? _userEmail;
+              final metaName = session.user.userMetadata?['name'] as String?;
+              if (metaName != null && metaName.isNotEmpty) {
+                _userName = metaName;
+              }
+              try {
+                final cloudProfile = await SupabaseService.fetchProfile(_userId!);
+                if (cloudProfile != null) {
+                  _applyProfileData(cloudProfile);
+                }
+              } catch (e) {
+                debugPrint("Profile fetch error in auth change: $e");
+              }
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                await _saveToLocalCache(prefs);
+              } catch (e) {
+                debugPrint("Cache save error in auth change: $e");
+              }
+              notifyListeners();
             }
-            final cloudProfile = await SupabaseService.fetchProfile(_userId!);
-            if (cloudProfile != null) {
-              _applyProfileData(cloudProfile);
-            }
-            final prefs = await SharedPreferences.getInstance();
-            await _saveToLocalCache(prefs);
+          } else if (event == AuthChangeEvent.signedOut) {
+            _isLoggedIn = false;
+            _userId = null;
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('is_logged_in', false);
+            } catch (_) {}
             notifyListeners();
           }
-        } else if (event == AuthChangeEvent.signedOut) {
-          _isLoggedIn = false;
-          _userId = null;
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('is_logged_in', false);
-          notifyListeners();
-        }
-      });
+        },
+        onError: (err, stack) {
+          debugPrint("Supabase onAuthStateChange stream error caught safely: $err");
+        },
+      );
     } catch (e) {
       debugPrint("Auth subscription error: $e");
     }
@@ -247,20 +262,20 @@ class AppState extends ChangeNotifier {
     }
 
     if (data['completed_levels'] != null && data['completed_levels'] is List) {
-      _completedLevels = List<int>.from(data['completed_levels']);
+      _completedLevels = (data['completed_levels'] as List).map((x) => (x as num).toInt()).toList();
       if (_completedLevels.isEmpty) _completedLevels = [1, 2, 3];
     }
     if (data['read_modules'] != null && data['read_modules'] is List) {
-      _readModules = List<int>.from(data['read_modules']);
+      _readModules = (data['read_modules'] as List).map((x) => (x as num).toInt()).toList();
     }
     if (data['unlocked_badges'] != null && data['unlocked_badges'] is List) {
-      _unlockedBadges = List<String>.from(data['unlocked_badges']);
+      _unlockedBadges = (data['unlocked_badges'] as List).map((x) => x.toString()).toList();
     }
     if (data['claimed_chests'] != null && data['claimed_chests'] is List) {
-      _claimedChests = List<int>.from(data['claimed_chests']);
+      _claimedChests = (data['claimed_chests'] as List).map((x) => (x as num).toInt()).toList();
     }
     if (data['claimed_daily_days'] != null && data['claimed_daily_days'] is List) {
-      _claimedDailyDays = List<int>.from(data['claimed_daily_days']);
+      _claimedDailyDays = (data['claimed_daily_days'] as List).map((x) => (x as num).toInt()).toList();
     }
     if (data['favorites'] != null) {
       if (data['favorites'] is List) {
