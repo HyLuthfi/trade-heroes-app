@@ -170,7 +170,7 @@ class _HomeViewState extends State<HomeView> {
             child: Row(
               children: [
                 _buildNavItem(0, Icons.map_outlined, Icons.map, "Kuis"),
-                _buildNavItem(1, Icons.show_chart_outlined, Icons.show_chart_rounded, "Market"),
+                _buildNavItem(1, Icons.candlestick_chart_outlined, Icons.candlestick_chart_rounded, "Market"),
                 _buildNavItem(2, Icons.menu_book_outlined, Icons.menu_book, "Materi"),
                 _buildNavItem(3, Icons.person_outline, Icons.person, "Saya"),
               ],
