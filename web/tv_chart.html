@@ -216,15 +216,16 @@
           borderColor: '#1e293b',
           timeVisible: true,
           secondsVisible: false,
-          barSpacing: 10,
-          minBarSpacing: 4,
+          barSpacing: 6,
+          minBarSpacing: 1.5,
+          rightOffset: 10,
           fixLeftEdge: false,
-          fixRightEdge: true,
+          fixRightEdge: false,
         },
         rightPriceScale: {
           borderColor: '#1e293b',
           scaleMargins: {
-            top: 0.12,
+            top: 0.10,
             bottom: 0.22,
           },
           autoScale: true,
@@ -242,12 +243,11 @@
         },
       });
 
-      // 1. Candlestick Series (emerald green / coral red)
+      // 1. Candlestick Series (emerald green / coral red, borderless modern look)
       const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
         upColor: '#10b981',
         downColor: '#ef4444',
-        borderUpColor: '#10b981',
-        borderDownColor: '#ef4444',
+        borderVisible: false,
         wickUpColor: '#10b981',
         wickDownColor: '#ef4444',
         priceFormat: {
@@ -260,7 +260,7 @@
       // 2. EMA20 Line (Amber)
       const emaSeries = chart.addSeries(LightweightCharts.LineSeries, {
         color: '#f59e0b',
-        lineWidth: 2,
+        lineWidth: 1.8,
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: true,
@@ -415,13 +415,13 @@
         setTimeout(() => { loader.style.display = 'none'; }, 260);
       }
 
-      // Timeframe to Yahoo Finance interval mapping
+      // Timeframe to Yahoo Finance interval mapping (tuned for rich, dense, high-frequency candles)
       const tfMap = {
-        '1D': { interval: '5m', range: '1d' },
-        '1W': { interval: '15m', range: '5d' },
-        '1M': { interval: '1d', range: '1mo' },
-        '3M': { interval: '1d', range: '3mo' },
-        '1Y': { interval: '1wk', range: '1y' },
+        '1D': { interval: '2m', range: '1d' },    // ~90-180 intraday candles (dense & sharp)
+        '1W': { interval: '15m', range: '5d' },   // ~129 candles across 5 trading days
+        '1M': { interval: '30m', range: '1mo' },  // ~337 candles across the month (super detailed!)
+        '3M': { interval: '1d', range: '6mo' },   // ~130 daily candles (clean 6-month view)
+        '1Y': { interval: '1d', range: '1y' },    // ~249 daily candles (full 1-year history)
       };
 
       // Fetch from local Yahoo Finance proxy
@@ -481,8 +481,8 @@
           'ASII': 5175, 'GOTO': 68, 'AMMN': 11450, 'ICBP': 11200, 'UNVR': 2450
         };
         const baseP = basePrices[sym] || 5000;
-        const count = tf === '1D' ? 65 : (tf === '1W' ? 45 : 60);
-        const intervalSec = tf === '1D' ? 300 : (tf === '1W' ? 1800 : 86400);
+        const count = tf === '1D' ? 120 : (tf === '1W' ? 130 : 150);
+        const intervalSec = tf === '1D' ? 120 : (tf === '1W' ? 900 : 1800);
         const now = Math.floor(Date.now() / 1000);
 
         let currP = baseP * 0.96;
