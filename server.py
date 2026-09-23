@@ -58,6 +58,11 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             pass
 
     def do_GET(self):
+        # --- Yahoo Finance API Proxy (avoids CORS for Flutter Web) ---
+        if self.path.startswith('/api/yahoo/'):
+            self._proxy_yahoo()
+            return
+
         # Normalize requested path
         clean_path = self.path.split('?')[0].split('#')[0]
         local_fs_path = os.path.normpath(os.path.join(WEB_DIR, clean_path.lstrip('/')))
@@ -75,6 +80,31 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
                 self.path = '/index.html'
 
         return super().do_GET()
+
+    def _proxy_yahoo(self):
+        """Proxy Yahoo Finance API requests to avoid CORS"""
+        import urllib.request, urllib.error
+        # /api/yahoo/chart/BBCA.JK?interval=5m&range=1d
+        rest = self.path[len('/api/yahoo/'):]
+        yahoo_url = f'https://query1.finance.yahoo.com/v8/finance/{rest}'
+        try:
+            req = urllib.request.Request(yahoo_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = resp.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(body)
+        except urllib.error.HTTPError as e:
+            self.send_response(e.code)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"error":"upstream error"}')
+        except Exception:
+            self.send_response(502)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"error":"proxy failed"}')
 
 def run(port=20170):
     if not os.path.isdir(WEB_DIR):

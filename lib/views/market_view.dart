@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
+import '../services/market_data_service.dart';
 import '../state/app_state.dart';
 
 class MarketView extends StatefulWidget {
@@ -57,12 +58,20 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   ];
 
   Timer? _liveTickTimer;
+  Timer? _realDataRefreshTimer;
+  bool _isLoadingRealData = false;
   final Random _rnd = Random();
 
   @override
   void initState() {
     super.initState();
     _initStockDatabase();
+    _fetchRealMarketData();
+
+    // Refresh data real-time setiap 30 detik
+    _realDataRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _fetchRealMarketData(silent: true);
+    });
 
     _liveTickTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted) {
@@ -84,6 +93,101 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         });
       }
     });
+  }
+
+  Future<void> _fetchRealMarketData({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent) {
+      setState(() => _isLoadingRealData = true);
+    }
+
+    try {
+      final activeStock = _filteredStocks.isNotEmpty && _selectedStockIdx < _filteredStocks.length
+          ? _filteredStocks[_selectedStockIdx]
+          : (_allStocks.isNotEmpty ? _allStocks[0] : null);
+
+      if (activeStock != null) {
+        final tfConfig = MarketDataService.timeframeMap[_selectedTimeframe] ?? {'interval': '5m', 'range': '1d'};
+        final chartData = await MarketDataService.fetchChart(
+          ticker: activeStock['ticker'],
+          interval: tfConfig['interval']!,
+          range: tfConfig['range']!,
+        );
+
+        if (chartData != null && mounted) {
+          setState(() {
+            final candles = List<Map<String, dynamic>>.from(chartData['candles']);
+            if (candles.isNotEmpty) {
+              // Update timeframe map
+              final Map<String, dynamic> tfMap = Map<String, dynamic>.from(activeStock['timeframesMap'] ?? {});
+              tfMap[_selectedTimeframe] = candles;
+              activeStock['timeframesMap'] = tfMap;
+              activeStock['candles'] = candles;
+
+              // Update price from latest candle / meta
+              final realPrice = chartData['price'] > 0 ? chartData['price'] : candles.last['c'];
+              activeStock['price'] = realPrice;
+
+              final prevClose = chartData['prevClose'] > 0 ? chartData['prevClose'] : candles.first['o'];
+              final change = realPrice - prevClose;
+              final changePct = prevClose > 0 ? (change / prevClose) * 100 : 0.0;
+
+              activeStock['change'] = change;
+              activeStock['changePct'] = double.parse(changePct.toStringAsFixed(2));
+
+              // Auto-generate realistic order book around real price
+              _updateOrderBookAroundPrice(realPrice.toDouble());
+            }
+          });
+        }
+      }
+
+      // Update background watchlist prices for top stocks
+      final topTickers = _allStocks.take(8).map((s) => s['ticker'].toString()).toList();
+      for (final ticker in topTickers) {
+        if (!mounted) break;
+        if (activeStock != null && ticker == activeStock['ticker']) continue; // already fetched
+        final data = await MarketDataService.fetchChart(ticker: ticker, interval: '1d', range: '2d');
+        if (data != null && mounted) {
+          final target = _allStocks.firstWhere((s) => s['ticker'] == ticker, orElse: () => {});
+          if (target.isNotEmpty) {
+            setState(() {
+              final realP = data['price'] > 0 ? data['price'] : target['price'];
+              target['price'] = realP;
+              final prevC = data['prevClose'] > 0 ? data['prevClose'] : realP;
+              final chg = realP - prevC;
+              target['change'] = chg;
+              target['changePct'] = prevC > 0 ? double.parse(((chg / prevC) * 100).toStringAsFixed(2)) : 0.0;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching real market data: $e");
+    } finally {
+      if (mounted && !silent) {
+        setState(() => _isLoadingRealData = false);
+      }
+    }
+  }
+
+  void _updateOrderBookAroundPrice(double price) {
+    int step = price > 5000 ? 25 : (price > 2000 ? 10 : (price > 500 ? 5 : 1));
+    int baseInt = (price / step).round() * step;
+
+    _bids.clear();
+    for (int i = 0; i < 5; i++) {
+      int p = baseInt - (i * step);
+      int vol = (_rnd.nextInt(150) + 50) * 100;
+      _bids.add({'price': p, 'vol': vol, 'pct': (5 - i) / 5.0});
+    }
+
+    _offers.clear();
+    for (int i = 0; i < 5; i++) {
+      int p = baseInt + ((i + 1) * step);
+      int vol = (_rnd.nextInt(150) + 50) * 100;
+      _offers.add({'price': p, 'vol': vol, 'pct': (5 - i) / 5.0});
+    }
   }
 
   void _initStockDatabase() {
@@ -195,6 +299,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   void dispose() {
     _searchController.dispose();
     _liveTickTimer?.cancel();
+    _realDataRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -394,6 +499,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 _touchOffset = null;
                 _hoveredCandleIdx = null;
               });
+              _fetchRealMarketData();
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
@@ -554,6 +660,38 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           color: Color(0xff64748b),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xff064e3b),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: Color(0xff10b981),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _isLoadingRealData ? "REFRESHING..." : "LIVE BEI",
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff10b981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                   Text(
@@ -630,6 +768,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       setState(() {
                         _selectedTimeframe = tf;
                       });
+                      _fetchRealMarketData();
                     },
                     child: Container(
                       margin: const EdgeInsets.only(right: 6),
