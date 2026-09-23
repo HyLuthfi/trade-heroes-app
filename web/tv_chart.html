@@ -41,47 +41,28 @@
 
   <script>
     (function() {
+      // Clear any cached TradingView resolutions from localStorage to guarantee 1D on load
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('tradingview') || k.startsWith('tv_'))) {
+            localStorage.removeItem(k);
+          }
+        }
+      } catch (e) {}
+
       const urlParams = new URLSearchParams(window.location.search);
       let rawTicker = (urlParams.get('ticker') || 'BBCA').toUpperCase().split('_')[0].replace('.JK', '');
-      let tf = (urlParams.get('tf') || '1D').toUpperCase();
-      let paramInv = urlParams.get('interval');
 
-      // 1D (Daily) and higher intervals are 100% free on BEI/IDX in TradingView.
-      // Intraday (1m, 5m, 15m) requires a paid real-time subscription.
-      // Map timeframe buttons to free, high-quality resolutions:
-      function getChartConfig(timeframe, explicitInterval) {
-        if (explicitInterval && explicitInterval !== 'D') {
-          return { interval: explicitInterval, range: '' };
-        }
-
-        const t = (timeframe || '1D').toUpperCase();
-        if (t === '1W') {
-          // 1 Minggu: lilin mingguan (Weekly)
-          return { interval: 'W', range: '12M' };
-        } else if (t === '1M') {
-          // 1 Bulan: lilin bulanan (Monthly)
-          return { interval: 'M', range: '60M' };
-        } else if (t === '3M') {
-          // 3 Bulan: lilin harian dengan rentang 3 bulan
-          return { interval: 'D', range: '3M' };
-        } else if (t === '1Y') {
-          // 1 Tahun: lilin mingguan dengan rentang 1 tahun
-          return { interval: 'W', range: '12M' };
-        } else {
-          // 1D (Harian): lilin harian (Daily) 100% GRATIS
-          return { interval: 'D', range: '3M' };
-        }
-      }
-
-      function renderWidget(ticker, cfg) {
+      function renderWidget(ticker) {
         const container = document.getElementById('tv_chart_target');
         container.innerHTML = '';
 
         if (typeof TradingView !== 'undefined' && TradingView.widget) {
-          const opts = {
+          new TradingView.widget({
             "autosize": true,
             "symbol": "IDX:" + ticker,
-            "interval": cfg.interval,
+            "interval": "D",
             "timezone": "Asia/Jakarta",
             "theme": "dark",
             "style": "1",
@@ -94,21 +75,21 @@
             "details": false,
             "hotlist": false,
             "calendar": true,
+            "doNotStoreSettings": true,
+            "disabled_features": [
+              "use_local_storage_for_settings"
+            ],
             "studies": [
               "STD;EMA"
             ],
             "container_id": "tv_chart_target"
-          };
-          if (cfg.range) {
-            opts.range = cfg.range;
-          }
-          new TradingView.widget(opts);
+          });
         } else {
           // Direct fallback iframe if tv.js is delayed
           const params = new URLSearchParams({
             'frameElementId': 'tradingview_widget',
             'symbol': 'IDX:' + ticker,
-            'interval': cfg.interval,
+            'interval': 'D',
             'symboledit': '1',
             'saveimage': '0',
             'toolbarbg': '0b0f19',
@@ -122,9 +103,6 @@
             'calendar': '1',
             'locale': 'id'
           });
-          if (cfg.range) {
-            params.set('range', cfg.range);
-          }
           const ifr = document.createElement('iframe');
           ifr.src = 'https://s.tradingview.com/widgetembed/?' + params.toString();
           ifr.style.width = '100%';
@@ -135,8 +113,7 @@
         }
       }
 
-      const initialCfg = getChartConfig(tf, paramInv);
-      renderWidget(rawTicker, initialCfg);
+      renderWidget(rawTicker);
 
       // Listen for postMessage from Flutter app
       window.addEventListener('message', function(event) {
@@ -144,14 +121,10 @@
           const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (!msg || !msg.action) return;
 
-          if (msg.action === 'loadStock' || msg.action === 'changeTimeframe') {
+          if (msg.action === 'loadStock') {
             const nextTicker = (msg.ticker || rawTicker).toUpperCase().split('_')[0].replace('.JK', '');
-            const nextTf = (msg.timeframe || tf).toUpperCase();
-            const nextCfg = getChartConfig(nextTf, msg.interval);
-
             rawTicker = nextTicker;
-            tf = nextTf;
-            renderWidget(nextTicker, nextCfg);
+            renderWidget(nextTicker);
           }
         } catch (e) {
           console.error('Error handling message:', e);

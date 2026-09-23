@@ -27,14 +27,14 @@ class _TradingViewChartState extends State<TradingViewChart> {
   void initState() {
     super.initState();
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
-    _viewId = 'tv-iframe-$cleanTicker-${widget.timeframe}-${DateTime.now().microsecondsSinceEpoch}';
+    _viewId = 'tv-iframe-$cleanTicker-${DateTime.now().microsecondsSinceEpoch}';
     _registerView();
   }
 
   void _registerView() {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     _iframe = html.IFrameElement()
-      ..src = '/tv_chart.html?v=tv_sync_v2&ticker=$cleanTicker&tf=${widget.timeframe}'
+      ..src = '/tv_chart.html?v=tv_strict_1d_v3&ticker=$cleanTicker'
       ..style.border = 'none'
       ..style.width = '100%'
       ..style.height = '100%'
@@ -53,8 +53,8 @@ class _TradingViewChartState extends State<TradingViewChart> {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     final oldCleanTicker = oldWidget.ticker.split('_').first.toUpperCase();
 
-    if (cleanTicker != oldCleanTicker || widget.timeframe != oldWidget.timeframe) {
-      _iframe?.src = '/tv_chart.html?v=tv_sync_v2&ticker=$cleanTicker&tf=${widget.timeframe}';
+    if (cleanTicker != oldCleanTicker) {
+      _iframe?.src = '/tv_chart.html?v=tv_strict_1d_v3&ticker=$cleanTicker';
     }
   }
 
