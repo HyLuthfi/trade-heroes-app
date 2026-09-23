@@ -44,6 +44,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   String _selectedNewsCategory = "Semua";
   String? _loadedNewsTicker;
 
+  // Dynamic Search State
+  bool _isSearchingNewStock = false;
+
   Timer? _realDataRefreshTimer;
   bool _isLoadingRealData = false;
   final Random _rnd = Random();
@@ -150,6 +153,16 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       {'ticker': 'AMMN', 'name': 'Amman Mineral Internasional Tbk', 'sector': 'Tambang', 'basePrice': 11450.0, 'volStr': '650.4K', 'valStr': 'Rp 742.1 M', 'mcap': 'Rp 830,2 T', 'per': 38.5, 'pbv': 8.12, 'foreign': '+Rp 210,5 M'},
       {'ticker': 'ICBP', 'name': 'Indofood CBP Sukses Makmur Tbk', 'sector': 'Konsumer', 'basePrice': 11200.0, 'volStr': '210.5K', 'valStr': 'Rp 235.8 M', 'mcap': 'Rp 130,6 T', 'per': 16.4, 'pbv': 3.12, 'foreign': '+Rp 45,2 M'},
       {'ticker': 'UNVR', 'name': 'Unilever Indonesia Tbk', 'sector': 'Konsumer', 'basePrice': 2450.0, 'volStr': '540.1K', 'valStr': 'Rp 132.4 M', 'mcap': 'Rp 93,5 T', 'per': 22.1, 'pbv': 14.8, 'foreign': '-Rp 12,8 M'},
+      {'ticker': 'BMRI', 'name': 'Bank Mandiri Tbk', 'sector': 'Perbankan', 'basePrice': 5925.0, 'volStr': '1.02M', 'valStr': 'Rp 604.1 M', 'mcap': 'Rp 552,8 T', 'per': 10.2, 'pbv': 2.18, 'foreign': '+Rp 65,3 M'},
+      {'ticker': 'MDKA', 'name': 'Merdeka Copper Gold Tbk', 'sector': 'Tambang', 'basePrice': 2380.0, 'volStr': '420.3K', 'valStr': 'Rp 100.1 M', 'mcap': 'Rp 56,4 T', 'per': 28.5, 'pbv': 3.45, 'foreign': '+Rp 22,1 M'},
+      {'ticker': 'ANTM', 'name': 'Aneka Tambang Tbk', 'sector': 'Tambang', 'basePrice': 1485.0, 'volStr': '1.8M', 'valStr': 'Rp 267.3 M', 'mcap': 'Rp 35,6 T', 'per': 8.9, 'pbv': 1.62, 'foreign': '-Rp 8,4 M'},
+      {'ticker': 'ADRO', 'name': 'Adaro Energy Indonesia Tbk', 'sector': 'Tambang', 'basePrice': 2550.0, 'volStr': '890.6K', 'valStr': 'Rp 227.0 M', 'mcap': 'Rp 79,8 T', 'per': 5.2, 'pbv': 1.15, 'foreign': '+Rp 38,7 M'},
+      {'ticker': 'BREN', 'name': 'Barito Renewables Energy Tbk', 'sector': 'Energi', 'basePrice': 6850.0, 'volStr': '320.1K', 'valStr': 'Rp 219.3 M', 'mcap': 'Rp 458,2 T', 'per': 95.0, 'pbv': 18.5, 'foreign': '+Rp 52,4 M'},
+      {'ticker': 'INDF', 'name': 'Indofood Sukses Makmur Tbk', 'sector': 'Konsumer', 'basePrice': 6575.0, 'volStr': '180.2K', 'valStr': 'Rp 118.5 M', 'mcap': 'Rp 57,8 T', 'per': 7.5, 'pbv': 1.08, 'foreign': '+Rp 10,2 M'},
+      {'ticker': 'CPIN', 'name': 'Charoen Pokphand Indonesia Tbk', 'sector': 'Konsumer', 'basePrice': 4850.0, 'volStr': '245.8K', 'valStr': 'Rp 119.3 M', 'mcap': 'Rp 79,4 T', 'per': 18.2, 'pbv': 4.35, 'foreign': '-Rp 5,6 M'},
+      {'ticker': 'ACES', 'name': 'Ace Hardware Indonesia Tbk', 'sector': 'Ritel', 'basePrice': 720.0, 'volStr': '1.5M', 'valStr': 'Rp 108.0 M', 'mcap': 'Rp 12,3 T', 'per': 19.8, 'pbv': 3.05, 'foreign': '-Rp 2,1 M'},
+      {'ticker': 'PANI', 'name': 'Pantai Indah Kapuk Dua Tbk', 'sector': 'Properti', 'basePrice': 17800.0, 'volStr': '120.5K', 'valStr': 'Rp 214.5 M', 'mcap': 'Rp 327,5 T', 'per': 120.0, 'pbv': 25.8, 'foreign': '+Rp 95,3 M'},
+      {'ticker': 'EMTK', 'name': 'Elang Mahkota Teknologi Tbk', 'sector': 'Teknologi', 'basePrice': 430.0, 'volStr': '3.2M', 'valStr': 'Rp 137.6 M', 'mcap': 'Rp 25,3 T', 'per': -5.2, 'pbv': 0.55, 'foreign': '+Rp 4,8 M'},
     ];
 
     for (var item in rawData) {
@@ -263,6 +276,128 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     }).toList();
   }
 
+  bool get _isSearchQueryAValidTicker {
+    final q = _searchQuery.trim().toUpperCase();
+    return q.length >= 4 && q.length <= 5 && RegExp(r'^[A-Z]{4,5}$').hasMatch(q);
+  }
+
+  bool get _isSearchedTickerAlreadyInList {
+    final q = _searchQuery.trim().toUpperCase();
+    return _allStocks.any((s) => s['ticker'].toString().toUpperCase() == q);
+  }
+
+  Future<void> _addDynamicStock(String ticker) async {
+    final cleanTicker = ticker.trim().toUpperCase();
+    if (_allStocks.any((s) => s['ticker'] == cleanTicker)) {
+      // Already exists, just select it
+      final idx = _allStocks.indexWhere((s) => s['ticker'] == cleanTicker);
+      if (idx >= 0) {
+        setState(() {
+          _selectedStockIdx = idx;
+          _searchController.clear();
+          _searchQuery = "";
+          _selectedSector = "Semua";
+        });
+      }
+      return;
+    }
+
+    setState(() => _isSearchingNewStock = true);
+
+    try {
+      final data = await MarketDataService.fetchChart(
+        ticker: cleanTicker,
+        interval: '1d',
+        range: '5d',
+      );
+
+      if (data != null && mounted) {
+        final realPrice = data['price'] > 0 ? (data['price'] as num).toDouble() : 0.0;
+        if (realPrice <= 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Ticker $cleanTicker tidak ditemukan di BEI."),
+                backgroundColor: const Color(0xffef4444),
+              ),
+            );
+          }
+          return;
+        }
+
+        final prevClose = data['prevClose'] > 0 ? (data['prevClose'] as num).toDouble() : realPrice;
+        final change = realPrice - prevClose;
+        final changePct = prevClose > 0 ? (change / prevClose) * 100 : 0.0;
+        final candles = List<Map<String, dynamic>>.from(data['candles'] ?? []);
+
+        final newStock = {
+          'ticker': cleanTicker,
+          'name': '$cleanTicker • IDX',
+          'sector': 'Lainnya',
+          'price': realPrice,
+          'change': change,
+          'changePct': double.parse(changePct.toStringAsFixed(2)),
+          'open': realPrice,
+          'high': realPrice,
+          'low': realPrice,
+          'prevClose': prevClose,
+          'volume': '-',
+          'timeframesMap': {'1D': candles},
+          'value': '-',
+          'marketCap': '-',
+          'turnover': '-',
+          'mcap': '-',
+          'per': 0.0,
+          'pbv': 0.0,
+          'foreignNet': '-',
+          'candles': candles,
+          'isDynamic': true,
+        };
+
+        setState(() {
+          _allStocks.insert(0, newStock);
+          _selectedStockIdx = 0;
+          _searchController.clear();
+          _searchQuery = "";
+          _selectedSector = "Semua";
+        });
+
+        AudioService.playConfirm();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("$cleanTicker berhasil ditambahkan ke watchlist!"),
+              backgroundColor: const Color(0xff059669),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Gagal mengambil data $cleanTicker dari BEI."),
+              backgroundColor: const Color(0xffef4444),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error adding dynamic stock $cleanTicker: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal menambahkan $cleanTicker: $e"),
+            backgroundColor: const Color(0xffef4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSearchingNewStock = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     try {
@@ -357,7 +492,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 2. Search Bar & Filter Chips
   Widget _buildSearchBarAndFilters() {
-    final sectors = ["Semua", "Perbankan", "Telko", "Teknologi", "Otomotif", "Tambang", "Konsumer"];
+    final sectors = ["Semua", "Perbankan", "Telko", "Teknologi", "Otomotif", "Tambang", "Konsumer", "Energi", "Properti", "Ritel", "Lainnya"];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
@@ -388,6 +523,12 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         _selectedStockIdx = 0;
                       });
                     },
+                    onSubmitted: (val) {
+                      final q = val.trim().toUpperCase();
+                      if (q.length >= 4 && RegExp(r'^[A-Z]{4,5}$').hasMatch(q)) {
+                        _addDynamicStock(q);
+                      }
+                    },
                     style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 13,
@@ -415,6 +556,50 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               ],
             ),
           ),
+
+          // Dynamic "Tambahkan ke Watchlist" button when ticker not found
+          if (_searchQuery.isNotEmpty && _isSearchQueryAValidTicker && !_isSearchedTickerAlreadyInList && _filteredStocks.isEmpty)
+            GestureDetector(
+              onTap: _isSearchingNewStock ? null : () => _addDynamicStock(_searchQuery.trim().toUpperCase()),
+              child: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xff10b981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isSearchingNewStock) ...[
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Mencari di Bursa Efek Indonesia...",
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff34d399)),
+                      ),
+                    ] else ...[
+                      const Icon(Icons.add_circle_outline_rounded, color: Color(0xff34d399), size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Tambahkan ${_searchQuery.trim().toUpperCase()} ke Watchlist",
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xff34d399),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
 
           SizedBox(
