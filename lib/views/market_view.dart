@@ -125,18 +125,25 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               activeStock['candles'] = candles;
 
               // Update price from latest candle / meta
-              final realPrice = chartData['price'] > 0 ? chartData['price'] : candles.last['c'];
+              final realPrice = chartData['price'] > 0 ? (chartData['price'] as num).toDouble() : (candles.last['c'] as num).toDouble();
               activeStock['price'] = realPrice;
 
-              final prevClose = chartData['prevClose'] > 0 ? chartData['prevClose'] : candles.first['o'];
+              final prevClose = chartData['prevClose'] > 0 ? (chartData['prevClose'] as num).toDouble() : (candles.first['o'] as num).toDouble();
               final change = realPrice - prevClose;
               final changePct = prevClose > 0 ? (change / prevClose) * 100 : 0.0;
 
               activeStock['change'] = change;
               activeStock['changePct'] = double.parse(changePct.toStringAsFixed(2));
 
+              final double highVal = candles.map((c) => (c['h'] as num).toDouble()).reduce(max);
+              final double lowVal = candles.map((c) => (c['l'] as num).toDouble()).reduce(min);
+              final double openVal = (candles.first['o'] as num).toDouble();
+              activeStock['open'] = openVal;
+              activeStock['high'] = highVal;
+              activeStock['low'] = lowVal;
+
               // Auto-generate realistic order book around real price
-              _updateOrderBookAroundPrice(realPrice.toDouble());
+              _updateOrderBookAroundPrice(realPrice);
             }
           });
         }
@@ -152,9 +159,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           final target = _allStocks.firstWhere((s) => s['ticker'] == ticker, orElse: () => {});
           if (target.isNotEmpty) {
             setState(() {
-              final realP = data['price'] > 0 ? data['price'] : target['price'];
+              final realP = data['price'] > 0 ? (data['price'] as num).toDouble() : (target['price'] as num).toDouble();
               target['price'] = realP;
-              final prevC = data['prevClose'] > 0 ? data['prevClose'] : realP;
+              final prevC = data['prevClose'] > 0 ? (data['prevClose'] as num).toDouble() : realP;
               final chg = realP - prevC;
               target['change'] = chg;
               target['changePct'] = prevC > 0 ? double.parse(((chg / prevC) * 100).toStringAsFixed(2)) : 0.0;
@@ -314,44 +321,92 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
-    final filtered = _filteredStocks;
-    final activeStock = filtered.isNotEmpty
-        ? filtered[_selectedStockIdx.clamp(0, filtered.length - 1)]
-        : _allStocks.first;
-    final bool isBullish = activeStock['changePct'] >= 0;
-    final Color mainColor = isBullish ? const Color(0xff10b981) : const Color(0xffef4444);
+    try {
+      final filtered = _filteredStocks;
+      if (_allStocks.isEmpty) {
+        return const Scaffold(
+          backgroundColor: Color(0xff0b0f19),
+          body: Center(
+            child: CircularProgressIndicator(color: Color(0xff10b981)),
+          ),
+        );
+      }
 
-    return Scaffold(
-      backgroundColor: const Color(0xff0b0f19), // TradingView Pro Dark
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 1. Interactive Real Search Bar & Sector Filter Chips
-            _buildSearchBarAndFilters(),
+      final activeStock = filtered.isNotEmpty
+          ? filtered[_selectedStockIdx.clamp(0, filtered.length - 1)]
+          : _allStocks.first;
+      final bool isBullish = ((activeStock['changePct'] as num?)?.toDouble() ?? 0.0) >= 0;
+      final Color mainColor = isBullish ? const Color(0xff10b981) : const Color(0xffef4444);
 
-            // 2. Stock Watchlist Selector Carousel
-            _buildStockWatchlistBar(filtered),
+      return Scaffold(
+        backgroundColor: const Color(0xff0b0f19), // TradingView Pro Dark
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 1. Interactive Real Search Bar & Sector Filter Chips
+              _buildSearchBarAndFilters(),
 
-            // 3. Pro Terminal Main Content Tabs
-            _buildTerminalTabSelector(),
+              // 2. Stock Watchlist Selector Carousel
+              _buildStockWatchlistBar(filtered),
 
-            // 4. Tab Body Content
-            Expanded(
-              child: IndexedStack(
-                index: _selectedTabIdx,
-                children: [
-                  _buildTradingViewUltraChartTab(activeStock, mainColor),
-                  _buildOrderBookTab(activeStock),
-                  _buildNewsTab(activeStock),
-                ],
+              // 3. Pro Terminal Main Content Tabs
+              _buildTerminalTabSelector(),
+
+              // 4. Tab Body Content
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedTabIdx.clamp(0, 2),
+                  children: [
+                    _buildTradingViewUltraChartTab(activeStock, mainColor),
+                    _buildOrderBookTab(activeStock),
+                    _buildNewsTab(activeStock),
+                  ],
+                ),
               ),
-            ),
 
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e, stack) {
+      debugPrint("Error in MarketView.build: $e\n$stack");
+      return Scaffold(
+        backgroundColor: const Color(0xff0b0f19),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.refresh_rounded, color: Color(0xff10b981), size: 48),
+                const SizedBox(height: 12),
+                const Text(
+                  "Memuat Data Pasar...",
+                  style: TextStyle(fontFamily: 'Outfit', fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "$e",
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff94a3b8)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xff10b981)),
+                  onPressed: () {
+                    setState(() {
+                      _initStockDatabase();
+                      _fetchRealMarketData();
+                    });
+                  },
+                  child: const Text("Muat Ulang"),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
   }
 
 
@@ -624,9 +679,14 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // TAB 1: TRADINGVIEW ULTRA CHART ENGINE
   Widget _buildTradingViewUltraChartTab(Map<String, dynamic> stock, Color mainColor) {
-    final bool isUp = stock['changePct'] >= 0;
-    final Map<String, List<Map<String, dynamic>>> tfMap = stock['timeframesMap'] as Map<String, List<Map<String, dynamic>>>? ?? {};
-    final candles = tfMap[_selectedTimeframe] ?? (stock['candles'] as List<Map<String, dynamic>>? ?? []);
+    final bool isUp = ((stock['changePct'] as num?)?.toDouble() ?? 0.0) >= 0;
+    List<Map<String, dynamic>> candles = [];
+    final rawTfMap = stock['timeframesMap'];
+    if (rawTfMap is Map && rawTfMap[_selectedTimeframe] is List) {
+      candles = List<Map<String, dynamic>>.from(rawTfMap[_selectedTimeframe]);
+    } else if (stock['candles'] is List) {
+      candles = List<Map<String, dynamic>>.from(stock['candles']);
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
@@ -643,7 +703,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   Row(
                     children: [
                       Text(
-                        stock['ticker'],
+                        stock['ticker']?.toString() ?? '',
                         style: const TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 24,
@@ -653,7 +713,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        stock['sector'],
+                        stock['sector']?.toString() ?? '',
                         style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 11,
@@ -695,7 +755,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     ],
                   ),
                   Text(
-                    stock['name'],
+                    stock['name']?.toString() ?? '',
                     style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
@@ -708,7 +768,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "Rp ${stock['price'].toStringAsFixed(0)}",
+                    "Rp ${(stock['price'] as num?)?.toStringAsFixed(0) ?? '0'}",
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 24,
@@ -719,7 +779,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   Row(
                     children: [
                       Text(
-                        "${isUp ? '+' : ''}${stock['change'].toInt()} (${isUp ? '+' : ''}${stock['changePct']}%)",
+                        "${isUp ? '+' : ''}${(stock['change'] as num?)?.toInt() ?? 0} (${isUp ? '+' : ''}${stock['changePct'] ?? 0}%)",
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 12,
@@ -746,11 +806,11 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMetricCell("Open", "Rp ${stock['open'].toInt()}"),
-                _buildMetricCell("High", "Rp ${stock['high'].toInt()}"),
-                _buildMetricCell("Low", "Rp ${stock['low'].toInt()}"),
-                _buildMetricCell("Val (Rp)", stock['value']),
-                _buildMetricCell("Foreign", stock['foreignNet']),
+                _buildMetricCell("Open", "Rp ${(stock['open'] as num?)?.toInt() ?? 0}"),
+                _buildMetricCell("High", "Rp ${(stock['high'] as num?)?.toInt() ?? 0}"),
+                _buildMetricCell("Low", "Rp ${(stock['low'] as num?)?.toInt() ?? 0}"),
+                _buildMetricCell("Val (Rp)", stock['value']?.toString() ?? "-"),
+                _buildMetricCell("Foreign", stock['foreignNet']?.toString() ?? "-"),
               ],
             ),
           ),
@@ -886,9 +946,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   child: CustomPaint(
                     painter: TradingViewUltraPainter(
                       candles: candles,
-                      stockPrice: stock['price'],
-                      highPrice: stock['high'],
-                      lowPrice: stock['low'],
+                      stockPrice: (stock['price'] as num?)?.toDouble() ?? 0.0,
+                      highPrice: (stock['high'] as num?)?.toDouble() ?? 0.0,
+                      lowPrice: (stock['low'] as num?)?.toDouble() ?? 0.0,
                       showMA: _showMA,
                       touchOffset: _touchOffset,
                       onHoverIndex: (idx) {
@@ -969,7 +1029,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         alignment: Alignment.center,
                         child: const Text("BID (BELI)", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xff34d399))),
                       ),
-                      ..._bids.map((b) => _buildProOrderBookRow(b['price'], b['vol'], b['pct'], true)),
+                      ..._bids.map((b) => _buildProOrderBookRow((b['price'] as num).toInt(), (b['vol'] as num).toInt(), (b['pct'] as num).toDouble(), true)),
                     ],
                   ),
                 ),
@@ -993,7 +1053,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         alignment: Alignment.center,
                         child: const Text("OFFER (JUAL)", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xfff87171))),
                       ),
-                      ..._offers.map((o) => _buildProOrderBookRow(o['price'], o['vol'], o['pct'], false)),
+                      ..._offers.map((o) => _buildProOrderBookRow((o['price'] as num).toInt(), (o['vol'] as num).toInt(), (o['pct'] as num).toDouble(), false)),
                     ],
                   ),
                 ),
@@ -2208,9 +2268,16 @@ class TradingViewUltraPainter extends CustomPainter {
     );
 
     // Draw Horizontal Y-Axis Price Grid Lines & Labels
-    final minP = lowPrice * 0.99;
-    final maxP = highPrice * 1.01;
-    final pStep = (maxP - minP) / 4;
+    final rawLow = lowPrice > 0
+        ? lowPrice
+        : (candles.isNotEmpty ? candles.map((c) => (c['l'] as num).toDouble()).reduce(min) : 100.0);
+    final rawHigh = highPrice > rawLow
+        ? highPrice
+        : (candles.isNotEmpty ? candles.map((c) => (c['h'] as num).toDouble()).reduce(max) : rawLow + 10.0);
+    final minP = rawLow * 0.99;
+    final maxP = (rawHigh * 1.01) > minP ? (rawHigh * 1.01) : (minP + 1.0);
+    final rangeP = (maxP - minP) > 0 ? (maxP - minP) : 1.0;
+    final pStep = rangeP / 4;
 
     for (int i = 0; i <= 4; i++) {
       final priceVal = maxP - (pStep * i);
@@ -2241,10 +2308,10 @@ class TradingViewUltraPainter extends CustomPainter {
       final highP = (c['h'] as num).toDouble();
       final lowP = (c['l'] as num).toDouble();
 
-      final openY = candlePaneHeight * (1.0 - ((openP - minP) / (maxP - minP)));
-      final closeY = candlePaneHeight * (1.0 - ((closeP - minP) / (maxP - minP)));
-      final highY = candlePaneHeight * (1.0 - ((highP - minP) / (maxP - minP)));
-      final lowY = candlePaneHeight * (1.0 - ((lowP - minP) / (maxP - minP)));
+      final openY = candlePaneHeight * (1.0 - ((openP - minP) / rangeP));
+      final closeY = candlePaneHeight * (1.0 - ((closeP - minP) / rangeP));
+      final highY = candlePaneHeight * (1.0 - ((highP - minP) / rangeP));
+      final lowY = candlePaneHeight * (1.0 - ((lowP - minP) / rangeP));
 
       final isGreen = closeP >= openP;
       final candleColor = isGreen ? const Color(0xff10b981) : const Color(0xffef4444);
@@ -2312,7 +2379,7 @@ class TradingViewUltraPainter extends CustomPainter {
 
     // 4. Current Price Horizontal Dashed Line
     final lastCandle = candles.last;
-    final lastPriceY = candlePaneHeight * (1.0 - (((lastCandle['c'] as num) - minP) / (maxP - minP)));
+    final lastPriceY = candlePaneHeight * (1.0 - (((lastCandle['c'] as num) - minP) / rangeP));
     final dashPaint = Paint()
       ..color = const Color(0xff10b981).withOpacity(0.7)
       ..strokeWidth = 1.0;
@@ -2360,7 +2427,7 @@ class TradingViewUltraPainter extends CustomPainter {
       onHoverIndex(hoveredIdx);
 
       // Y-Axis Touch Price Tooltip Badge
-      final touchPrice = maxP - ((crosshairY / candlePaneHeight) * (maxP - minP));
+      final touchPrice = maxP - ((crosshairY / candlePaneHeight) * rangeP);
       final touchPillPaint = Paint()..color = const Color(0xfff59e0b);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
