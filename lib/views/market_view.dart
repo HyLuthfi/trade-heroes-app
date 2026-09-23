@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../services/market_data_service.dart';
@@ -799,7 +801,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     return "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
   }
 
-  void _sendChatMessage(String question, Map<String, dynamic> stock) {
+  Future<void> _sendChatMessage(String question, Map<String, dynamic> stock) async {
     final q = question.trim();
     if (q.isEmpty || _isAiResponding) return;
 
@@ -817,10 +819,44 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
     _scrollToChatBottom();
 
-    // Generate intelligent contextual response
-    Future.delayed(const Duration(milliseconds: 550), () {
-      if (!mounted) return;
-      final answer = _generateAiAnswer(q, stock);
+    String answer = '';
+    try {
+      final res = await http.post(
+        Uri.parse('/api/ai/chat'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'prompt': q,
+          'ticker': stock['ticker']?.toString() ?? 'BBCA',
+          'stock': {
+            'name': stock['name'] ?? '',
+            'price': stock['price'],
+            'change': stock['change'],
+            'changePct': stock['changePct'],
+            'sector': stock['sector'] ?? 'Umum',
+            'per': stock['per'] ?? '15.0',
+            'pbv': stock['pbv'] ?? '2.0',
+            'mcap': stock['mcap'] ?? '-',
+            'foreignNet': stock['foreignNet'] ?? '-',
+          },
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['reply'] != null && (data['reply'] as String).trim().isNotEmpty) {
+          answer = data['reply'];
+        }
+      }
+    } catch (e) {
+      debugPrint("9Router AI chat error: $e, using local fallback");
+    }
+
+    // Fallback to local intelligent analysis if 9Router is unreachable
+    if (answer.isEmpty) {
+      answer = _generateAiAnswer(q, stock);
+    }
+
+    if (mounted) {
       setState(() {
         _chatMessages.add({
           'isUser': false,
@@ -830,7 +866,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         _isAiResponding = false;
       });
       _scrollToChatBottom();
-    });
+    }
   }
 
   void _scrollToChatBottom() {

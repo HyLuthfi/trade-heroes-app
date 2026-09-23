@@ -5,6 +5,21 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build', 'web')
 
+def get_router_key():
+    k = os.environ.get('ROUTER_API_KEY') or os.environ.get('HERMES_CUSTOM_LOCALHOST_20128_API_KEY')
+    if k:
+        return k
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.local')
+    if os.path.exists(env_file):
+        try:
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('ROUTER_API_KEY='):
+                        return line.strip().split('=', 1)[1]
+        except Exception:
+            pass
+    return ''
+
 # Ensure standard MIME types are properly registered
 mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('application/javascript', '.mjs')
@@ -65,6 +80,13 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError):
             pass
 
+    def do_POST(self):
+        if self.path.startswith('/api/ai/chat'):
+            self._handle_ai_chat()
+            return
+        self.send_response(404)
+        self.end_headers()
+
     def do_GET(self):
         # --- Yahoo Finance API Proxy (avoids CORS for Flutter Web) ---
         if self.path.startswith('/api/yahoo/'):
@@ -113,6 +135,82 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(b'{"error":"proxy failed"}')
+
+    def _handle_ai_chat(self):
+        """Proxy AI Chat requests to 9Router with fastest model (ag/gemini-3.8-flash-low)"""
+        import urllib.request, urllib.error, json
+        try:
+            content_len = int(self.headers.get('Content-Length', 0))
+            post_body = self.rfile.read(content_len)
+            req_data = json.loads(post_body.decode('utf-8'))
+        except Exception:
+            self.send_response(400)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"error":"invalid json"}')
+            return
+
+        prompt = req_data.get('prompt', '')
+        ticker = req_data.get('ticker', 'BBCA')
+        stock = req_data.get('stock', {})
+        name = stock.get('name', ticker)
+        price = stock.get('price', '-')
+        change_pct = stock.get('changePct', '-')
+        sector = stock.get('sector', 'Umum')
+        per = stock.get('per', '-')
+        pbv = stock.get('pbv', '-')
+        mcap = stock.get('mcap', '-')
+        foreign = stock.get('foreignNet', '-')
+
+        system_prompt = (
+            f"Kamu adalah SAI Tech AI Chatbot, asisten cerdas analis pasar modal Indonesia (BEI) di platform Trade Heroes.\n"
+            f"Karakter: Analis kuantitatif & edukator saham profesional, ramah, to-the-point, dan zero basa-basi.\n"
+            f"Saham yang sedang aktif: {ticker} ({name})\n"
+            f"Data Real-Time Pasar BEI:\n"
+            f"- Harga Terkini: Rp {price} ({change_pct}%)\n"
+            f"- Sektor: {sector}\n"
+            f"- PER: {per}x | PBV: {pbv}x\n"
+            f"- Market Cap: {mcap}\n"
+            f"- Foreign Flow: {foreign}\n\n"
+            f"Petunjuk Format Output:\n"
+            f"- Gunakan Markdown Prettier yang rapi (gunakan bold **...** untuk angka/harga/level kunci, bullet points, dan judul ringkas).\n"
+            f"- Berikan analisa yang taktis (Level Support & Resistance, Katalis Bisnis, dan Strategi Trading/Investasi yang jelas).\n"
+            f"- Jangan gunakan kalimat klise pembuka seperti 'Tentu, saya bisa bantu'. Langsung sajikan analisa berkualitas tinggi."
+        )
+
+        key = get_router_key()
+        router_payload = {
+            'model': 'ag/gemini-3.8-flash-low',
+            'messages': [
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': prompt}
+            ],
+            'stream': False,
+            'max_tokens': 450
+        }
+
+        try:
+            req = urllib.request.Request(
+                'http://127.0.0.1:20128/v1/chat/completions',
+                data=json.dumps(router_payload).encode('utf-8'),
+                headers={
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {key}'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                ai_text = data['choices'][0]['message']['content']
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(json.dumps({'reply': ai_text}).encode('utf-8'))
+        except Exception as e:
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e), 'fallback': True}).encode('utf-8'))
 
 def run(port=20170):
     if not os.path.isdir(WEB_DIR):
