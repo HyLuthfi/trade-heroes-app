@@ -231,12 +231,24 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         )
 
         key = get_router_key()
+
+        # 4. Multi-turn Conversation Memory
+        history = req_data.get('history', [])
+        messages = [{'role': 'system', 'content': system_prompt}]
+
+        for h in history[-8:]:
+            r = 'user' if (h.get('isUser') or h.get('role') == 'user') else 'assistant'
+            c = (h.get('content') or h.get('text') or '').strip()
+            if c:
+                messages.append({'role': r, 'content': c})
+
+        # Ensure current prompt is at the end
+        if not messages or messages[-1].get('role') != 'user' or messages[-1].get('content') != prompt:
+            messages.append({'role': 'user', 'content': prompt})
+
         router_payload = {
             'model': 'ag/gemini-3.8-flash-low',
-            'messages': [
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': prompt}
-            ],
+            'messages': messages,
             'stream': False,
             'max_tokens': 450
         }

@@ -819,6 +819,18 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
     _scrollToChatBottom();
 
+    // Prepare multi-turn conversational history
+    final history = _chatMessages
+        .take(_chatMessages.length - 1)
+        .map((m) => {
+              'role': m['isUser'] == true ? 'user' : 'assistant',
+              'content': m['text']?.toString() ?? '',
+            })
+        .toList();
+    if (history.length > 8) {
+      history.removeRange(0, history.length - 8);
+    }
+
     String answer = '';
     try {
       final res = await http.post(
@@ -827,6 +839,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         body: jsonEncode({
           'prompt': q,
           'ticker': stock['ticker']?.toString() ?? 'BBCA',
+          'history': history,
           'stock': {
             'name': stock['name'] ?? '',
             'price': stock['price'],
