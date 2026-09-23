@@ -852,6 +852,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           SizedBox(
             height: 500,
             child: TradingViewChart(
+              key: ValueKey('${stock['ticker']}_$_selectedTimeframe'),
               ticker: stock['ticker']?.toString() ?? 'BBCA',
               timeframe: _selectedTimeframe,
             ),

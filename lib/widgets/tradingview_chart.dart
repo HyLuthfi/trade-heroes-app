@@ -6,14 +6,12 @@ import 'package:flutter/material.dart';
 class TradingViewChart extends StatefulWidget {
   final String ticker;
   final String timeframe;
-  final String interval;
   final List<Map<String, dynamic>>? candles;
 
   const TradingViewChart({
     Key? key,
     required this.ticker,
     this.timeframe = '1D',
-    this.interval = 'D',
     this.candles,
   }) : super(key: key);
 
@@ -28,14 +26,15 @@ class _TradingViewChartState extends State<TradingViewChart> {
   @override
   void initState() {
     super.initState();
-    _viewId = 'tv-iframe-${DateTime.now().microsecondsSinceEpoch}';
+    final cleanTicker = widget.ticker.split('_').first.toUpperCase();
+    _viewId = 'tv-iframe-$cleanTicker-${widget.timeframe}-${DateTime.now().microsecondsSinceEpoch}';
     _registerView();
   }
 
   void _registerView() {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     _iframe = html.IFrameElement()
-      ..src = '/tv_chart.html?v=tv_1d_final&ticker=$cleanTicker&tf=${widget.timeframe}&interval=${widget.interval}'
+      ..src = '/tv_chart.html?v=tv_sync_v2&ticker=$cleanTicker&tf=${widget.timeframe}'
       ..style.border = 'none'
       ..style.width = '100%'
       ..style.height = '100%'
@@ -54,11 +53,8 @@ class _TradingViewChartState extends State<TradingViewChart> {
     final cleanTicker = widget.ticker.split('_').first.toUpperCase();
     final oldCleanTicker = oldWidget.ticker.split('_').first.toUpperCase();
 
-    if (cleanTicker != oldCleanTicker ||
-        widget.timeframe != oldWidget.timeframe ||
-        widget.interval != oldWidget.interval) {
-      _iframe?.src =
-          '/tv_chart.html?v=tv_1d_final&ticker=$cleanTicker&tf=${widget.timeframe}&interval=${widget.interval}';
+    if (cleanTicker != oldCleanTicker || widget.timeframe != oldWidget.timeframe) {
+      _iframe?.src = '/tv_chart.html?v=tv_sync_v2&ticker=$cleanTicker&tf=${widget.timeframe}';
     }
   }
 
