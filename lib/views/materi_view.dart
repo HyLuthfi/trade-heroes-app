@@ -7,6 +7,7 @@ import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
+import '../widgets/in_app_notification_banner.dart';
 import 'package:path_provider/path_provider.dart';
 
 class MateriView extends StatefulWidget {
@@ -666,7 +667,11 @@ class _MateriViewState extends State<MateriView>
                     AudioService.playReward();
                   } catch (_) {}
                   Navigator.of(ctx).pop();
+                  final bool wasAlreadyRead = appState.readModules.contains(mod['id']);
                   appState.completeModule(mod['id'], mod['xp'], context);
+                  if (context.mounted) {
+                    _showModuleCelebrationDialog(context, appState, mod, wasAlreadyRead);
+                  }
                 },
                 child: Text(
                   "${_tr(appState, 'materi.finish_reading', params: {'xp': '${mod['xp'] ?? 5}'})} 🚀",
@@ -682,6 +687,236 @@ class _MateriViewState extends State<MateriView>
           ),
         ),
       ),
+    );
+  }
+
+  void _showModuleCelebrationDialog(
+      BuildContext context, AppState appState, Map<String, dynamic> mod, bool wasAlreadyRead) {
+    final isEn = appState.language.startsWith('en');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final int xp = (mod['xp'] as num?)?.toInt() ?? 50;
+
+    // Trigger InAppNotificationBanner
+    try {
+      InAppNotificationBanner.show(
+        context,
+        InAppNotificationPayload(
+          title: isEn ? "Learning XP Earned! 🎓" : "XP Belajar Diperoleh! 🎓",
+          message: isEn
+              ? "+$xp XP for completing '${mod['title']}'"
+              : "+$xp XP menyelesaikan '${mod['title']}'",
+          type: InAppNotificationType.reward,
+        ),
+      );
+    } catch (_) {}
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "ModuleCelebration",
+      barrierColor: Colors.black.withOpacity(0.65),
+      transitionDuration: const Duration(milliseconds: 380),
+      transitionBuilder: (context, anim, secondaryAnim, child) {
+        final curvedAnim = CurvedAnimation(
+          parent: anim,
+          curve: Curves.easeOutBack,
+        );
+        return ScaleTransition(
+          scale: Tween<double>(begin: 0.75, end: 1.0).animate(curvedAnim),
+          child: FadeTransition(
+            opacity: anim,
+            child: child,
+          ),
+        );
+      },
+      pageBuilder: (context, anim, secondaryAnim) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 320,
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xff0f172a) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xff10b981).withOpacity(0.4),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xff10b981).withOpacity(isDark ? 0.25 : 0.15),
+                    blurRadius: 28,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animated Trophy Glow Badge
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const RadialGradient(
+                        colors: [Color(0xff34d399), Color(0xff059669)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xff10b981).withOpacity(0.4),
+                          blurRadius: 20,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.emoji_events_rounded,
+                      color: Colors.white,
+                      size: 42,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Celebration Headline
+                  Text(
+                    isEn ? "Awesome! 🎉" : "Luar Biasa! 🎉",
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xff10b981),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isEn
+                        ? "You've successfully completed this module!"
+                        : "Kamu telah berhasil menyelesaikan modul ini!",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Module Title Chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xff161f30) : const Color(0xfff1f5f9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.menu_book_rounded, color: Color(0xff10b981), size: 16),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            mod['title']?.toString() ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xff0f172a),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // XP Reward Box
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? const [Color(0xff1e293b), Color(0xff0f172a)]
+                            : const [Color(0xfffffbeb), Color(0xfffef3c7)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xfff59e0b).withOpacity(0.5),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.stars_rounded, color: Color(0xfff59e0b), size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          "+$xp XP",
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xffd97706),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isEn ? "Earned!" : "Didapat!",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xffcbd5e1) : const Color(0xff92400e),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Continue Button
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff10b981),
+                      minimumSize: const Size(double.infinity, 46),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      try {
+                        AudioService.playClick();
+                      } catch (_) {}
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      isEn ? "Continue Learning 🚀" : "Lanjut Belajar 🚀",
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

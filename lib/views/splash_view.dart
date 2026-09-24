@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../utils/browser_helper.dart';
 
 class VideoSplashView extends StatefulWidget {
   final Widget child;
@@ -23,15 +23,9 @@ class _VideoSplashViewState extends State<VideoSplashView> {
     super.initState();
 
     // Instant bypass if returning from Google OAuth redirect (prevents black/frozen screen)
-    if (kIsWeb) {
-      try {
-        final hash = html.window.location.hash;
-        final search = html.window.location.search ?? '';
-        if (hash.contains('access_token') || hash.contains('error') || search.contains('code=')) {
-          _splashCompleted = true;
-          return;
-        }
-      } catch (_) {}
+    if (kIsWeb && BrowserHelper.isOAuthRedirect()) {
+      _splashCompleted = true;
+      return;
     }
 
     _initVideoPlayer();

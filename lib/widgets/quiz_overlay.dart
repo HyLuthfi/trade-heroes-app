@@ -364,7 +364,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 4,
               ),
-              onPressed: () => Navigator.of(ctx).pop(),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                if (!isPassed && appState.petir <= 0 && !appState.isPremium) {
+                  _showRefillLivesModal(appState);
+                }
+              },
               child: Text(
                 isPassed ? tr('quiz.continue_great') : (isEn ? "TRY AGAIN" : "COBA LAGI"),
                 style: const TextStyle(

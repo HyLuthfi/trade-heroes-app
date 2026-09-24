@@ -1,31 +1,6 @@
-import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
-
-@JS('playVoiceAudioUri')
-external void _jsPlayVoiceAudioUri(JSString uri, JSFunction? onEnded);
-
-@JS('stopVoiceAudio')
-external void _jsStopVoiceAudio();
-
-@JS('startLiveVoiceStream')
-external void _jsStartLiveVoiceStream(
-  JSString payloadJson,
-  JSFunction onTextDelta,
-  JSFunction onFirstAudio,
-  JSFunction onAllDone,
-  JSFunction onError,
-);
-
-@JS('startLiveSpeechRecognition')
-external JSBoolean _jsStartLiveSpeechRecognition(
-  JSString lang,
-  JSFunction onTranscript,
-  JSFunction onStateChange,
-  JSFunction onError,
-);
-
-@JS('stopLiveSpeechRecognition')
-external void _jsStopLiveSpeechRecognition();
+import 'live_voice_stub.dart'
+    if (dart.library.js_interop) 'live_voice_web.dart' as platform_voice;
 
 class LiveVoiceService {
   static bool _isPlaying = false;
@@ -37,30 +12,18 @@ class LiveVoiceService {
   /// Play Base64 WAV audio data URI ('data:audio/wav;base64,...')
   static void playAudio(String dataUri, {VoidCallback? onEnded}) {
     if (!kIsWeb) return;
-    try {
-      _isPlaying = true;
-      final jsCallback = ((JSObject? _) {
-        _isPlaying = false;
-        if (onEnded != null) onEnded();
-      }).toJS;
-
-      _jsPlayVoiceAudioUri(dataUri.toJS, jsCallback);
-    } catch (e) {
-      debugPrint("LiveVoiceService playAudio error: $e");
+    _isPlaying = true;
+    platform_voice.jsPlayVoiceAudioUri(dataUri, () {
       _isPlaying = false;
       if (onEnded != null) onEnded();
-    }
+    });
   }
 
   /// Stop current playing voice audio immediately (barge-in / interrupt)
   static void stopAudio() {
     if (!kIsWeb) return;
-    try {
-      _isPlaying = false;
-      _jsStopVoiceAudio();
-    } catch (e) {
-      debugPrint("LiveVoiceService stopAudio error: $e");
-    }
+    _isPlaying = false;
+    platform_voice.jsStopVoiceAudio();
   }
 
   /// Start progressive SSE voice streaming (ChatGPT Voice Style)
@@ -72,37 +35,22 @@ class LiveVoiceService {
     required Function(String error) onError,
   }) {
     if (!kIsWeb) return;
-    try {
-      final jsTextCb = ((JSString jsDelta, JSString jsAcc) {
-        onTextDelta(jsDelta.toDart, jsAcc.toDart);
-      }).toJS;
-
-      final jsFirstAudioCb = (() {
+    platform_voice.jsStartLiveVoiceStream(
+      payloadJson,
+      onTextDelta,
+      () {
         _isPlaying = true;
         onFirstAudio();
-      }).toJS;
-
-      final jsAllDoneCb = (() {
+      },
+      () {
         _isPlaying = false;
         onAllDone();
-      }).toJS;
-
-      final jsErrorCb = ((JSString jsErr) {
+      },
+      (err) {
         _isPlaying = false;
-        onError(jsErr.toDart);
-      }).toJS;
-
-      _jsStartLiveVoiceStream(
-        payloadJson.toJS,
-        jsTextCb,
-        jsFirstAudioCb,
-        jsAllDoneCb,
-        jsErrorCb,
-      );
-    } catch (e) {
-      debugPrint("LiveVoiceService startVoiceStream error: $e");
-      onError(e.toString());
-    }
+        onError(err);
+      },
+    );
   }
 
   /// Start browser speech recognition
@@ -113,46 +61,26 @@ class LiveVoiceService {
     String lang = 'id-ID',
   }) {
     if (!kIsWeb) return false;
-    try {
-      final jsTranscriptCb = ((JSString jsText) {
-        final text = jsText.toDart;
-        onTranscript(text);
-      }).toJS;
-
-      final jsStateCb = ((JSString jsState) {
-        final state = jsState.toDart;
+    final started = platform_voice.jsStartLiveSpeechRecognition(
+      lang,
+      onTranscript,
+      (state) {
         _isListening = (state == 'listening');
         onStateChange(state);
-      }).toJS;
-
-      final jsErrorCb = ((JSString jsErr) {
+      },
+      (err) {
         _isListening = false;
-        onError(jsErr.toDart);
-      }).toJS;
-
-      final res = _jsStartLiveSpeechRecognition(
-        lang.toJS,
-        jsTranscriptCb,
-        jsStateCb,
-        jsErrorCb,
-      );
-      _isListening = res.toDart;
-      return _isListening;
-    } catch (e) {
-      debugPrint("LiveVoiceService startListening error: $e");
-      onError(e.toString());
-      return false;
-    }
+        onError(err);
+      },
+    );
+    _isListening = started;
+    return started;
   }
 
   /// Stop speech recognition
   static void stopListening() {
     if (!kIsWeb) return;
-    try {
-      _isListening = false;
-      _jsStopLiveSpeechRecognition();
-    } catch (e) {
-      debugPrint("LiveVoiceService stopListening error: $e");
-    }
+    _isListening = false;
+    platform_voice.jsStopLiveSpeechRecognition();
   }
 }

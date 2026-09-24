@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../services/live_voice_service.dart';
+import '../state/app_state.dart';
 
 enum VoiceState { listening, thinking, speaking, idle }
 
@@ -42,6 +44,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
   String _aiTranscript = "";
   String _errorMessage = "";
   bool _isMicMuted = false;
+  bool _wasBgmPlaying = false;
   final String _selectedEngine = "gemini_charon";
 
   late AnimationController _orbController;
@@ -51,6 +54,12 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
   @override
   void initState() {
     super.initState();
+    // BGM Ducking: Pause background music during active voice session
+    if (AudioService.isBgmPlaying) {
+      _wasBgmPlaying = true;
+      AudioService.stopBgm();
+    }
+
     _orbController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -75,6 +84,9 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
   void dispose() {
     LiveVoiceService.stopAudio();
     LiveVoiceService.stopListening();
+    if (_wasBgmPlaying) {
+      AudioService.startBgm();
+    }
     _orbController.dispose();
     _rippleController.dispose();
     super.dispose();
@@ -83,6 +95,9 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
   void _startListeningCycle() {
     if (!mounted || _isMicMuted) return;
 
+    final appState = Provider.of<AppState>(context, listen: false);
+    final voiceLang = appState.language.startsWith('en') ? 'en-US' : 'id-ID';
+
     LiveVoiceService.stopAudio();
     setState(() {
       _state = VoiceState.listening;
@@ -90,7 +105,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
     });
 
     final success = LiveVoiceService.startListening(
-      lang: 'id-ID',
+      lang: voiceLang,
       onTranscript: (text) {
         if (!mounted) return;
         final clean = text.trim();
@@ -117,7 +132,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
         debugPrint("Speech recognition notice: $err");
         if (_state == VoiceState.listening) {
           setState(() {
-            _errorMessage = "Ketuk Orb untuk mulai bicara";
+            _errorMessage = AppTranslations.text(appState.language, 'live_voice.err_mic_permission');
           });
         }
       },
@@ -125,7 +140,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
 
     if (!success && mounted) {
       setState(() {
-        _errorMessage = "Mikrofon tidak aktif atau belum diizinkan";
+        _errorMessage = AppTranslations.text(appState.language, 'live_voice.err_mic_permission');
       });
     }
   }
@@ -224,31 +239,42 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
         return const Color(0xff64748b); // Slate
     }
   }
-
-  String _getStatusText() {
+  String _getStatusText(AppState appState) {
+    String tr(String key) => AppTranslations.text(appState.language, key);
     switch (_state) {
       case VoiceState.listening:
-        return "Mendengarkan pertanyaan Anda...";
+        return tr('live_voice.status_listening');
       case VoiceState.thinking:
-        return "Menganalisa Data Pasar BEI...";
+        return tr('live_voice.status_thinking');
       case VoiceState.speaking:
-        return "SAI Analyst sedang berbicara...";
+        return tr('live_voice.status_speaking');
       case VoiceState.idle:
-        return _errorMessage.isNotEmpty ? _errorMessage : "Mikrofon Jeda (Ketuk untuk mulai)";
+        return _errorMessage.isNotEmpty ? _errorMessage : tr('live_voice.status_idle');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(appState.language, key, params: params);
+
     final curColor = _getPrimaryColor();
     final ticker = widget.stock['ticker']?.toString() ?? 'BBCA';
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
-      decoration: const BoxDecoration(
-        color: Color(0xff090d16),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border(top: BorderSide(color: Color(0xff1e293b), width: 1.5)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xff090d16) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
+            width: 1.5,
+          ),
+        ),
       ),
       child: Stack(
         children: [
@@ -261,7 +287,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                   center: const Alignment(0, -0.15),
                   radius: 0.9,
                   colors: [
-                    curColor.withOpacity(0.12),
+                    curColor.withOpacity(isDark ? 0.12 : 0.08),
                     Colors.transparent,
                   ],
                 ),
@@ -293,13 +319,13 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "Live Voice Analyst",
+                              Text(
+                                tr('live_voice.title'),
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
-                                  color: Colors.white,
+                                  color: isDark ? Colors.white : const Color(0xff0f172a),
                                 ),
                               ),
                               Row(
@@ -314,11 +340,11 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
-                                    "Saham $ticker • BEI Live",
-                                    style: const TextStyle(
+                                    tr('live_voice.subtitle', params: {'ticker': ticker}),
+                                    style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 11,
-                                      color: Color(0xff94a3b8),
+                                      color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
                                     ),
                                   ),
                                 ],
@@ -327,6 +353,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           ),
                         ],
                       ),
+
                       // Close button
                       GestureDetector(
                         onTap: () {
@@ -337,9 +364,13 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.08),
+                            color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xfff1f5f9),
                           ),
-                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
+                            size: 18,
+                          ),
                         ),
                       ),
                     ],
@@ -412,13 +443,13 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                                   Colors.white,
                                   curColor,
                                   curColor.withOpacity(0.4),
-                                  const Color(0xff090d16),
+                                  isDark ? const Color(0xff090d16) : Colors.white,
                                 ],
                                 stops: const [0.0, 0.4, 0.75, 1.0],
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: curColor.withOpacity(0.55),
+                                  color: curColor.withOpacity(isDark ? 0.55 : 0.35),
                                   blurRadius: 36,
                                   spreadRadius: 6,
                                 ),
@@ -447,8 +478,8 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: Text(
-                    _getStatusText(),
-                    key: ValueKey(_getStatusText()),
+                    _getStatusText(appState),
+                    key: ValueKey(_getStatusText(appState)),
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 15,
@@ -467,9 +498,13 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   constraints: const BoxConstraints(minHeight: 65, maxHeight: 110),
                   decoration: BoxDecoration(
-                    color: const Color(0xff161f30).withOpacity(0.8),
+                    color: isDark
+                        ? const Color(0xff161f30).withOpacity(0.8)
+                        : const Color(0xfff8fafc),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0),
+                    ),
                   ),
                   child: SingleChildScrollView(
                     child: Column(
@@ -479,11 +514,23 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("Anda: ", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xff38bdf8))),
+                              Text(
+                                "${tr('live_voice.label_you')}: ",
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xff0284c7),
+                                ),
+                              ),
                               Expanded(
                                 child: Text(
                                   _userTranscript,
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Colors.white),
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.5,
+                                    color: isDark ? Colors.white : const Color(0xff0f172a),
+                                  ),
                                 ),
                               ),
                             ],
@@ -494,21 +541,38 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("SAI: ", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xff34d399))),
+                              Text(
+                                "${tr('live_voice.label_ai')}: ",
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? const Color(0xff34d399) : const Color(0xff059669),
+                                ),
+                              ),
                               Expanded(
                                 child: Text(
                                   _aiTranscript,
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xffcbd5e1), height: 1.3),
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.5,
+                                    color: isDark ? const Color(0xffcbd5e1) : const Color(0xff334155),
+                                    height: 1.3,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ] else if (_userTranscript.isEmpty) ...[
-                          const Center(
+                          Center(
                             child: Text(
-                              "Bicaralah, misalnya: 'Bagaimana prospek dan level resisten BBCA?'",
+                              tr('live_voice.prompt_hint'),
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xff64748b)),
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11.5,
+                                color: isDark ? const Color(0xff64748b) : const Color(0xff94a3b8),
+                              ),
                             ),
                           ),
                         ],
@@ -533,14 +597,20 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           height: 52,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isMicMuted ? const Color(0xffef4444).withOpacity(0.2) : const Color(0xff1e293b),
+                            color: _isMicMuted
+                                ? const Color(0xffef4444).withOpacity(0.2)
+                                : (isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9)),
                             border: Border.all(
-                              color: _isMicMuted ? const Color(0xffef4444) : Colors.white.withOpacity(0.12),
+                              color: _isMicMuted
+                                  ? const Color(0xffef4444)
+                                  : (isDark ? Colors.white.withOpacity(0.12) : const Color(0xffcbd5e1)),
                             ),
                           ),
                           child: Icon(
                             _isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                            color: _isMicMuted ? const Color(0xfff87171) : Colors.white,
+                            color: _isMicMuted
+                                ? const Color(0xfff87171)
+                                : (isDark ? Colors.white : const Color(0xff334155)),
                             size: 22,
                           ),
                         ),
@@ -558,12 +628,17 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                               border: Border.all(color: const Color(0xffef4444).withOpacity(0.5)),
                             ),
                             child: Row(
-                              children: const [
-                                Icon(Icons.stop_circle_rounded, color: Color(0xfff87171), size: 18),
-                                SizedBox(width: 8),
+                              children: [
+                                const Icon(Icons.stop_circle_rounded, color: Color(0xfff87171), size: 18),
+                                const SizedBox(width: 8),
                                 Text(
-                                  "Hentikan Suara",
-                                  style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xfff87171)),
+                                  tr('live_voice.btn_stop'),
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xfff87171),
+                                  ),
                                 ),
                               ],
                             ),
@@ -595,8 +670,15 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  _state == VoiceState.listening ? "Jeda Bicara" : "Mulai Bicara",
-                                  style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: curColor),
+                                  _state == VoiceState.listening
+                                      ? tr('live_voice.btn_pause')
+                                      : tr('live_voice.btn_start'),
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: curColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -614,10 +696,16 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                           height: 52,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xff1e293b),
-                            border: Border.all(color: Colors.white.withOpacity(0.12)),
+                            color: isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9),
+                            border: Border.all(
+                              color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xffcbd5e1),
+                            ),
                           ),
-                          child: const Icon(Icons.keyboard_rounded, color: Colors.white, size: 22),
+                          child: Icon(
+                            Icons.keyboard_rounded,
+                            color: isDark ? Colors.white : const Color(0xff334155),
+                            size: 22,
+                          ),
                         ),
                       ),
                     ],

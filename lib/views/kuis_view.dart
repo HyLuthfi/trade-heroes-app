@@ -6,7 +6,6 @@ import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/quiz_overlay.dart';
 import '../widgets/daily_reward_modal.dart';
-import '../widgets/leaderboard_modal.dart';
 import '../widgets/ad_overlay.dart';
 
 class KuisView extends StatefulWidget {
@@ -1866,7 +1865,7 @@ IconData _getZoneIcon(dynamic zone) {
                                 },
                                 child: Text(
                                   isCompleted
-                                      ? (language == 'en' ? "REVIEW QUIZ" : "ULANG LATIHAN")
+                                      ? AppTranslations.text(language, 'kuis.review_start')
                                       : AppTranslations.text(language, 'kuis.start_quiz'),
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
@@ -1893,11 +1892,15 @@ IconData _getZoneIcon(dynamic zone) {
   }
 
   void _showRefillLivesModal(BuildContext context, AppState appState) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lang = appState.language;
+    String tr(String key) => AppTranslations.text(lang, key);
+
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
+        backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: const BorderSide(color: Color(0xffef4444), width: 1.5),
@@ -1907,9 +1910,9 @@ IconData _getZoneIcon(dynamic zone) {
           children: [
             const Icon(Icons.bolt_rounded, color: Color(0xffef4444), size: 64),
             const SizedBox(height: 12),
-            const Text(
-              "PETIR ANDA HABIS!",
-              style: TextStyle(
+            Text(
+              tr('kuis.refill_title'),
+              style: const TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
@@ -1918,10 +1921,14 @@ IconData _getZoneIcon(dynamic zone) {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Nyawa petir Anda kosong. Klaim hadiah milestone XP, tunggu pemulihan otomatis, atau tonton iklan instan untuk memulai kuis!",
+            Text(
+              tr('kuis.refill_desc'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.5),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 20),
             OutlinedButton(
@@ -1931,23 +1938,38 @@ IconData _getZoneIcon(dynamic zone) {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () {
+                AudioService.playClick();
                 Navigator.of(ctx).pop();
                 AdOverlay.show(context, () {
                   appState.refillOnePetir();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("1 Nyawa petir telah berhasil dipulihkan.")),
+                    SnackBar(content: Text(tr('kuis.refill_success'))),
                   );
                 });
               },
-              child: const Text(
-                "🎬 TONTON IKLAN (+1 NYAWA)",
-                style: TextStyle(fontFamily: 'Outfit', color: Color(0xff10b981), fontWeight: FontWeight.w900),
+              child: Text(
+                tr('kuis.refill_watch_ad'),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Color(0xff10b981),
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 10),
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text("TUTUP", style: TextStyle(color: Color(0xff94a3b8), fontFamily: 'Outfit')),
+              onPressed: () {
+                AudioService.playClick();
+                Navigator.of(ctx).pop();
+              },
+              child: Text(
+                tr('kuis.refill_close'),
+                style: TextStyle(
+                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),

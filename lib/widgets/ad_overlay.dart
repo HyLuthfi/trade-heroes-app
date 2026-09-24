@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../state/app_state.dart';
 import '../services/audio_service.dart';
 
@@ -148,7 +149,11 @@ class _AdOverlayState extends State<AdOverlay> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context, listen: false);
+    final appState = Provider.of<AppState>(context);
+    final language = appState.language;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(language, key, params: params);
+
     final Color c = _ad['color'] as Color;
 
     return WillPopScope(
@@ -181,9 +186,9 @@ class _AdOverlayState extends State<AdOverlay> with TickerProviderStateMixin {
                         color: const Color(0xff1e293b),
                         borderRadius: BorderRadius.circular(5),
                       ),
-                      child: const Text(
-                        "Iklan",
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Color(0xff64748b)),
+                      child: Text(
+                        tr('ad.badge'),
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Color(0xff64748b)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -209,7 +214,10 @@ class _AdOverlayState extends State<AdOverlay> with TickerProviderStateMixin {
                       )
                     else
                       GestureDetector(
-                        onTap: widget.onClose,
+                        onTap: () {
+                          AudioService.playClick();
+                          widget.onClose();
+                        },
                         child: Container(
                           width: 28,
                           height: 28,
@@ -328,7 +336,7 @@ class _AdOverlayState extends State<AdOverlay> with TickerProviderStateMixin {
                         SizedBox(width: 13, height: 13, child: CircularProgressIndicator(color: c, strokeWidth: 2)),
                         const SizedBox(width: 10),
                         Text(
-                          "Hadiah tersedia dalam $_countdown detik",
+                          tr('ad.countdown_reward', params: {'seconds': '$_countdown'}),
                           style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8)),
                         ),
                       ],
@@ -355,10 +363,13 @@ class _AdOverlayState extends State<AdOverlay> with TickerProviderStateMixin {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
                           ),
-                          onPressed: widget.onClose,
-                          child: const Text(
-                            "KLAIM HADIAH & TUTUP",
-                            style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3),
+                          onPressed: () {
+                            AudioService.playReward();
+                            widget.onClose();
+                          },
+                          child: Text(
+                            tr('ad.btn_claim_close'),
+                            style: const TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3),
                           ),
                         ),
                       );
@@ -369,13 +380,14 @@ class _AdOverlayState extends State<AdOverlay> with TickerProviderStateMixin {
                 // Row 7: VIP upsell
                 GestureDetector(
                   onTap: () {
+                    AudioService.playClick();
                     widget.onClose();
                     appState.upgradeToPremium(context);
                   },
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      "Bebas iklan selamanya? Upgrade VIP Gold Pass",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xfff59e0b), decoration: TextDecoration.underline, decorationColor: Color(0xfff59e0b)),
+                      tr('ad.vip_upgrade_prompt'),
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xfff59e0b), decoration: TextDecoration.underline, decorationColor: Color(0xfff59e0b)),
                     ),
                   ),
                 ),

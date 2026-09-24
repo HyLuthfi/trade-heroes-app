@@ -297,4 +297,156 @@ const Map<String, String> idTranslations = {
   'vip.already_active': 'AKUN ANDA SUDAH VIP GOLD 👑',
   'vip.upgrade_success': 'Selamat! Akun Anda telah berhasil di-upgrade ke VIP GOLD PASS 👑!',
   'vip.cta_upgrade': 'GABUNG VIP GOLD PASS SEKARANG 👑',
+
+  // ==========================================
+  // Rank Progression & Trader Tiers (rank.*)
+  // ==========================================
+  'rank.title': 'Jenjang Karier',
+  'rank.nav_xp_rewards': 'Jalur Hadiah XP',
+  'rank.nav_leaderboard': 'Liga Trader BEI',
+  'rank.tier_badge': 'TIER {tier}',
+  'rank.badge_active': 'AKTIF',
+  'rank.total_xp': '{xp} Total XP',
+  'rank.target_xp': 'Target: {xp} XP',
+  'rank.highest_rank_reached': 'Gelar Tertinggi Tercapai',
+  'rank.xp_remaining': '{xp} XP lagi menuju {rank}',
+  'rank.pinnacle_master': 'Puncak Master Trader',
+  'rank.all_tiers': 'Semua Tingkatan Trader',
+  'rank.tier_item_title': 'Tier {roman} • {title}',
+  'rank.badge_you': 'ANDA',
+  'rank.xp_range': '{min}-{max} XP',
+  'rank.xp_plus': '{min}+ XP',
+  'rank.tier_up_badge': 'NAIK PANGKAT • TIER {roman}',
+  'rank.tier_up_perks_title': 'Keistimewaan Baru Terbuka:',
+  'rank.tier_up_claim_btn': 'AMBIL GELAR SAYA 👑',
+  'rank.tier1_title': 'Investor Pemula',
+  'rank.tier1_desc': 'Memulai langkah pertama memahami fondasi pasar modal & saham.',
+  'rank.tier1_perk': 'Akses 10 level dasar & 5 Nyawa Petir',
+  'rank.tier2_title': 'Trader Ritel Aktif',
+  'rank.tier2_desc': 'Mulai aktif menganalisis pergerakan harga dan tren pasar.',
+  'rank.tier2_perk': 'Simpan materi favorit tanpa batas & badge perunggu',
+  'rank.tier3_title': 'Analis Saham Muda',
+  'rank.tier3_desc': 'Mampu membaca chart candlestick dan level Support/Resistance.',
+  'rank.tier3_perk': 'Akses analisis teknikal mendalam & badge perak',
+  'rank.tier4_title': 'Swing Specialist',
+  'rank.tier4_desc': 'Menguasai Smart Money Concepts (SMC) & manajemen risiko.',
+  'rank.tier4_perk': 'Penguasaan instrumen institusi & badge emas',
+  'rank.tier5_title': 'Market Maestro',
+  'rank.tier5_desc': 'Trader berpengetahuan komprehensif, disiplin dan bermental baja.',
+  'rank.tier5_perk': 'Gelar prestise tertinggi & frame profil ungu',
+
+  // ==========================================
+  // XP Milestone Rewards (xp_reward.*)
+  // ==========================================
+  'xp_reward.title': 'Jalur Hadiah XP',
+  'xp_reward.subtitle': 'Kumpulkan XP dari kuis & materi untuk membuka hadiah eksklusif secara gratis. XP tidak pernah berkurang!',
+  'xp_reward.current_xp': '{xp} XP',
+  'xp_reward.xp_unit': 'XP',
+  'xp_reward.claimed': 'KLAIMED ✓',
+  'xp_reward.claim_action': 'KLAIM',
+  'xp_reward.xp_needed': '-{xp} XP',
+  'xp_reward.snack_claimed': "Selamat! Hadiah '{reward}' berhasil diklaim! 🎉",
+  'xp_reward.m50_title': '+2 Nyawa Petir',
+  'xp_reward.m50_desc': 'Bantuan petir instan untuk terus belajar.',
+  'xp_reward.m100_title': 'Pelindung Streak',
+  'xp_reward.m100_desc': 'Proteksi 1 hari agar streak belajarmu tidak hangus.',
+  'xp_reward.m200_title': 'Avatar Breakout Trader',
+  'xp_reward.m200_desc': 'Buka avatar eksklusif momentum penembusan harga.',
+  'xp_reward.m350_title': 'Full Refill 5 Petir',
+  'xp_reward.m350_desc': 'Isi penuh seluruh energi petir seketika.',
+  'xp_reward.m500_title': '+2 Pelindung Streak',
+  'xp_reward.m500_desc': 'Simpanan proteksi ekstra untuk menjaga konsistensi.',
+  'xp_reward.m750_title': 'Avatar Scalper Sejati',
+  'xp_reward.m750_desc': 'Buka avatar eksklusif pembaca volatilitas cepat.',
+  'xp_reward.m1000_title': 'Avatar Market Legend',
+  'xp_reward.m1000_desc': 'Buka avatar legendaris bintang pasar modal.',
+  'xp_reward.m1500_title': 'Avatar Grand Master',
+  'xp_reward.m1500_desc': 'Buka avatar kehormatan tertinggi akademi.',
+
+  // ==========================================
+  // Leaderboard Modal (leaderboard.*)
+  // ==========================================
+  'leaderboard.title': 'Liga Trader BEI',
+  'leaderboard.subtitle': 'Papan peringkat edukasi & akumulasi XP',
+  'leaderboard.rankings_header': 'Klasemen Peringkat',
+  'leaderboard.badge_you': 'ANDA',
+  'leaderboard.streak_days': '• 🔥 {count} Hari',
+  'leaderboard.leading_league': '👑 Anda memimpin posisi teratas Liga!',
+  'leaderboard.overtake_prompt': 'Butuh {xp} XP lagi untuk menyalip #{rank} ({name})',
+  'leaderboard.keep_learning': 'Terus selesaikan kuis untuk naik peringkat!',
+
+  // ==========================================
+  // Live Voice Modal (live_voice.*)
+  // ==========================================
+  'live_voice.title': 'Live Voice Analyst',
+  'live_voice.subtitle': 'Saham {ticker} • BEI Live',
+  'live_voice.status_listening': 'Mendengarkan pertanyaan Anda...',
+  'live_voice.status_thinking': 'Menganalisa Data Pasar BEI...',
+  'live_voice.status_speaking': 'SAI Analyst sedang berbicara...',
+  'live_voice.status_idle': 'Mikrofon Jeda (Ketuk untuk mulai)',
+  'live_voice.label_you': 'Anda: ',
+  'live_voice.label_ai': 'SAI: ',
+  'live_voice.hint_speak': "Bicaralah, misalnya: 'Bagaimana prospek dan level resisten {ticker}?'",
+  'live_voice.btn_stop': 'Hentikan Suara',
+  'live_voice.btn_pause': 'Jeda Bicara',
+  'live_voice.btn_start': 'Mulai Bicara',
+  'live_voice.err_tap_to_speak': 'Ketuk Orb untuk mulai bicara',
+  'live_voice.err_mic_permission': 'Mikrofon tidak aktif atau belum diizinkan',
+  'live_voice.err_connection_lost': 'Koneksi terputus. Silakan coba lagi.',
+
+  // ==========================================
+  // Market AI Chatbot & Chips (market.ai_* & market.chip_*)
+  // ==========================================
+  'market.ai_title': 'SAI Tech AI Chatbot',
+  'market.ai_live_voice_btn': 'Live Voice',
+  'market.ai_thinking': 'AI sedang menganalisis data pasar...',
+  'market.ai_input_hint': 'Tanya AI tentang {ticker}...',
+  'market.ai_greeting': 'Halo! Saya **SAI Tech AI Chatbot** 🤖.\n\nKamu sedang memantau saham **{ticker}** ({name}) di harga **{price}** ({change}).\n\nAda yang ingin kamu tanyakan mengenai analisa teknikal, valuasi fundamental, atau strategi trading untuk saham ini?',
+  'market.chip_prospects': 'Analisa Prospek',
+  'market.chip_snr': 'Support & Resistance (SNR)',
+  'market.chip_smc': 'Smart Money (SMC / FVG)',
+  'market.chip_momentum': 'Momentum Zero-Lag',
+  'market.chip_valuation': 'Valuasi & Rasio',
+  'market.chip_entry_exit': 'Strategi Masuk/Keluar',
+  'market.chip_beginner_tips': 'Tips Pemula',
+
+  // ==========================================
+  // Market News Tab (market.news_*)
+  // ==========================================
+  'market.news_header': 'Berita Bursa Terkini • {ticker}',
+  'market.news_refresh': 'Perbarui',
+  'market.news_cat_all': 'Semua',
+  'market.news_cat_dividend': 'Dividen & Kinerja',
+  'market.news_cat_corporate': 'Aksi Korporasi',
+  'market.news_cat_sentiment': 'Sentimen Pasar',
+  'market.news_cat_analysis': 'Analisa Pasar',
+  'market.news_sentiment_positive': 'POSITIF',
+  'market.news_sentiment_neutral': 'NETRAL',
+  'market.news_sentiment_caution': 'WASPADA',
+  'market.news_empty': 'Tidak ada artikel untuk kategori {category}.',
+  'market.news_time_just_now': 'Baru saja',
+  'market.news_btn_read': 'Baca',
+  'market.news_btn_analyze_impact': 'Analisa Dampak',
+
+  // ==========================================
+  // Ad Overlay (ad.*)
+  // ==========================================
+  'ad.badge': 'Iklan',
+  'ad.countdown_reward': 'Hadiah tersedia dalam {seconds} detik',
+  'ad.btn_claim_close': 'KLAIM HADIAH & TUTUP',
+  'ad.vip_upgrade_prompt': 'Bebas iklan selamanya? Upgrade VIP Gold Pass',
+
+  // ==========================================
+  // Quiz Review & Refill Modal (kuis.review_* & kuis.refill_*)
+  // ==========================================
+  'kuis.review_start': 'ULANG LATIHAN',
+  'kuis.review_tag': 'Ulang',
+  'kuis.review_xp_reward': '+{xp} XP (Ulang)',
+  'kuis.refill_title': 'PETIR ANDA HABIS!',
+  'kuis.refill_desc': 'Nyawa petir Anda kosong. Klaim hadiah milestone XP, tunggu pemulihan otomatis, atau tonton iklan instan untuk memulai kuis!',
+  'kuis.refill_watch_ad': '🎬 TONTON IKLAN (+1 NYAWA)',
+  'kuis.refill_success': '1 Nyawa petir telah berhasil dipulihkan.',
+  'kuis.refill_close': 'TUTUP',
 };
+
+const Map<String, String> appTranslationsId = idTranslations;

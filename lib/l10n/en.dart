@@ -295,4 +295,156 @@ const Map<String, String> enTranslations = {
   'vip.already_active': 'YOUR ACCOUNT IS VIP GOLD 👑',
   'vip.upgrade_success': 'Congratulations! Your account has been upgraded to VIP GOLD PASS 👑!',
   'vip.cta_upgrade': 'JOIN VIP GOLD PASS NOW 👑',
+
+  // ==========================================
+  // Rank Progression & Trader Tiers (rank.*)
+  // ==========================================
+  'rank.title': 'Career Progression',
+  'rank.nav_xp_rewards': 'XP Reward Path',
+  'rank.nav_leaderboard': 'IDX Trader League',
+  'rank.tier_badge': 'TIER {tier}',
+  'rank.badge_active': 'ACTIVE',
+  'rank.total_xp': '{xp} Total XP',
+  'rank.target_xp': 'Target: {xp} XP',
+  'rank.highest_rank_reached': 'Highest Rank Achieved',
+  'rank.xp_remaining': '{xp} more XP to {rank}',
+  'rank.pinnacle_master': 'Master Trader Pinnacle',
+  'rank.all_tiers': 'All Trader Tiers',
+  'rank.tier_item_title': 'Tier {roman} • {title}',
+  'rank.badge_you': 'YOU',
+  'rank.xp_range': '{min}-{max} XP',
+  'rank.xp_plus': '{min}+ XP',
+  'rank.tier_up_badge': 'RANK PROMOTION • TIER {roman}',
+  'rank.tier_up_perks_title': 'New Perks Unlocked:',
+  'rank.tier_up_claim_btn': 'CLAIM MY TITLE 👑',
+  'rank.tier1_title': 'Novice Investor',
+  'rank.tier1_desc': 'Taking the first steps to understand stock market foundations.',
+  'rank.tier1_perk': 'Access 10 basic levels & 5 Lightning Lives',
+  'rank.tier2_title': 'Active Retail Trader',
+  'rank.tier2_desc': 'Actively analyzing price action and market trends.',
+  'rank.tier2_perk': 'Unlimited favorite bookmarks & bronze badge',
+  'rank.tier3_title': 'Junior Stock Analyst',
+  'rank.tier3_desc': 'Able to read candlestick charts and Support/Resistance levels.',
+  'rank.tier3_perk': 'In-depth technical analysis access & silver badge',
+  'rank.tier4_title': 'Swing Specialist',
+  'rank.tier4_desc': 'Mastering Smart Money Concepts (SMC) & risk management.',
+  'rank.tier4_perk': 'Institutional instrument mastery & gold badge',
+  'rank.tier5_title': 'Market Maestro',
+  'rank.tier5_desc': 'Comprehensive trading knowledge, disciplined and iron-willed.',
+  'rank.tier5_perk': 'Highest prestige title & purple profile frame',
+
+  // ==========================================
+  // XP Milestone Rewards (xp_reward.*)
+  // ==========================================
+  'xp_reward.title': 'XP Reward Path',
+  'xp_reward.subtitle': 'Collect XP from quizzes & lessons to unlock free exclusive rewards. XP never resets!',
+  'xp_reward.current_xp': '{xp} XP',
+  'xp_reward.xp_unit': 'XP',
+  'xp_reward.claimed': 'CLAIMED ✓',
+  'xp_reward.claim_action': 'CLAIM',
+  'xp_reward.xp_needed': '-{xp} XP',
+  'xp_reward.snack_claimed': "Congratulations! Reward '{reward}' claimed successfully! 🎉",
+  'xp_reward.m50_title': '+2 Lightning Lives',
+  'xp_reward.m50_desc': 'Instant lightning energy boost to keep learning.',
+  'xp_reward.m100_title': 'Streak Shield',
+  'xp_reward.m100_desc': '1-day protection so your learning streak stays unbroken.',
+  'xp_reward.m200_title': 'Breakout Trader Avatar',
+  'xp_reward.m200_desc': 'Unlock exclusive price breakout momentum avatar.',
+  'xp_reward.m350_title': 'Full Refill 5 Energy',
+  'xp_reward.m350_desc': 'Instantly recharge all lightning energy to max.',
+  'xp_reward.m500_title': '+2 Streak Shields',
+  'xp_reward.m500_desc': 'Extra shield reserves to preserve your study consistency.',
+  'xp_reward.m750_title': 'True Scalper Avatar',
+  'xp_reward.m750_desc': 'Unlock exclusive rapid volatility reader avatar.',
+  'xp_reward.m1000_title': 'Market Legend Avatar',
+  'xp_reward.m1000_desc': 'Unlock legendary stock market star avatar.',
+  'xp_reward.m1500_title': 'Grand Master Avatar',
+  'xp_reward.m1500_desc': 'Unlock the highest academy honor avatar.',
+
+  // ==========================================
+  // Leaderboard Modal (leaderboard.*)
+  // ==========================================
+  'leaderboard.title': 'IDX Trader League',
+  'leaderboard.subtitle': 'Educational rankings & XP accumulation',
+  'leaderboard.rankings_header': 'Leaderboard Standings',
+  'leaderboard.badge_you': 'YOU',
+  'leaderboard.streak_days': '• 🔥 {count} Days',
+  'leaderboard.leading_league': '👑 You are leading the League in #1 position!',
+  'leaderboard.overtake_prompt': 'Need {xp} more XP to overtake #{rank} ({name})',
+  'leaderboard.keep_learning': 'Keep completing quizzes to climb the ranks!',
+
+  // ==========================================
+  // Live Voice Modal (live_voice.*)
+  // ==========================================
+  'live_voice.title': 'Live Voice Analyst',
+  'live_voice.subtitle': 'Stock {ticker} • IDX Live',
+  'live_voice.status_listening': 'Listening to your question...',
+  'live_voice.status_thinking': 'Analyzing IDX Market Data...',
+  'live_voice.status_speaking': 'SAI Analyst is speaking...',
+  'live_voice.status_idle': 'Microphone Paused (Tap to start)',
+  'live_voice.label_you': 'You: ',
+  'live_voice.label_ai': 'SAI: ',
+  'live_voice.hint_speak': "Speak now, e.g.: 'What is {ticker} outlook and resistance level?'",
+  'live_voice.btn_stop': 'Stop Voice',
+  'live_voice.btn_pause': 'Pause Voice',
+  'live_voice.btn_start': 'Start Speaking',
+  'live_voice.err_tap_to_speak': 'Tap Orb to start speaking',
+  'live_voice.err_mic_permission': 'Microphone is inactive or permission denied',
+  'live_voice.err_connection_lost': 'Connection lost. Please try again.',
+
+  // ==========================================
+  // Market AI Chatbot & Chips (market.ai_* & market.chip_*)
+  // ==========================================
+  'market.ai_title': 'SAI Tech AI Chatbot',
+  'market.ai_live_voice_btn': 'Live Voice',
+  'market.ai_thinking': 'AI is analyzing market data...',
+  'market.ai_input_hint': 'Ask AI about {ticker}...',
+  'market.ai_greeting': 'Hello! I am **SAI Tech AI Chatbot** 🤖.\n\nYou are currently tracking **{ticker}** ({name}) at **{price}** ({change}).\n\nHow can I help you regarding technical analysis, fundamental valuation, or trading strategies for this stock?',
+  'market.chip_prospects': 'Prospect Analysis',
+  'market.chip_snr': 'Support & Resistance (SNR)',
+  'market.chip_smc': 'Smart Money (SMC / FVG)',
+  'market.chip_momentum': 'Zero-Lag Momentum',
+  'market.chip_valuation': 'Valuation & Ratios',
+  'market.chip_entry_exit': 'Entry/Exit Strategy',
+  'market.chip_beginner_tips': 'Beginner Tips',
+
+  // ==========================================
+  // Market News Tab (market.news_*)
+  // ==========================================
+  'market.news_header': 'Latest Market News • {ticker}',
+  'market.news_refresh': 'Refresh',
+  'market.news_cat_all': 'All',
+  'market.news_cat_dividend': 'Dividends & Earnings',
+  'market.news_cat_corporate': 'Corporate Actions',
+  'market.news_cat_sentiment': 'Market Sentiment',
+  'market.news_cat_analysis': 'Market Analysis',
+  'market.news_sentiment_positive': 'POSITIVE',
+  'market.news_sentiment_neutral': 'NEUTRAL',
+  'market.news_sentiment_caution': 'CAUTION',
+  'market.news_empty': 'No news articles found for category {category}.',
+  'market.news_time_just_now': 'Just now',
+  'market.news_btn_read': 'Read',
+  'market.news_btn_analyze_impact': 'Impact Analysis',
+
+  // ==========================================
+  // Ad Overlay (ad.*)
+  // ==========================================
+  'ad.badge': 'Sponsored',
+  'ad.countdown_reward': 'Reward available in {seconds} seconds',
+  'ad.btn_claim_close': 'CLAIM REWARD & CLOSE',
+  'ad.vip_upgrade_prompt': 'Ad-free forever? Upgrade to VIP Gold Pass',
+
+  // ==========================================
+  // Quiz Review & Refill Modal (kuis.review_* & kuis.refill_*)
+  // ==========================================
+  'kuis.review_start': 'REVIEW QUIZ',
+  'kuis.review_tag': 'Review',
+  'kuis.review_xp_reward': '+{xp} XP (Review)',
+  'kuis.refill_title': 'OUT OF LIVES!',
+  'kuis.refill_desc': 'Your lightning energy is depleted. Claim XP milestone rewards, wait for auto-recharge, or watch an instant ad to start the quiz!',
+  'kuis.refill_watch_ad': '🎬 WATCH AD (+1 LIFE)',
+  'kuis.refill_success': '1 Lightning life restored successfully.',
+  'kuis.refill_close': 'CLOSE',
 };
+
+const Map<String, String> appTranslationsEn = enTranslations;

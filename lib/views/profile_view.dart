@@ -1848,12 +1848,21 @@ class _ProfileViewState extends State<ProfileView> {
                           child: Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: const Color(0xff161f30),
+                              color: isDark ? const Color(0xff161f30) : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: (appState.currentRank['color'] as Color).withOpacity(0.35),
+                                color: (appState.currentRank['color'] as Color).withOpacity(isDark ? 0.35 : 0.45),
                                 width: 1.0,
                               ),
+                              boxShadow: isDark
+                                  ? null
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1869,13 +1878,13 @@ class _ProfileViewState extends State<ProfileView> {
                                           size: 16,
                                         ),
                                         const SizedBox(width: 6),
-                                        const Text(
-                                          "Jenjang Karier Trader",
+                                        Text(
+                                          appState.language == 'en' ? "Career Progression" : "Jenjang Karier Trader",
                                           style: TextStyle(
                                             fontFamily: 'Outfit',
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                            color: isDark ? Colors.white : const Color(0xff0f172a),
                                           ),
                                         ),
                                       ],
@@ -1906,38 +1915,40 @@ class _ProfileViewState extends State<ProfileView> {
                                   borderRadius: BorderRadius.circular(5),
                                   child: LinearProgressIndicator(
                                     value: appState.rankProgress.clamp(0.0, 1.0),
-                                    minHeight: 6,
-                                    backgroundColor: const Color(0xff0b0f19),
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      appState.currentRank['color'] as Color,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      appState.currentRank['title'] as String,
-                                      style: const TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 10.5,
-                                        color: Color(0xff94a3b8),
-                                      ),
-                                    ),
-                                    Text(
-                                      appState.nextRank != null
-                                          ? "Kurang ${appState.xpToNextRank} XP lagi (${(appState.rankProgress * 100).toInt()}%)"
-                                          : "Gelar Tertinggi ✓",
-                                      style: TextStyle(
-                                        fontFamily: 'Outfit',
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: appState.currentRank['color'] as Color,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                     minHeight: 6,
+                                     backgroundColor: isDark ? const Color(0xff0b0f19) : const Color(0xffe2e8f0),
+                                     valueColor: AlwaysStoppedAnimation<Color>(
+                                       appState.currentRank['color'] as Color,
+                                     ),
+                                   ),
+                                 ),
+                                 const SizedBox(height: 6),
+                                 Row(
+                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                   children: [
+                                     Text(
+                                       appState.currentRank['title'] as String,
+                                       style: TextStyle(
+                                         fontFamily: 'Inter',
+                                         fontSize: 10.5,
+                                         color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                                       ),
+                                     ),
+                                     Text(
+                                       appState.nextRank != null
+                                           ? (appState.language == 'en'
+                                               ? "${appState.xpToNextRank} XP left (${(appState.rankProgress * 100).toInt()}%)"
+                                               : "Kurang ${appState.xpToNextRank} XP lagi (${(appState.rankProgress * 100).toInt()}%)")
+                                           : (appState.language == 'en' ? "Max Rank Reached ✓" : "Gelar Tertinggi ✓"),
+                                       style: TextStyle(
+                                         fontFamily: 'Outfit',
+                                         fontSize: 10.5,
+                                         fontWeight: FontWeight.w700,
+                                         color: appState.currentRank['color'] as Color,
+                                       ),
+                                     ),
+                                   ],
+                                 ),
                               ],
                             ),
                           ),
@@ -1953,8 +1964,10 @@ class _ProfileViewState extends State<ProfileView> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xff1e293b), Color(0xff0f172a)],
+                              gradient: LinearGradient(
+                                colors: isDark
+                                    ? const [Color(0xff1e293b), Color(0xff0f172a)]
+                                    : const [Colors.white, Color(0xfff8fafc)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
@@ -1962,27 +1975,32 @@ class _ProfileViewState extends State<ProfileView> {
                               border: Border.all(
                                 color: appState.unclaimedMilestonesCount > 0
                                     ? const Color(0xfff59e0b)
-                                    : Colors.white.withOpacity(0.08),
+                                    : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0)),
                                 width: appState.unclaimedMilestonesCount > 0 ? 1.5 : 1.0,
                               ),
-                              boxShadow: appState.unclaimedMilestonesCount > 0
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xfff59e0b).withOpacity(0.2),
-                                        blurRadius: 10,
-                                      ),
-                                    ]
-                                  : null,
+                              boxShadow: [
+                                if (appState.unclaimedMilestonesCount > 0)
+                                  BoxShadow(
+                                    color: const Color(0xfff59e0b).withOpacity(0.2),
+                                    blurRadius: 10,
+                                  )
+                                else if (!isDark)
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
                             ),
                             child: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(7),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xfff59e0b).withOpacity(0.18),
+                                    color: const Color(0xfff59e0b).withOpacity(isDark ? 0.18 : 0.15),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.card_giftcard_rounded, color: Color(0xfffbbf24), size: 18),
+                                  child: const Icon(Icons.card_giftcard_rounded, color: Color(0xffd97706), size: 18),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -1991,13 +2009,13 @@ class _ProfileViewState extends State<ProfileView> {
                                     children: [
                                       Row(
                                         children: [
-                                          const Text(
-                                            "Jalur Hadiah XP",
+                                          Text(
+                                            appState.language == 'en' ? "XP Milestone Rewards" : "Jalur Hadiah XP",
                                             style: TextStyle(
                                               fontFamily: 'Outfit',
                                               fontSize: 13.5,
                                               fontWeight: FontWeight.w900,
-                                              color: Colors.white,
+                                              color: isDark ? Colors.white : const Color(0xff0f172a),
                                             ),
                                           ),
                                           const SizedBox(width: 6),
@@ -2009,7 +2027,9 @@ class _ProfileViewState extends State<ProfileView> {
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: Text(
-                                                "${appState.unclaimedMilestonesCount} Hadiah Siap!",
+                                                appState.language == 'en'
+                                                    ? "${appState.unclaimedMilestonesCount} Rewards Ready!"
+                                                    : "${appState.unclaimedMilestonesCount} Hadiah Siap!",
                                                 style: const TextStyle(
                                                   fontFamily: 'Outfit',
                                                   fontSize: 9.5,
@@ -2031,21 +2051,31 @@ class _ProfileViewState extends State<ProfileView> {
                                                   fontFamily: 'Outfit',
                                                   fontSize: 9.5,
                                                   fontWeight: FontWeight.bold,
-                                                  color: Color(0xfffbbf24),
+                                                  color: Color(0xffd97706),
                                                 ),
                                               ),
                                             ),
                                         ],
                                       ),
                                       const SizedBox(height: 2),
-                                      const Text(
-                                        "Buka nyawa, pelindung streak & avatar saat XP naik.",
-                                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                                      Text(
+                                        appState.language == 'en'
+                                            ? "Unlock hearts, streak shields & avatars as XP grows."
+                                            : "Buka nyawa, pelindung streak & avatar saat XP naik.",
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 10.5,
+                                          color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xfffbbf24), size: 13),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: isDark ? const Color(0xfffbbf24) : const Color(0xffd97706),
+                                  size: 13,
+                                ),
                               ],
                             ),
                           ),
@@ -2439,20 +2469,30 @@ class _ProfileViewState extends State<ProfileView> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xff0f172a).withOpacity(0.9),
+                                color: isDark ? const Color(0xff0f172a).withOpacity(0.9) : Colors.white,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: isUnlocked ? badgeColor.withOpacity(0.8) : Colors.white.withOpacity(0.06),
+                                  color: isUnlocked
+                                      ? badgeColor.withOpacity(isDark ? 0.8 : 0.6)
+                                      : (isDark ? Colors.white.withOpacity(0.06) : const Color(0xffe2e8f0)),
                                   width: isUnlocked ? 1.2 : 0.8,
                                 ),
                                 boxShadow: isUnlocked
                                     ? [
                                         BoxShadow(
-                                          color: badgeColor.withOpacity(0.2),
+                                          color: badgeColor.withOpacity(isDark ? 0.2 : 0.15),
                                           blurRadius: 6,
                                         ),
                                       ]
-                                    : null,
+                                    : (!isDark
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.03),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null),
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -2463,15 +2503,21 @@ class _ProfileViewState extends State<ProfileView> {
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: isUnlocked ? badgeColor : const Color(0xff334155),
+                                        color: isUnlocked
+                                            ? badgeColor
+                                            : (isDark ? const Color(0xff334155) : const Color(0xffcbd5e1)),
                                         width: isUnlocked ? 2.0 : 1.0,
                                       ),
-                                      color: const Color(0xff1e293b),
+                                      color: isUnlocked
+                                          ? badgeColor.withOpacity(isDark ? 0.15 : 0.1)
+                                          : (isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9)),
                                     ),
                                     alignment: Alignment.center,
                                     child: Icon(
                                       iconData,
-                                      color: isUnlocked ? badgeColor : const Color(0xff475569),
+                                      color: isUnlocked
+                                          ? badgeColor
+                                          : (isDark ? const Color(0xff475569) : const Color(0xff94a3b8)),
                                       size: 19,
                                     ),
                                   ),
@@ -2485,7 +2531,9 @@ class _ProfileViewState extends State<ProfileView> {
                                       fontFamily: 'Outfit',
                                       fontSize: 10,
                                       fontWeight: isUnlocked ? FontWeight.w800 : FontWeight.w600,
-                                      color: isUnlocked ? Colors.white : const Color(0xff64748b),
+                                      color: isUnlocked
+                                          ? (isDark ? Colors.white : const Color(0xff0f172a))
+                                          : (isDark ? const Color(0xff64748b) : const Color(0xff94a3b8)),
                                     ),
                                   ),
                                 ],

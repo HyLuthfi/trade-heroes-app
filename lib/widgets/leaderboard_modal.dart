@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../data/avatar_data.dart';
+import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 
@@ -29,39 +32,54 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
     });
   }
 
-  IconData _getAvatarIcon(String avatarId) {
-    switch (avatarId) {
-      case 'bull': return Icons.trending_up_rounded;
-      case 'chart': return Icons.show_chart_rounded;
-      case 'vip': return Icons.workspace_premium_rounded;
-      case 'wallet': return Icons.account_balance_wallet_rounded;
-      case 'rocket': return Icons.rocket_launch_rounded;
-      case 'star': return Icons.stars_rounded;
-      case 'shield': return Icons.security_rounded;
-      case 'fire': return Icons.local_fire_department_rounded;
-      case 'academy': return Icons.school_rounded;
-      default: return Icons.person_rounded;
-    }
-  }
+  String _tr(String language, String key, {Map<String, String> params = const {}}) =>
+      AppTranslations.text(language, key, params: params);
 
-  Color _getAvatarColor(String avatarId) {
-    switch (avatarId) {
-      case 'bull': return const Color(0xff10b981);
-      case 'chart': return const Color(0xff38bdf8);
-      case 'vip': return const Color(0xfff59e0b);
-      case 'wallet': return const Color(0xff14b8a6);
-      case 'rocket': return const Color(0xffa855f7);
-      case 'star': return const Color(0xfffbbf24);
-      case 'shield': return const Color(0xff059669);
-      case 'fire': return const Color(0xffef4444);
-      case 'academy': return const Color(0xffec4899);
-      default: return const Color(0xff60a5fa);
+  Widget _buildAvatarImage(String avatar, double size, Color iconColor, double iconSize) {
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return ClipOval(
+        child: Image.network(
+          avatar,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            AvatarData.getIcon(avatar),
+            color: iconColor,
+            size: iconSize,
+          ),
+        ),
+      );
+    } else if (avatar.startsWith('data:image')) {
+      try {
+        final b64 = avatar.split(',').last;
+        final bytes = base64Decode(b64);
+        return ClipOval(
+          child: Image.memory(
+            bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Icon(
+              AvatarData.getIcon(avatar),
+              color: iconColor,
+              size: iconSize,
+            ),
+          ),
+        );
+      } catch (_) {
+        return Icon(AvatarData.getIcon(avatar), color: iconColor, size: iconSize);
+      }
+    } else {
+      return Icon(AvatarData.getIcon(avatar), color: iconColor, size: iconSize);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
     final leaderboard = appState.leaderboard;
     final isLoading = appState.isLoadingLeaderboard;
     final int userRank = appState.userLeaderboardRank;
@@ -75,10 +93,15 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xff0f172a),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Color(0xfff59e0b), width: 1.8)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xff0f172a) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xfff59e0b) : const Color(0xffd97706),
+            width: 1.8,
+          ),
+        ),
       ),
       child: Column(
         children: [
@@ -88,7 +111,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
             width: 42,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: isDark ? Colors.white.withOpacity(0.2) : const Color(0xffcbd5e1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -100,56 +123,87 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: const Color(0xfff59e0b).withOpacity(0.18),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
-                      ),
-                      child: const Icon(Icons.emoji_events_rounded, color: Color(0xfffbbf24), size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Liga Trader BEI",
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xfff59e0b).withOpacity(isDark ? 0.18 : 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xfff59e0b).withOpacity(0.4),
                           ),
                         ),
-                        Text(
-                          "Papan peringkat edukasi & akumulasi XP",
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                        child: const Icon(
+                          Icons.emoji_events_rounded,
+                          color: Color(0xfffbbf24),
+                          size: 18,
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _tr(appState.language, 'leaderboard.title'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: isDark ? Colors.white : const Color(0xff0f172a),
+                              ),
+                            ),
+                            Text(
+                              _tr(appState.language, 'leaderboard.subtitle'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10.5,
+                                color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: Color(0xff94a3b8), size: 20),
+                      icon: Icon(
+                        Icons.refresh_rounded,
+                        color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                        size: 20,
+                      ),
                       onPressed: () {
                         AudioService.playClick();
                         appState.loadLeaderboard(force: true);
                       },
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
+                      onTap: () {
+                        AudioService.playClick();
+                        Navigator.of(context).pop();
+                      },
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.08),
+                          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
                         ),
-                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: isDark ? Colors.white : const Color(0xff64748b),
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
@@ -170,21 +224,21 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                     children: [
                       // Top 3 Podium
                       if (top1 != null) ...[
-                        _buildTopPodium(top1, top2, top3, appState),
+                        _buildTopPodium(top1, top2, top3, appState, isDark),
                         const SizedBox(height: 16),
                       ],
 
                       // Rest of Rank List
                       if (restList.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.only(left: 4, bottom: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
                           child: Text(
-                            "Klasemen Peringkat",
+                            _tr(appState.language, 'leaderboard.rankings_header'),
                             style: TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xff94a3b8),
+                              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
                             ),
                           ),
                         ),
@@ -192,7 +246,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                           final item = restList[idx];
                           final int rankNum = idx + 4;
                           final bool isMe = item['isCurrentUser'] == true;
-                          return _buildRankRow(item, rankNum, isMe);
+                          return _buildRankRow(item, rankNum, isMe, appState, isDark);
                         }),
                       ],
                     ],
@@ -200,7 +254,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
           ),
 
           // Sticky Bottom User Rank Status Bar
-          _buildUserRankBottomBar(appState, userRank, leaderboard),
+          _buildUserRankBottomBar(appState, userRank, leaderboard, isDark),
         ],
       ),
     );
@@ -211,13 +265,16 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
     Map<String, dynamic>? top2,
     Map<String, dynamic>? top3,
     AppState appState,
+    bool isDark,
   ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 16, 10, 12),
       decoration: BoxDecoration(
-        color: const Color(0xff161f30),
+        color: isDark ? const Color(0xff161f30) : const Color(0xfff8fafc),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -232,6 +289,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
               badgeColor: const Color(0xff94a3b8),
               medalIcon: Icons.military_tech_rounded,
               isMe: top2['isCurrentUser'] == true,
+              isDark: isDark,
             )
           else
             const SizedBox(width: 85),
@@ -244,6 +302,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
             badgeColor: const Color(0xfff59e0b),
             medalIcon: Icons.workspace_premium_rounded,
             isMe: top1['isCurrentUser'] == true,
+            isDark: isDark,
           ),
 
           // #3 Bronze
@@ -255,6 +314,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
               badgeColor: const Color(0xffea580c),
               medalIcon: Icons.military_tech_rounded,
               isMe: top3['isCurrentUser'] == true,
+              isDark: isDark,
             )
           else
             const SizedBox(width: 85),
@@ -270,11 +330,12 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
     required Color badgeColor,
     required IconData medalIcon,
     required bool isMe,
+    required bool isDark,
   }) {
     final String name = (item['name'] ?? 'Trader').toString();
     final int xp = (item['xp'] as num?)?.toInt() ?? 0;
     final String avatarId = (item['avatar'] ?? 'bull').toString();
-    final Color avaColor = _getAvatarColor(avatarId);
+    final Color avaColor = AvatarData.getColor(avatarId);
     final String shortName = name.split(' ').first;
 
     return Expanded(
@@ -299,13 +360,18 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                   boxShadow: [
                     if (rankNum == 1)
                       BoxShadow(
-                        color: badgeColor.withOpacity(0.35),
+                        color: badgeColor.withOpacity(isDark ? 0.35 : 0.25),
                         blurRadius: 14,
                       ),
                   ],
                 ),
                 alignment: Alignment.center,
-                child: Icon(_getAvatarIcon(avatarId), color: isMe ? const Color(0xff34d399) : avaColor, size: rankNum == 1 ? 26 : 22),
+                child: _buildAvatarImage(
+                  avatarId,
+                  rankNum == 1 ? 48 : 40,
+                  isMe ? const Color(0xff34d399) : avaColor,
+                  rankNum == 1 ? 26 : 22,
+                ),
               ),
               // Floating Rank Badge on top
               Positioned(
@@ -316,7 +382,10 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                     color: badgeColor,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
-                      BoxShadow(color: badgeColor.withOpacity(0.4), blurRadius: 6),
+                      BoxShadow(
+                        color: badgeColor.withOpacity(0.4),
+                        blurRadius: 6,
+                      ),
                     ],
                   ),
                   child: Row(
@@ -350,7 +419,9 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
               fontFamily: 'Outfit',
               fontSize: rankNum == 1 ? 13 : 11.5,
               fontWeight: FontWeight.bold,
-              color: isMe ? const Color(0xff34d399) : Colors.white,
+              color: isMe
+                  ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                  : (isDark ? Colors.white : const Color(0xff0f172a)),
             ),
           ),
           const SizedBox(height: 2),
@@ -359,8 +430,11 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: const Color(0xff0f172a),
+              color: isDark ? const Color(0xff0f172a) : Colors.white,
               borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isDark ? Colors.transparent : const Color(0xffe2e8f0),
+              ),
             ),
             child: Text(
               "$xp XP",
@@ -377,12 +451,18 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
     );
   }
 
-  Widget _buildRankRow(Map<String, dynamic> item, int rankNum, bool isMe) {
+  Widget _buildRankRow(
+    Map<String, dynamic> item,
+    int rankNum,
+    bool isMe,
+    AppState appState,
+    bool isDark,
+  ) {
     final String name = (item['name'] ?? 'Trader').toString();
     final int xp = (item['xp'] as num?)?.toInt() ?? 0;
     final int streak = (item['streak'] as num?)?.toInt() ?? 0;
     final String avatarId = (item['avatar'] ?? 'bull').toString();
-    final Color avaColor = _getAvatarColor(avatarId);
+    final Color avaColor = AvatarData.getColor(avatarId);
 
     // Get Tier name for XP
     String tierLabel = "Tier I";
@@ -400,10 +480,14 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: isMe ? const Color(0xff064e3b).withOpacity(0.35) : const Color(0xff161f30),
+        color: isMe
+            ? (isDark ? const Color(0xff064e3b).withOpacity(0.35) : const Color(0xffd1fae5))
+            : (isDark ? const Color(0xff161f30) : Colors.white),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isMe ? const Color(0xff10b981).withOpacity(0.6) : Colors.white.withOpacity(0.04),
+          color: isMe
+              ? (isDark ? const Color(0xff10b981).withOpacity(0.6) : const Color(0xff10b981))
+              : (isDark ? Colors.white.withOpacity(0.04) : const Color(0xffe2e8f0)),
           width: isMe ? 1.4 : 1.0,
         ),
       ),
@@ -418,7 +502,9 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                 fontFamily: 'Outfit',
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isMe ? const Color(0xff34d399) : const Color(0xff94a3b8),
+                color: isMe
+                    ? (isDark ? const Color(0xff34d399) : const Color(0xff065f46))
+                    : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
               ),
             ),
           ),
@@ -434,7 +520,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
               border: Border.all(color: avaColor.withOpacity(0.4)),
             ),
             alignment: Alignment.center,
-            child: Icon(_getAvatarIcon(avatarId), color: avaColor, size: 17),
+            child: _buildAvatarImage(avatarId, 30, avaColor, 17),
           ),
           const SizedBox(width: 10),
 
@@ -454,7 +540,9 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                           fontFamily: 'Outfit',
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: isMe ? const Color(0xff34d399) : Colors.white,
+                          color: isMe
+                              ? (isDark ? const Color(0xff34d399) : const Color(0xff065f46))
+                              : (isDark ? Colors.white : const Color(0xff0f172a)),
                         ),
                       ),
                     ),
@@ -463,12 +551,17 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: const Color(0xff065f46),
+                          color: isDark ? const Color(0xff065f46) : const Color(0xff10b981),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          "ANDA",
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xff34d399)),
+                        child: Text(
+                          _tr(appState.language, 'leaderboard.badge_you'),
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -479,13 +572,21 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                   children: [
                     Text(
                       tierLabel,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff64748b)),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 10,
+                        color: Color(0xff64748b),
+                      ),
                     ),
                     if (streak > 0) ...[
                       const SizedBox(width: 6),
                       Text(
-                        "• 🔥 $streak Hari",
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xfff87171)),
+                        _tr(appState.language, 'leaderboard.streak_days', params: {'count': '$streak'}),
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 10,
+                          color: Color(0xfff87171),
+                        ),
                       ),
                     ],
                   ],
@@ -498,8 +599,13 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xff0f172a),
+              color: isDark
+                  ? const Color(0xff0f172a)
+                  : (isMe ? Colors.white : const Color(0xfff1f5f9)),
               borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isDark ? Colors.transparent : const Color(0xffe2e8f0),
+              ),
             ),
             child: Text(
               "$xp XP",
@@ -507,7 +613,9 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                 fontFamily: 'Outfit',
                 fontSize: 11.5,
                 fontWeight: FontWeight.w900,
-                color: isMe ? const Color(0xff34d399) : const Color(0xffcbd5e1),
+                color: isMe
+                    ? (isDark ? const Color(0xff34d399) : const Color(0xff065f46))
+                    : (isDark ? const Color(0xffcbd5e1) : const Color(0xff334155)),
               ),
             ),
           ),
@@ -516,38 +624,56 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
     );
   }
 
-  Widget _buildUserRankBottomBar(AppState appState, int userRank, List<Map<String, dynamic>> leaderboard) {
+  Widget _buildUserRankBottomBar(
+    AppState appState,
+    int userRank,
+    List<Map<String, dynamic>> leaderboard,
+    bool isDark,
+  ) {
     int xpToOvertake = 0;
     String overtakeName = "";
+    int targetRank = 1;
     if (userRank > 1 && userRank <= leaderboard.length) {
       final prevUser = leaderboard[userRank - 2];
       final prevXp = (prevUser['xp'] as num?)?.toInt() ?? 0;
       xpToOvertake = (prevXp - appState.xp) + 1;
+      targetRank = userRank - 1;
       overtakeName = (prevUser['name'] ?? 'Trader').toString().split(' ').first;
     }
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-      decoration: const BoxDecoration(
-        color: Color(0xff161f30),
-        border: Border(top: BorderSide(color: Color(0xff1e293b), width: 1.2)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xff161f30) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
+            width: 1.2,
+          ),
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xff10b981).withOpacity(0.18),
+              color: isDark
+                  ? const Color(0xff10b981).withOpacity(0.18)
+                  : const Color(0xffd1fae5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xff10b981).withOpacity(0.4)
+                    : const Color(0xffa7f3d0),
+              ),
             ),
             child: Text(
               "#$userRank",
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
-                color: Color(0xff34d399),
+                color: isDark ? const Color(0xff34d399) : const Color(0xff065f46),
               ),
             ),
           ),
@@ -561,26 +687,42 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                   children: [
                     Text(
                       appState.userName,
-                      style: const TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xff0f172a),
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       "• ${appState.xp} XP",
-                      style: const TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xfffbbf24)),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xfffbbf24) : const Color(0xffd97706),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 1),
                 Text(
                   userRank == 1
-                      ? "👑 Anda memimpin posisi teratas Liga!"
+                      ? _tr(appState.language, 'leaderboard.leading_league')
                       : (xpToOvertake > 0
-                          ? "Butuh $xpToOvertake XP lagi untuk menyalip #$userRank-1 ($overtakeName)"
-                          : "Terus selesaikan kuis untuk naik peringkat!"),
+                          ? _tr(appState.language, 'leaderboard.overtake_prompt', params: {
+                              'xp': '$xpToOvertake',
+                              'rank': '$targetRank',
+                              'name': overtakeName,
+                            })
+                          : _tr(appState.language, 'leaderboard.keep_learning')),
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 10.5,
-                    color: userRank == 1 ? const Color(0xfffbbf24) : const Color(0xff94a3b8),
+                    color: userRank == 1
+                        ? (isDark ? const Color(0xfffbbf24) : const Color(0xffd97706))
+                        : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
                   ),
                 ),
               ],

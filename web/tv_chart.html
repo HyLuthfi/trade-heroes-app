@@ -53,6 +53,13 @@
 
       const urlParams = new URLSearchParams(window.location.search);
       let rawTicker = (urlParams.get('ticker') || 'BBCA').toUpperCase().split('_')[0].replace('.JK', '');
+      let themeMode = (urlParams.get('theme') || 'dark').toLowerCase();
+      let isDarkTheme = themeMode !== 'light';
+      let bgColor = isDarkTheme ? '#0b0f19' : '#ffffff';
+      let toolbarBg = isDarkTheme ? '#0b0f19' : '#f8fafc';
+
+      document.body.style.backgroundColor = bgColor;
+      document.documentElement.style.backgroundColor = bgColor;
 
       function renderWidget(ticker) {
         const container = document.getElementById('tv_chart_target');
@@ -64,10 +71,10 @@
             "symbol": "IDX:" + ticker,
             "interval": "D",
             "timezone": "Asia/Jakarta",
-            "theme": "dark",
+            "theme": isDarkTheme ? "dark" : "light",
             "style": "1",
             "locale": "id",
-            "toolbar_bg": "#0b0f19",
+            "toolbar_bg": toolbarBg,
             "enable_publishing": false,
             "withdateranges": true,
             "hide_side_toolbar": false,
@@ -92,9 +99,9 @@
             'interval': 'D',
             'symboledit': '1',
             'saveimage': '0',
-            'toolbarbg': '0b0f19',
+            'toolbarbg': isDarkTheme ? '0b0f19' : 'f8fafc',
             'studies': JSON.stringify(['STD;EMA']),
-            'theme': 'dark',
+            'theme': isDarkTheme ? 'dark' : 'light',
             'style': '1',
             'timezone': 'Asia/Jakarta',
             'withdateranges': '1',
@@ -125,6 +132,13 @@
             const nextTicker = (msg.ticker || rawTicker).toUpperCase().split('_')[0].replace('.JK', '');
             rawTicker = nextTicker;
             renderWidget(nextTicker);
+          } else if (msg.action === 'setTheme') {
+            isDarkTheme = msg.theme !== 'light';
+            bgColor = isDarkTheme ? '#0b0f19' : '#ffffff';
+            toolbarBg = isDarkTheme ? '#0b0f19' : '#f8fafc';
+            document.body.style.backgroundColor = bgColor;
+            document.documentElement.style.backgroundColor = bgColor;
+            renderWidget(rawTicker);
           }
         } catch (e) {
           console.error('Error handling message:', e);

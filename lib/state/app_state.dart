@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../l10n/locale_resolver.dart';
+import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
@@ -1053,6 +1054,9 @@ class AppState extends ChangeNotifier {
     _virtualBalance = 100000000.0;
     _portfolio = [];
     _tradeHistory = [];
+    _claimedXpMilestones = [];
+    _streakShields = 0;
+    _unlockedAvatars = ["bull", "chart", "wallet"];
     _saveState();
     _syncToCloudBackground();
     notifyListeners();
@@ -1543,16 +1547,28 @@ class AppState extends ChangeNotifier {
     AudioService.playReward();
     final Color rColor = rankData['color'] as Color;
     final IconData rIcon = rankData['icon'] as IconData;
-    final String rTitle = rankData['title'] as String;
+    final int rTier = rankData['tier'] as int;
     final String rRoman = rankData['roman'] as String;
-    final String rDesc = rankData['desc'] as String;
-    final String rPerk = rankData['perk'] as String;
+
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(_language, key, params: params);
+
+    final keyTitle = 'rank.tier${rTier}_title';
+    final rTitle = tr(keyTitle) != keyTitle ? tr(keyTitle) : (rankData['title'] as String);
+
+    final keyDesc = 'rank.tier${rTier}_desc';
+    final rDesc = tr(keyDesc) != keyDesc ? tr(keyDesc) : (rankData['desc'] as String);
+
+    final keyPerk = 'rank.tier${rTier}_perk';
+    final rPerk = tr(keyPerk) != keyPerk ? tr(keyPerk) : (rankData['perk'] as String);
+
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
+        backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: rColor, width: 2),
@@ -1566,10 +1582,10 @@ class AppState extends ChangeNotifier {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: rColor, width: 3.5),
-                color: const Color(0xff1e293b),
+                color: isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9),
                 boxShadow: [
                   BoxShadow(
-                    color: rColor.withOpacity(0.55),
+                    color: rColor.withOpacity(isDark ? 0.55 : 0.3),
                     blurRadius: 24,
                     spreadRadius: 2,
                   ),
@@ -1582,12 +1598,12 @@ class AppState extends ChangeNotifier {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: rColor.withOpacity(0.2),
+                color: rColor.withOpacity(isDark ? 0.2 : 0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: rColor.withOpacity(0.5)),
               ),
               child: Text(
-                "NAIK PANGKAT • TIER $rRoman",
+                tr('rank.tier_up_badge', params: {'roman': rRoman}),
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 11,
@@ -1601,26 +1617,31 @@ class AppState extends ChangeNotifier {
             Text(
               rTitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xff0f172a),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               rDesc,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.4),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.5,
+                color: isDark ? const Color(0xffcbd5e1) : const Color(0xff64748b),
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xff161f30),
+                color: isDark ? const Color(0xff161f30) : const Color(0xfff8fafc),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0)),
               ),
               child: Row(
                 children: [
@@ -1630,13 +1651,22 @@ class AppState extends ChangeNotifier {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Keistimewaan Baru Terbuka:",
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                        Text(
+                          tr('rank.tier_up_perks_title'),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.5,
+                            color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                          ),
                         ),
                         Text(
                           rPerk,
-                          style: const TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
+                          ),
                         ),
                       ],
                     ),
@@ -1652,10 +1682,19 @@ class AppState extends ChangeNotifier {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 4,
               ),
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text(
-                "AMBIL GELAR SAYA 👑",
-                style: TextStyle(fontFamily: 'Outfit', color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
+              onPressed: () {
+                AudioService.playClick();
+                Navigator.of(ctx).pop();
+              },
+              child: Text(
+                tr('rank.tier_up_claim_btn'),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ],
