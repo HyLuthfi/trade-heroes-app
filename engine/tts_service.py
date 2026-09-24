@@ -163,13 +163,13 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
         }
         json_bytes = json.dumps(payload).encode('utf-8')
 
-        # If auto, try 1 key with 6s timeout; if explicit gemini requested, give up to 14s timeout
-        is_explicit_gemini = voice_engine in ["gemini_puck", "gemini_charon", "puck", "charon"]
-        timeout_sec = 14.0 if is_explicit_gemini else 6.0
-        max_attempts_count = 2 if is_explicit_gemini else 1
+        # Pool of confirmed active keys with healthy quotas
+        active_indices = [0, 1, 3, 5, 6, 7, 10, 11, 12, 13, 15, 16, 17, 19, 20]
+        # Always advance start index on each request for genuine round-robin
+        _gemini_key_index = (_gemini_key_index + 1) % len(active_indices)
 
-        preferred_indices = [2, 4, 5, 6, 10, 15, 16, 17, 19, 20]
-        attempts = [preferred_indices[(_gemini_key_index + i) % len(preferred_indices)] for i in range(min(max_attempts_count, len(preferred_indices)))]
+        max_attempts_count = min(6, len(active_indices))
+        attempts = [active_indices[(_gemini_key_index + i) % len(active_indices)] for i in range(max_attempts_count)]
 
         for idx in attempts:
             if idx >= num_keys:
@@ -183,7 +183,7 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
                     data=json_bytes,
                     headers={"Content-Type": "application/json"}
                 )
-                with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+                with urllib.request.urlopen(req, timeout=8.0) as resp:
                     if resp.status == 200:
                         data = json.loads(resp.read().decode('utf-8'))
                         candidates = data.get("candidates", [])
@@ -199,7 +199,6 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
                                         wav = raw_audio
                                     else:
                                         wav = wrap_pcm_wav(raw_audio)
-                                    _gemini_key_index = (idx + 1) % len(preferred_indices)
                                     return {
                                         "audio": f"data:audio/wav;base64,{base64.b64encode(wav).decode('utf-8')}",
                                         "provider": f"Google Gemini ({gemini_voice} - Cowok)"
