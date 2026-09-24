@@ -681,8 +681,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                 (qData['options'] as List).length,
                                 (idx) {
                                   final optionLetter = String.fromCharCode(65 + idx);
-                                  final isSelected = _selectedOptionIdx == idx;
+                                  final isSelected = (_selectedOptionIdx == idx);
                                   final isCorrectAnswer = (qData['a'] == idx);
+                                  final bool showCorrectOption = _checked && (isCorrectAnswer && (_isAnswerCorrect || appState.isPremium));
 
                                   Color cardBg = const Color(0xff0f172a).withOpacity(0.9);
                                   Color cardShadow = const Color(0xff022c22);
@@ -691,7 +692,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                   Color letterText = const Color(0xfff59e0b);
 
                                   if (_checked) {
-                                    if (isCorrectAnswer) {
+                                    if (showCorrectOption) {
                                       cardBg = const Color(0xff059669);
                                       cardShadow = const Color(0xff047857);
                                       cardBorder = const Color(0xff34d399);
@@ -787,7 +788,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                                     ),
                                                   ),
                                                 ),
-                                                if (_checked && isCorrectAnswer)
+                                                if (showCorrectOption)
                                                   const Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
                                                 if (_checked && isSelected && !isCorrectAnswer)
                                                   const Icon(Icons.cancel_rounded, color: Colors.white, size: 22),
