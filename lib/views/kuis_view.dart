@@ -606,7 +606,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 13),
                                 const SizedBox(width: 5),
                                 Text(
-                                  appState.canClaimDailyToday ? "Absen Harian 🎁" : "Hadiah Harian 🎁",
+                                  appState.canClaimDailyToday ? "Absen Harian" : "Hadiah Harian",
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 10.5,
@@ -1504,7 +1504,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
         chestBorder = const Color(0xfff59e0b);
         chestIcon = Icons.card_giftcard_rounded;
         iconColor = const Color(0xfffbbf24);
-        labelText = "KLAIM +$xpReward XP 🎁";
+        labelText = "KLAIM +$xpReward XP";
       }
     }
 
@@ -1656,8 +1656,8 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
               isClaimed
                   ? "Hadiah +$xpReward XP telah diklaim ✓"
                   : isCompleted
-                      ? "Bonus +$xpReward XP siap diklaim! 🎁"
-                      : "Selesaikan Level $levelId untuk membuka 🔒",
+                      ? "Bonus +$xpReward XP siap diklaim!"
+                      : "Selesaikan Level $levelId untuk membuka",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Outfit',
@@ -1676,7 +1676,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                   appState.claimChest(levelId, xpReward, context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text("Selamat! Bonus +$xpReward XP telah diklaim! 🎁"),
+                      content: Text("Selamat! Bonus +$xpReward XP telah diklaim!"),
                       backgroundColor: const Color(0xff059669),
                     ),
                   );
@@ -1696,7 +1696,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    "KLAIM +$xpReward XP 🎁",
+                    "KLAIM +$xpReward XP",
                     style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 14,

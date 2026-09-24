@@ -284,7 +284,7 @@ class _ProfileViewState extends State<ProfileView> {
               XpRewardModal.show(context);
             },
             child: const Text(
-              "Buka Jalur Hadiah 🎁",
+              "Buka Jalur Hadiah",
               style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.black),
             ),
           ),
@@ -1523,7 +1523,7 @@ class _ProfileViewState extends State<ProfileView> {
                         iconData: appState.isDailyGoalReached ? Icons.check_circle_rounded : Icons.track_changes_rounded,
                         color: appState.isDailyGoalReached ? const Color(0xff10b981) : const Color(0xff3b82f6),
                         subtitle: appState.canClaimDailyGoalBonus
-                            ? "Klaim Bonus Hadiah! 🎁"
+                            ? "Klaim Bonus Hadiah!"
                             : (appState.isDailyGoalClaimedToday ? "Target Tercapai ✓" : "Target 50 XP/hari"),
                         onTap: () {
                           AudioService.playClick();
@@ -1531,7 +1531,7 @@ class _ProfileViewState extends State<ProfileView> {
                             appState.claimDailyGoalBonus(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text("Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir! 🎉"),
+                                content: Text("Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir!"),
                                 backgroundColor: Color(0xff059669),
                               ),
                             );
@@ -1572,7 +1572,7 @@ class _ProfileViewState extends State<ProfileView> {
                                     const SizedBox(height: 12),
                                     Text(
                                       appState.isDailyGoalClaimedToday
-                                          ? "Hadiah bonus harian (+15 XP & +1 Petir) sudah berhasil Anda klaim hari ini. Keren, pertahankan konsistensimu!"
+                                          ? "Hadiah bonus harian (+15 XP & +1 Petir) sudah berhasil Anda klaim hari ini. Pertahankan konsistensi belajarmu!"
                                           : (appState.canClaimDailyGoalBonus
                                               ? "Target tercapai! Klaim bonus +15 XP & +1 Nyawa Petir sekarang!"
                                               : "Kumpulkan minimal 50 XP setiap hari melalui kuis atau modul baca untuk mendapatkan bonus ekstra +15 XP & +1 Nyawa Petir!"),
@@ -1589,12 +1589,12 @@ class _ProfileViewState extends State<ProfileView> {
                                         appState.claimDailyGoalBonus(context);
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
-                                            content: Text("Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir! 🎉"),
+                                            content: Text("Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir!"),
                                             backgroundColor: Color(0xff059669),
                                           ),
                                         );
                                       },
-                                      child: const Text("Klaim Hadiah 🎁", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white)),
+                                      child: const Text("Klaim Hadiah", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white)),
                                     ),
                                   TextButton(
                                     onPressed: () => Navigator.of(dCtx).pop(),

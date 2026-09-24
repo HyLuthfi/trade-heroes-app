@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import 'ad_overlay.dart';
+import 'vip_pass_modal.dart';
 
 class QuizOverlay extends StatefulWidget {
   final int levelId;
@@ -107,7 +108,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
           ],
         ),
         content: const Text(
-          "Jika Anda menyerah sekarang sebelum menyelesaikan kuis, Anda akan dianggap GAGAL dan kehilangan 1 Nyawa Petir ⚡.",
+          "Jika Anda menyerah sekarang sebelum menyelesaikan kuis, Anda akan dianggap GAGAL dan kehilangan 1 Nyawa Petir.",
           style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xffcbd5e1), height: 1.4),
         ),
         actions: [
@@ -122,7 +123,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
               appState.deductPetir(); // Candy crush style: forfeit loses 1 life
               Navigator.of(context).pop();
             },
-            child: const Text("MENYERAH (-1 ⚡)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+            child: const Text("MENYERAH (-1 PETIR)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
           ),
         ],
       ),
@@ -259,7 +260,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
             Text(
               isPassed
                   ? "Anda berhasil lulus kuis level '${widget.title}' dengan menjawab benar $_scoreCorrect dari ${widget.questions.length} soal! Nyawa petir Anda utuh."
-                  : "Sayang sekali, Anda belum memenuhi syarat minimal 1 bintang. Nyawa petir berkurang 1 ⚡. Pelajari materi lagi dan coba ulangi!",
+                  : "Sayang sekali, Anda belum memenuhi syarat minimal 1 bintang. Nyawa petir berkurang 1. Pelajari materi lagi dan coba ulangi!",
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.4),
             ),
@@ -283,7 +284,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                       Text(isPassed ? (isFirstClear ? "XP Diperoleh" : "XP Latihan") : "Penalti", style: const TextStyle(fontSize: 11, color: Color(0xff94a3b8))),
                       const SizedBox(height: 4),
                       Text(
-                        isPassed ? "+$xpReward XP" : "-1 Petir ⚡",
+                        isPassed ? "+$xpReward XP" : "-1 Petir",
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 18,
@@ -316,7 +317,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
               ),
               onPressed: () => Navigator.of(ctx).pop(),
               child: Text(
-                isPassed ? "LANJUTKAN 🚀" : "COBA LAGI 🔄",
+                isPassed ? "LANJUTKAN" : "COBA LAGI",
                 style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.8),
               ),
             ),
@@ -374,7 +375,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 });
               },
               child: const Text(
-                "🎬 TONTON IKLAN (+1 NYAWA)",
+                "TONTON IKLAN (+1 NYAWA)",
                 style: TextStyle(fontFamily: 'Outfit', color: Color(0xff10b981), fontWeight: FontWeight.w900),
               ),
             ),
@@ -390,7 +391,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 appState.upgradeToPremium(context);
               },
               child: const Text(
-                "👑 UPGRADE PREMIUM (NYAWA UNLIMITED)",
+                "UPGRADE VIP (NYAWA TAK TERBATAS)",
                 style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
               ),
             ),
@@ -894,35 +895,142 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                           Row(
                             children: [
                               Icon(
-                                _isAnswerCorrect ? Icons.stars_rounded : Icons.cancel_rounded,
-                                color: _isAnswerCorrect ? const Color(0xfff59e0b) : const Color(0xfffca5a5),
-                                size: 26,
+                                _isAnswerCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                                color: _isAnswerCorrect ? const Color(0xff34d399) : const Color(0xfffca5a5),
+                                size: 24,
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               Text(
-                                _isAnswerCorrect ? "Luar Biasa! (+10 XP) 🎉" : "Kurang Tepat! 😅",
+                                _isAnswerCorrect ? "Jawaban Tepat! (+10 XP)" : "Kurang Tepat",
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
-                                  color: _isAnswerCorrect ? const Color(0xfff59e0b) : const Color(0xfffca5a5),
+                                  color: _isAnswerCorrect ? const Color(0xff34d399) : const Color(0xfffca5a5),
                                 ),
                               ),
+                              if (!_isAnswerCorrect && appState.isPremium) ...[
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xfff59e0b).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.5)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.workspace_premium_rounded, color: Color(0xfffbbf24), size: 13),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "VIP INSIGHT",
+                                        style: TextStyle(
+                                          fontFamily: 'Outfit',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xfffbbf24),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _isAnswerCorrect
-                                ? qData['explanation']
-                                : "Jawaban Benar: ${qData['type'] == 'pilgan' ? qData['options'][qData['a']] : qData['a']}\n${qData['explanation']}",
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13,
-                              color: Colors.white,
-                              height: 1.4,
+                          const SizedBox(height: 8),
+                          if (_isAnswerCorrect) ...[
+                            Text(
+                              qData['explanation'],
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: Colors.white,
+                                height: 1.4,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
+                          ] else if (appState.isPremium) ...[
+                            // User Subs: Muncul Jawaban Benar & Pembahasan
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: "Jawaban Benar: ",
+                                          style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff6ee7b7)),
+                                        ),
+                                        TextSpan(
+                                          text: "${qData['type'] == 'pilgan' ? qData['options'][qData['a']] : qData['a']}",
+                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    qData['explanation'],
+                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.35),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            // User Non-Subs: TIDAK muncul jawaban benar & pembahasan, melainkan info netral + teaser VIP
+                            const Text(
+                              "Pilihan Anda belum tepat. Pelajari kembali materi modul untuk menemukan jawaban yang benar saat mengulang kuis.",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12.5,
+                                color: Color(0xffe2e8f0),
+                                height: 1.35,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => VipPassModal.show(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff0f172a).withOpacity(0.85),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4), width: 1.0),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.lock_rounded, color: Color(0xfffbbf24), size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: const [
+                                          Text(
+                                            "Kunci Jawaban & Pembahasan Terkunci",
+                                            style: TextStyle(fontFamily: 'Outfit', fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
+                                          ),
+                                          Text(
+                                            "Buka pembahasan & kunci jawaban instan dengan VIP Pass",
+                                            style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff94a3b8)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xfffbbf24), size: 12),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
                           // 3D Continue Button
                           GestureDetector(
                             onTap: () => _nextQuestion(appState),
@@ -946,13 +1054,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                   ),
                                   alignment: Alignment.center,
                                   child: const Text(
-                                    "LANJUTKAN 🚀",
+                                    "LANJUTKAN",
                                     style: TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
-                                      letterSpacing: 1.0,
                                     ),
                                   ),
                                 ),
