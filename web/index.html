@@ -287,6 +287,24 @@
       let isVoiceStreamDone = false;
       let onVoiceStreamAllEndedCb = null;
 
+      function dataUriToBlob(dataUri) {
+        try {
+          const parts = dataUri.split(',');
+          const mimeMatch = parts[0].match(/:(.*?);/);
+          const mime = mimeMatch ? mimeMatch[1] : 'audio/wav';
+          const binary = atob(parts[1]);
+          const len = binary.length;
+          const u8arr = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            u8arr[i] = binary.charCodeAt(i);
+          }
+          return new Blob([u8arr], { type: mime });
+        } catch(e) {
+          console.warn('[LiveVoice] dataUriToBlob failed:', e);
+          return null;
+        }
+      }
+
       function playNextVoiceQueueChunk() {
         if (liveVoiceAudioQueue.length === 0) {
           isPlayingVoiceQueue = false;
@@ -294,28 +312,41 @@
           if (isVoiceStreamDone && typeof onVoiceStreamAllEndedCb === 'function') {
             const cb = onVoiceStreamAllEndedCb;
             onVoiceStreamAllEndedCb = null;
-            cb();
+            try { cb(); } catch(e) { console.warn("[LiveVoice] allEnded cb err:", e); }
           }
           return;
         }
 
         isPlayingVoiceQueue = true;
         const nextUri = liveVoiceAudioQueue.shift();
-        activeVoiceAudio = new Audio(nextUri);
+
+        let playUrl = nextUri;
+        const blob = dataUriToBlob(nextUri);
+        if (blob) {
+          playUrl = URL.createObjectURL(blob);
+        }
+
+        activeVoiceAudio = new Audio(playUrl);
 
         activeVoiceAudio.onended = function() {
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
           playNextVoiceQueueChunk();
         };
 
         activeVoiceAudio.onerror = function(err) {
-          console.warn('Live voice chunk error:', err);
+          console.warn('[LiveVoice] chunk audio error:', err);
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
           playNextVoiceQueueChunk();
         };
 
-        activeVoiceAudio.play().catch(function(e) {
-          console.warn('Live voice chunk play error:', e);
-          playNextVoiceQueueChunk();
-        });
+        const playPromise = activeVoiceAudio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function(e) {
+            console.warn('[LiveVoice] chunk play error:', e);
+            if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+            playNextVoiceQueueChunk();
+          });
+        }
       }
 
       window.enqueueLiveVoiceAudio = globalThis.enqueueLiveVoiceAudio = function(dataUri, onStarted, onAllEnded) {
@@ -324,23 +355,32 @@
         }
         liveVoiceAudioQueue.push(dataUri);
         if (!isPlayingVoiceQueue) {
-          if (typeof onStarted === 'function') onStarted();
+          if (typeof onStarted === 'function') {
+            try { onStarted(); } catch(e) { console.warn("[LiveVoice] onStarted err:", e); }
+          }
           playNextVoiceQueueChunk();
         }
       };
 
       window.playVoiceAudioUri = globalThis.playVoiceAudioUri = function(dataUri, onEnded) {
         window.stopVoiceAudio();
-        activeVoiceAudio = new Audio(dataUri);
+        let playUrl = dataUri;
+        const blob = dataUriToBlob(dataUri);
+        if (blob) playUrl = URL.createObjectURL(blob);
+
+        activeVoiceAudio = new Audio(playUrl);
         activeVoiceAudio.onended = function() {
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
           if (typeof onEnded === 'function') onEnded();
         };
         activeVoiceAudio.onerror = function(err) {
-          console.warn('Voice audio error:', err);
+          console.warn('[LiveVoice] audio error:', err);
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
           if (typeof onEnded === 'function') onEnded();
         };
         return activeVoiceAudio.play().catch(function(e) {
-          console.warn('Voice play blocked/rejected:', e);
+          console.warn('[LiveVoice] play blocked/rejected:', e);
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
           if (typeof onEnded === 'function') onEnded();
         });
       };
@@ -391,7 +431,7 @@
                   if (typeof onVoiceStreamAllEndedCb === 'function') {
                     const cb = onVoiceStreamAllEndedCb;
                     onVoiceStreamAllEndedCb = null;
-                    cb();
+                    try { cb(); } catch(e) {}
                   }
                 }
                 return;
@@ -417,7 +457,7 @@
                   try {
                     const parsed = JSON.parse(dataStr);
                     if (eventName === 'text' && typeof onTextDelta === 'function') {
-                      onTextDelta(parsed.delta || '', parsed.accumulated || '');
+                      try { onTextDelta(parsed.delta || '', parsed.accumulated || ''); } catch(e) {}
                     } else if (eventName === 'audio' && parsed.audio) {
                       window.enqueueLiveVoiceAudio(parsed.audio, onFirstAudio, onAllDone);
                     } else if (eventName === 'done') {
@@ -426,11 +466,11 @@
                         if (typeof onVoiceStreamAllEndedCb === 'function') {
                           const cb = onVoiceStreamAllEndedCb;
                           onVoiceStreamAllEndedCb = null;
-                          cb();
+                          try { cb(); } catch(e) {}
                         }
                       }
                     } else if (eventName === 'error' && typeof onError === 'function') {
-                      onError(parsed.error || 'Stream error');
+                      try { onError(parsed.error || 'Stream error'); } catch(e) {}
                     }
                   } catch(e) {}
                 }

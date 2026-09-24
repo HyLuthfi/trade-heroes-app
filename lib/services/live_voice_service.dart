@@ -77,12 +77,12 @@ class LiveVoiceService {
         onTextDelta(jsDelta.toDart, jsAcc.toDart);
       }).toJS;
 
-      final jsFirstAudioCb = ((JSObject? _) {
+      final jsFirstAudioCb = (() {
         _isPlaying = true;
         onFirstAudio();
       }).toJS;
 
-      final jsAllDoneCb = ((JSObject? _) {
+      final jsAllDoneCb = (() {
         _isPlaying = false;
         onAllDone();
       }).toJS;
