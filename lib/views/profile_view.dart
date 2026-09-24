@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../data/avatar_data.dart';
 import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
+import '../widgets/avatar_picker_modal.dart';
 import '../widgets/vip_pass_modal.dart';
 import 'admin_console_view.dart';
 
@@ -66,18 +68,6 @@ class _ProfileViewState extends State<ProfileView> {
       'iconData': Icons.school_rounded,
       'color': Color(0xffec4899),
     }
-  ];
-
-  final List<Map<String, dynamic>> _avatars = const [
-    { 'id': "bull", 'iconData': Icons.trending_up_rounded, 'name': "Bull" },
-    { 'id': "chart", 'iconData': Icons.show_chart_rounded, 'name': "Analyst" },
-    { 'id': "vip", 'iconData': Icons.workspace_premium_rounded, 'name': "VIP Gold" },
-    { 'id': "wallet", 'iconData': Icons.account_balance_wallet_rounded, 'name': "Whale" },
-    { 'id': "rocket", 'iconData': Icons.rocket_launch_rounded, 'name': "Breakout" },
-    { 'id': "star", 'iconData': Icons.stars_rounded, 'name': "Legend" },
-    { 'id': "shield", 'iconData': Icons.security_rounded, 'name': "Guardian" },
-    { 'id': "fire", 'iconData': Icons.local_fire_department_rounded, 'name': "Scalper" },
-    { 'id': "academy", 'iconData': Icons.school_rounded, 'name': "Master" },
   ];
 
   void _showProfileEditPrompt(BuildContext context, AppState appState) {
@@ -179,19 +169,19 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
-                  height: 54,
+                  height: 56,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _avatars.length,
+                    itemCount: AvatarData.avatars.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 8),
                     itemBuilder: (context, idx) {
-                      final ava = _avatars[idx];
-                      final isSelected = currentAvatar == ava['id'];
+                      final ava = AvatarData.avatars[idx];
+                      final isSelected = currentAvatar == ava.id;
                       return GestureDetector(
                         onTap: () {
                           AudioService.playClick();
                           setDialogState(() {
-                            currentAvatar = ava['id'] as String;
+                            currentAvatar = ava.id;
                           });
                         },
                         child: Container(
@@ -200,22 +190,38 @@ class _ProfileViewState extends State<ProfileView> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isSelected
-                                ? const Color(0xff10b981).withOpacity(0.2)
+                                ? ava.color.withOpacity(0.25)
                                 : (isDark ? const Color(0xff0f172a) : const Color(0xfff1f5f9)),
                             border: Border.all(
-                              color: isSelected ? const Color(0xff10b981) : Colors.transparent,
-                              width: 2.0,
+                              color: isSelected ? ava.color : Colors.transparent,
+                              width: 2.2,
                             ),
                           ),
                           alignment: Alignment.center,
                           child: Icon(
-                            ava['iconData'] as IconData,
-                            color: isSelected ? const Color(0xff10b981) : (isDark ? Colors.white70 : const Color(0xff475569)),
+                            ava.icon,
+                            color: isSelected ? ava.color : (isDark ? Colors.white70 : const Color(0xff475569)),
                             size: 24,
                           ),
                         ),
                       );
                     },
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Center(
+                  child: Text(
+                    currentAvatar.startsWith('http') || currentAvatar.startsWith('data:image')
+                        ? (appState.language == 'en' ? 'Custom Photo' : 'Foto Kustom')
+                        : AvatarData.getTitle(currentAvatar, appState.language),
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: currentAvatar.startsWith('http') || currentAvatar.startsWith('data:image')
+                          ? const Color(0xff10b981)
+                          : AvatarData.getColor(currentAvatar),
+                    ),
                   ),
                 ),
               ],
@@ -1387,42 +1393,165 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   IconData _getAvatarIcon(String avatarId) {
-    switch (avatarId) {
-      case 'bear':
-        return Icons.south_west_rounded;
-      case 'vip':
-        return Icons.workspace_premium_rounded;
-      case 'chart':
-        return Icons.candlestick_chart_rounded;
-      case 'bandar':
-        return Icons.visibility_rounded;
-      case 'champion':
-        return Icons.emoji_events_rounded;
-      case 'bull':
-      default:
-        return Icons.trending_up_rounded;
-    }
+    return AvatarData.getIcon(avatarId);
   }
 
   Color _getAvatarColor(String avatarId) {
-    if (avatarId.startsWith('http') || avatarId.startsWith('data:image')) {
-      return const Color(0xff10b981);
-    }
-    switch (avatarId) {
-      case 'bear':
-        return const Color(0xfff87171);
-      case 'vip':
-        return const Color(0xfff59e0b);
-      case 'chart':
-        return const Color(0xff38bdf8);
-      case 'bandar':
-        return const Color(0xffa855f7);
-      case 'champion':
-        return const Color(0xffeab308);
-      case 'bull':
-      default:
-        return const Color(0xff10b981);
-    }
+    return AvatarData.getColor(avatarId);
+  }
+
+  void _showAvatarOptionsSheet(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isEn = appState.language == 'en';
+    final hasCustomPhoto = appState.userAvatar.startsWith('http') || appState.userAvatar.startsWith('data:image');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xff0f172a) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(
+            top: BorderSide(
+              color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0),
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.2) : const Color(0xffcbd5e1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              _tr(appState, 'profile.avatar_picker'),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xff0f172a),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xff10b981).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.theater_comedy_rounded, color: Color(0xff10b981), size: 22),
+              ),
+              title: Text(
+                isEn ? "Choose Character Avatar" : "Pilih Karakter Avatar 3D",
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : const Color(0xff0f172a),
+                ),
+              ),
+              subtitle: Text(
+                isEn ? "Select from 12 trader character avatars" : "Pilih dari 12 karakter trader Trade Heroes",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xff94a3b8)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                AvatarPickerModal.show(context);
+              },
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xff3b82f6).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.photo_camera_rounded, color: Color(0xff3b82f6), size: 22),
+              ),
+              title: Text(
+                isEn ? "Upload Custom Photo" : "Unggah Foto dari Galeri",
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : const Color(0xff0f172a),
+                ),
+              ),
+              subtitle: Text(
+                isEn ? "Choose an image file from your device" : "Pilih file gambar dari penyimpanan perangkat",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xff94a3b8)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickAndUploadAvatar(context, appState);
+              },
+            ),
+            if (hasCustomPhoto) ...[
+              const SizedBox(height: 6),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xfff59e0b).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.restore_rounded, color: Color(0xfff59e0b), size: 22),
+                ),
+                title: Text(
+                  isEn ? "Use Default Character Avatar" : "Gunakan Karakter Bawaan",
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : const Color(0xff0f172a),
+                  ),
+                ),
+                subtitle: Text(
+                  isEn ? "Reset photo to Bull Pro avatar" : "Kembalikan foto ke avatar Banteng Pro",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11.5,
+                    color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  appState.updateAvatar('bull');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      content: Text(isEn ? "Reset to default character avatar" : "Avatar dikembalikan ke karakter bawaan"),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1484,9 +1613,9 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                     child: Column(
                       children: [
-                        // Avatar Circle with Custom Photo Picker
+                        // Avatar Circle with Avatar Picker Sheet
                         GestureDetector(
-                          onTap: _isUploadingAvatar ? null : () => _pickAndUploadAvatar(context, appState),
+                          onTap: _isUploadingAvatar ? null : () => _showAvatarOptionsSheet(context, appState),
                           child: Stack(
                             children: [
                               Container(
@@ -1592,6 +1721,53 @@ class _ProfileViewState extends State<ProfileView> {
                             fontFamily: 'Inter',
                             fontSize: 12.5,
                             color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Avatar Tag Pill
+                        InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            AudioService.playClick();
+                            _showAvatarOptionsSheet(context, appState);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _getAvatarColor(appState.userAvatar).withOpacity(0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _getAvatarIcon(appState.userAvatar),
+                                  size: 13,
+                                  color: _getAvatarColor(appState.userAvatar),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  appState.userAvatar.startsWith('http') || appState.userAvatar.startsWith('data:image')
+                                      ? (appState.language == 'en' ? 'Custom Photo' : 'Foto Kustom')
+                                      : AvatarData.getTitle(appState.userAvatar, appState.language),
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xff0f172a),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit_rounded,
+                                  size: 11,
+                                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 18),

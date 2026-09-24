@@ -527,6 +527,7 @@ class AppState extends ChangeNotifier {
   void updateAvatar(String newAvatar) {
     _userAvatar = newAvatar;
     _saveState();
+    _syncToCloudBackground();
     notifyListeners();
   }
 
