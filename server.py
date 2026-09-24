@@ -98,7 +98,7 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def _handle_ai_tts(self):
-        """Synthesize text to speech using Google Gemini Generative Audio API"""
+        """Synthesize text to speech using Google Gemini or Microsoft Edge TTS"""
         import json
         try:
             content_len = int(self.headers.get('Content-Length', 0))
@@ -112,14 +112,14 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             return
 
         text = req_data.get('text', '')
-        voice = req_data.get('voice', 'Puck')
+        voice = req_data.get('voice', 'auto')
         try:
-            from engine.tts_service import synthesize_gemini_tts
-            audio_uri = synthesize_gemini_tts(text, voice=voice)
+            from engine.tts_service import synthesize_voice
+            res = synthesize_voice(text, voice_engine=voice)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.end_headers()
-            self.wfile.write(json.dumps({'audio': audio_uri, 'voice': voice}).encode('utf-8'))
+            self.wfile.write(json.dumps({'audio': res.get('audio', ''), 'provider': res.get('provider', '')}).encode('utf-8'))
         except Exception as e:
             self.send_response(500)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -328,21 +328,43 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
                 }
             )
             with urllib.request.urlopen(req, timeout=12) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                ai_text = data['choices'][0]['message']['content']
+                resp_body = resp.read().decode('utf-8').strip()
+                ai_text = ""
+                if resp_body.startswith("data: ") or "\ndata: " in resp_body:
+                    for line in resp_body.splitlines():
+                        line = line.strip()
+                        if line.startswith("data: "):
+                            line_data = line[6:].strip()
+                            if line_data == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(line_data)
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                content_piece = delta.get("content", "")
+                                if content_piece:
+                                    ai_text += content_piece
+                            except Exception:
+                                pass
+                else:
+                    data = json.loads(resp_body)
+                    ai_text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
 
             audio_uri = ""
+            tts_provider = ""
             if is_live_voice:
                 try:
-                    from engine.tts_service import synthesize_gemini_tts
-                    audio_uri = synthesize_gemini_tts(ai_text, voice=req_data.get('voiceName', 'Puck'))
+                    from engine.tts_service import synthesize_voice
+                    v_engine = req_data.get('voiceEngine') or req_data.get('voiceName') or 'auto'
+                    tts_res = synthesize_voice(ai_text, voice_engine=v_engine)
+                    audio_uri = tts_res.get('audio', '')
+                    tts_provider = tts_res.get('provider', '')
                 except Exception as tts_err:
                     print(f"Warning: Live voice synthesis failed: {tts_err}")
 
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.end_headers()
-            self.wfile.write(json.dumps({'reply': ai_text, 'audio': audio_uri}).encode('utf-8'))
+            self.wfile.write(json.dumps({'reply': ai_text, 'audio': audio_uri, 'provider': tts_provider}).encode('utf-8'))
         except Exception as e:
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')

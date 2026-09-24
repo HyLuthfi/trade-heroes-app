@@ -44,6 +44,7 @@ def get_gemini_keys():
         except Exception as e:
             print(f"Notice: Failed reading 9Router DB for Gemini keys: {e}")
 
+    # Prioritize healthy keys (rotate initial index to confirmed responsive keys)
     _gemini_keys_cache = keys
     return keys
 
@@ -51,24 +52,15 @@ def clean_text_for_speech(text: str) -> str:
     """Strip markdown formatting, emojis, and symbols so TTS speaks smooth spoken Indonesian."""
     if not text:
         return ""
-    # Remove thought blocks
     t = re.sub(r'<think[\s>].*?</think>', '', text, flags=re.DOTALL)
-    # Remove code blocks
     t = re.sub(r'```.*?```', '', t, flags=re.DOTALL)
-    # Remove inline code
     t = re.sub(r'`(.*?)`', r'\1', t)
-    # Remove bold / italic markdown
     t = re.sub(r'\*\*(.*?)\*\*', r'\1', t)
     t = re.sub(r'\*(.*?)\*', r'\1', t)
-    # Remove markdown headers
     t = re.sub(r'#+\s*', '', t)
-    # Remove bullet markers
     t = re.sub(r'[•\-\*]\s+', '', t)
-    # Replace arrows
     t = t.replace('->', ' ke ')
-    # Remove brackets
     t = re.sub(r'[\[\]\(\)\{\}]', ' ', t)
-    # Normalize spaces
     t = re.sub(r'\s+', ' ', t).strip()
     return t
 
@@ -87,8 +79,13 @@ def wrap_pcm_wav(pcm_bytes: bytes, sample_rate: int = 24000, channels: int = 1, 
     )
     return riff_header + fmt_chunk + data_chunk + pcm_bytes
 
-def synthesize_edge_tts(clean_text: str, voice: str = "id-ID-GadisNeural") -> str:
-    """Fallback generator using Microsoft Edge TTS (id-ID-GadisNeural) for ultra-fast, zero-rate-limit audio."""
+def synthesize_edge_tts(clean_text: str, voice: str = "id-ID-ArdiNeural") -> str:
+    """
+    Generate audio using Microsoft Edge TTS.
+    Voices:
+    - id-ID-ArdiNeural (Cowok / Pria)
+    - id-ID-GadisNeural (Cewek / Wanita)
+    """
     try:
         import edge_tts
 
@@ -113,23 +110,42 @@ def synthesize_edge_tts(clean_text: str, voice: str = "id-ID-GadisNeural") -> st
         if data:
             return f"data:audio/mp3;base64,{base64.b64encode(data).decode('utf-8')}"
     except Exception as e:
-        print(f"Edge TTS fallback error: {e}")
+        print(f"Edge TTS ({voice}) error: {e}")
     return ""
 
-def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2.5-flash-preview-tts") -> str:
+def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
     """
-    Generate spoken voice audio via Google Gemini Generative Audio API,
-    with automatic ultra-fast fallback to Microsoft Edge TTS (id-ID-GadisNeural)
-    if Gemini encounters rate limits or latency.
+    Main TTS router with explicit model detection.
+    voice_engine options:
+    - 'gemini_puck': Google Gemini (Puck - Cowok Enerjik)
+    - 'gemini_charon': Google Gemini (Charon - Cowok Bariton)
+    - 'microsoft_ardi': Microsoft Edge (Ardi - Cowok Berwibawa)
+    - 'microsoft_gadis': Microsoft Edge (Gadis - Cewek Edukatif)
+    - 'auto': Coba Gemini Cowok (Puck) dulu, jika limit/timeout -> otomatis Microsoft Cowok (Ardi).
     """
     global _gemini_key_index
     clean_text = clean_text_for_speech(text)
     if not clean_text:
-        return ""
+        return {"audio": "", "provider": "None"}
+
+    # 1. Direct Microsoft Edge selection
+    if voice_engine == "microsoft_ardi" or voice_engine == "ardi":
+        audio = synthesize_edge_tts(clean_text, voice="id-ID-ArdiNeural")
+        return {"audio": audio, "provider": "Microsoft Edge (Ardi - Cowok)"}
+
+    if voice_engine == "microsoft_gadis" or voice_engine == "gadis":
+        audio = synthesize_edge_tts(clean_text, voice="id-ID-GadisNeural")
+        return {"audio": audio, "provider": "Microsoft Edge (Gadis - Cewek)"}
+
+    # 2. Gemini selection or Auto
+    gemini_voice = "Puck"
+    if voice_engine == "gemini_charon" or voice_engine == "charon":
+        gemini_voice = "Charon"
 
     keys = get_gemini_keys()
     num_keys = len(keys)
 
+    # If Gemini requested or Auto mode, attempt Gemini TTS with healthy keys
     if num_keys > 0:
         prompt_text = f"Please read the following text aloud naturally and expressively in Indonesian without adding or replying anything:\n\n{clean_text}"
         payload = {
@@ -139,7 +155,7 @@ def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2
                 "speechConfig": {
                     "voiceConfig": {
                         "prebuiltVoiceConfig": {
-                            "voiceName": voice
+                            "voiceName": gemini_voice
                         }
                     }
                 }
@@ -147,10 +163,17 @@ def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2
         }
         json_bytes = json.dumps(payload).encode('utf-8')
 
-        # Try 1 key with short timeout (2.8s) so response never hangs
-        max_retries = min(1, num_keys)
-        for attempt in range(max_retries):
-            idx = (_gemini_key_index + attempt) % num_keys
+        # If auto, try 1 key quickly (2.0s), if explicit gemini requested, try up to 3 keys (4.0s)
+        is_explicit_gemini = voice_engine in ["gemini_puck", "gemini_charon", "puck", "charon"]
+        timeout_sec = 4.0 if is_explicit_gemini else 2.0
+        max_attempts_count = 3 if is_explicit_gemini else 1
+
+        preferred_indices = [2, 4, 5, 6, 10, 15, 16, 17, 19, 20]
+        attempts = [preferred_indices[(_gemini_key_index + i) % len(preferred_indices)] for i in range(min(max_attempts_count, len(preferred_indices)))]
+
+        for idx in attempts:
+            if idx >= num_keys:
+                continue
             key = keys[idx]
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
 
@@ -160,7 +183,7 @@ def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2
                     data=json_bytes,
                     headers={"Content-Type": "application/json"}
                 )
-                with urllib.request.urlopen(req, timeout=2.8) as resp:
+                with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
                     if resp.status == 200:
                         data = json.loads(resp.read().decode('utf-8'))
                         candidates = data.get("candidates", [])
@@ -172,11 +195,21 @@ def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2
                                 if b64:
                                     pcm = base64.b64decode(b64)
                                     wav = wrap_pcm_wav(pcm)
-                                    _gemini_key_index = (idx + 1) % num_keys
-                                    return f"data:audio/wav;base64,{base64.b64encode(wav).decode('utf-8')}"
+                                    _gemini_key_index = (idx + 1) % len(preferred_indices)
+                                    return {
+                                        "audio": f"data:audio/wav;base64,{base64.b64encode(wav).decode('utf-8')}",
+                                        "provider": f"Google Gemini ({gemini_voice} - Cowok)"
+                                    }
             except Exception as ex:
-                print(f"Gemini TTS notice: {ex}, switching directly to fast Edge TTS...")
-                break
+                print(f"Gemini Key #{idx} notice: {ex}, trying next...")
+                continue
 
-    # Fallback to high-speed Edge TTS
-    return synthesize_edge_tts(clean_text)
+    # Fallback or Forced Microsoft
+    print("Switching to Microsoft Edge (Ardi - Cowok)...")
+    audio = synthesize_edge_tts(clean_text, voice="id-ID-ArdiNeural")
+    return {"audio": audio, "provider": "Microsoft Edge (Ardi - Cowok)"}
+
+def synthesize_gemini_tts(text: str, voice: str = "auto") -> str:
+    """Backward compatibility helper returning data URI string."""
+    res = synthesize_voice(text, voice_engine=voice)
+    return res.get("audio", "")

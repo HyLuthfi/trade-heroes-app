@@ -1104,7 +1104,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       final res = await http.post(
         Uri.parse('/api/ai/tts'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': text, 'voice': 'Puck'}),
+        body: jsonEncode({'text': text, 'voice': 'auto'}),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
