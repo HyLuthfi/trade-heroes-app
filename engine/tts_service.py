@@ -137,10 +137,10 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
         audio = synthesize_edge_tts(clean_text, voice="id-ID-GadisNeural")
         return {"audio": audio, "provider": "Microsoft Edge (Gadis - Cewek)"}
 
-    # 2. Gemini selection or Auto
-    gemini_voice = "Puck"
-    if voice_engine == "gemini_charon" or voice_engine == "charon":
-        gemini_voice = "Charon"
+    # 2. Gemini selection or Auto (Default: Charon)
+    gemini_voice = "Charon"
+    if voice_engine == "gemini_puck" or voice_engine == "puck":
+        gemini_voice = "Puck"
     model = "gemini-3.8-flash-lite-tts"
 
     keys = get_gemini_keys()

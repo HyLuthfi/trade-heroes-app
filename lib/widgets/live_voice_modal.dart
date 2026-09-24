@@ -42,8 +42,8 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
   String _aiTranscript = "";
   String _errorMessage = "";
   bool _isMicMuted = false;
-  String _selectedEngine = "auto";
-  String _activeProviderName = "Otomatis (Cowok)";
+  String _selectedEngine = "gemini_charon";
+  String _activeProviderName = "Google Gemini (Charon)";
 
   late AnimationController _orbController;
   late Animation<double> _orbPulse;
@@ -411,13 +411,13 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: [
-                      _buildVoiceChip("auto", "Otomatis (Cowok)"),
-                      const SizedBox(width: 6),
-                      _buildVoiceChip("microsoft_ardi", "MS Edge (Ardi)"),
+                      _buildVoiceChip("gemini_charon", "Gemini (Charon)"),
                       const SizedBox(width: 6),
                       _buildVoiceChip("gemini_puck", "Gemini (Puck)"),
                       const SizedBox(width: 6),
-                      _buildVoiceChip("gemini_charon", "Gemini (Charon)"),
+                      _buildVoiceChip("microsoft_ardi", "MS Edge (Ardi)"),
+                      const SizedBox(width: 6),
+                      _buildVoiceChip("auto", "Otomatis"),
                     ],
                   ),
                 ),
