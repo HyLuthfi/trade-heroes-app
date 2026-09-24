@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -54,6 +55,33 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   Timer? _realDataRefreshTimer;
   bool _isLoadingRealData = false;
   final Random _rnd = Random();
+
+  static final Map<String, Map<String, dynamic>> _globalStockCache = {};
+
+  static void _loadCacheFromStorage() {
+    if (kIsWeb) {
+      try {
+        final raw = html.window.localStorage['th_market_cache_v2'];
+        if (raw != null && raw.isNotEmpty) {
+          final decoded = jsonDecode(raw) as Map<String, dynamic>;
+          decoded.forEach((k, v) {
+            if (v is Map) {
+              _globalStockCache[k] = Map<String, dynamic>.from(v);
+            }
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
+  static void _saveCacheForTicker(String ticker, Map<String, dynamic> data) {
+    _globalStockCache[ticker] = data;
+    if (kIsWeb) {
+      try {
+        html.window.localStorage['th_market_cache_v2'] = jsonEncode(_globalStockCache);
+      } catch (_) {}
+    }
+  }
 
   @override
   void initState() {
@@ -113,6 +141,16 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               activeStock['open'] = openVal;
               activeStock['high'] = highVal;
               activeStock['low'] = lowVal;
+
+              _saveCacheForTicker(activeStock['ticker'], {
+                'price': realPrice,
+                'change': change,
+                'changePct': activeStock['changePct'],
+                'open': openVal,
+                'high': highVal,
+                'low': lowVal,
+                'prevClose': prevClose,
+              });
             }
           });
         }
@@ -134,6 +172,13 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               final chg = realP - prevC;
               target['change'] = chg;
               target['changePct'] = prevC > 0 ? double.parse(((chg / prevC) * 100).toStringAsFixed(2)) : 0.0;
+
+              _saveCacheForTicker(ticker, {
+                'price': realP,
+                'change': chg,
+                'changePct': target['changePct'],
+                'prevClose': prevC,
+              });
             });
           }
         }
@@ -148,34 +193,46 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   void _initStockDatabase() {
+    _loadCacheFromStorage();
+    _allStocks.clear();
+
     final rawData = [
-      {'ticker': 'BBCA', 'name': 'Bank Central Asia Tbk', 'sector': 'Perbankan', 'basePrice': 10250.0, 'volStr': '854.2K', 'valStr': 'Rp 872.5 M', 'mcap': 'Rp 1.263,4 T', 'per': 24.8, 'pbv': 4.85, 'foreign': '+Rp 142,8 M'},
-      {'ticker': 'BBRI', 'name': 'Bank Rakyat Indonesia Tbk', 'sector': 'Perbankan', 'basePrice': 5450.0, 'volStr': '1.24M', 'valStr': 'Rp 676.2 M', 'mcap': 'Rp 825,9 T', 'per': 14.2, 'pbv': 2.65, 'foreign': '+Rp 88,4 M'},
-      {'ticker': 'TLKM', 'name': 'Telkom Indonesia Tbk', 'sector': 'Telko', 'basePrice': 3820.0, 'volStr': '451.8K', 'valStr': 'Rp 172.6 M', 'mcap': 'Rp 378,4 T', 'per': 15.6, 'pbv': 2.80, 'foreign': '-Rp 24,5 M'},
-      {'ticker': 'ASII', 'name': 'Astra International Tbk', 'sector': 'Otomotif', 'basePrice': 5175.0, 'volStr': '328.4K', 'valStr': 'Rp 169.8 M', 'mcap': 'Rp 209,5 T', 'per': 6.8, 'pbv': 1.05, 'foreign': '+Rp 18,2 M'},
-      {'ticker': 'GOTO', 'name': 'GoTo Gojek Tokopedia Tbk', 'sector': 'Teknologi', 'basePrice': 68.0, 'volStr': '12.4M', 'valStr': 'Rp 843.2 M', 'mcap': 'Rp 81,6 T', 'per': -12.4, 'pbv': 0.72, 'foreign': '+Rp 31,6 M'},
-      {'ticker': 'AMMN', 'name': 'Amman Mineral Internasional Tbk', 'sector': 'Tambang', 'basePrice': 11450.0, 'volStr': '650.4K', 'valStr': 'Rp 742.1 M', 'mcap': 'Rp 830,2 T', 'per': 38.5, 'pbv': 8.12, 'foreign': '+Rp 210,5 M'},
-      {'ticker': 'ICBP', 'name': 'Indofood CBP Sukses Makmur Tbk', 'sector': 'Konsumer', 'basePrice': 11200.0, 'volStr': '210.5K', 'valStr': 'Rp 235.8 M', 'mcap': 'Rp 130,6 T', 'per': 16.4, 'pbv': 3.12, 'foreign': '+Rp 45,2 M'},
-      {'ticker': 'UNVR', 'name': 'Unilever Indonesia Tbk', 'sector': 'Konsumer', 'basePrice': 2450.0, 'volStr': '540.1K', 'valStr': 'Rp 132.4 M', 'mcap': 'Rp 93,5 T', 'per': 22.1, 'pbv': 14.8, 'foreign': '-Rp 12,8 M'},
-      {'ticker': 'BMRI', 'name': 'Bank Mandiri Tbk', 'sector': 'Perbankan', 'basePrice': 5925.0, 'volStr': '1.02M', 'valStr': 'Rp 604.1 M', 'mcap': 'Rp 552,8 T', 'per': 10.2, 'pbv': 2.18, 'foreign': '+Rp 65,3 M'},
-      {'ticker': 'MDKA', 'name': 'Merdeka Copper Gold Tbk', 'sector': 'Tambang', 'basePrice': 2380.0, 'volStr': '420.3K', 'valStr': 'Rp 100.1 M', 'mcap': 'Rp 56,4 T', 'per': 28.5, 'pbv': 3.45, 'foreign': '+Rp 22,1 M'},
-      {'ticker': 'ANTM', 'name': 'Aneka Tambang Tbk', 'sector': 'Tambang', 'basePrice': 1485.0, 'volStr': '1.8M', 'valStr': 'Rp 267.3 M', 'mcap': 'Rp 35,6 T', 'per': 8.9, 'pbv': 1.62, 'foreign': '-Rp 8,4 M'},
-      {'ticker': 'ADRO', 'name': 'Adaro Energy Indonesia Tbk', 'sector': 'Tambang', 'basePrice': 2550.0, 'volStr': '890.6K', 'valStr': 'Rp 227.0 M', 'mcap': 'Rp 79,8 T', 'per': 5.2, 'pbv': 1.15, 'foreign': '+Rp 38,7 M'},
-      {'ticker': 'BREN', 'name': 'Barito Renewables Energy Tbk', 'sector': 'Energi', 'basePrice': 6850.0, 'volStr': '320.1K', 'valStr': 'Rp 219.3 M', 'mcap': 'Rp 458,2 T', 'per': 95.0, 'pbv': 18.5, 'foreign': '+Rp 52,4 M'},
-      {'ticker': 'INDF', 'name': 'Indofood Sukses Makmur Tbk', 'sector': 'Konsumer', 'basePrice': 6575.0, 'volStr': '180.2K', 'valStr': 'Rp 118.5 M', 'mcap': 'Rp 57,8 T', 'per': 7.5, 'pbv': 1.08, 'foreign': '+Rp 10,2 M'},
-      {'ticker': 'CPIN', 'name': 'Charoen Pokphand Indonesia Tbk', 'sector': 'Konsumer', 'basePrice': 4850.0, 'volStr': '245.8K', 'valStr': 'Rp 119.3 M', 'mcap': 'Rp 79,4 T', 'per': 18.2, 'pbv': 4.35, 'foreign': '-Rp 5,6 M'},
-      {'ticker': 'ACES', 'name': 'Ace Hardware Indonesia Tbk', 'sector': 'Ritel', 'basePrice': 720.0, 'volStr': '1.5M', 'valStr': 'Rp 108.0 M', 'mcap': 'Rp 12,3 T', 'per': 19.8, 'pbv': 3.05, 'foreign': '-Rp 2,1 M'},
-      {'ticker': 'PANI', 'name': 'Pantai Indah Kapuk Dua Tbk', 'sector': 'Properti', 'basePrice': 17800.0, 'volStr': '120.5K', 'valStr': 'Rp 214.5 M', 'mcap': 'Rp 327,5 T', 'per': 120.0, 'pbv': 25.8, 'foreign': '+Rp 95,3 M'},
-      {'ticker': 'EMTK', 'name': 'Elang Mahkota Teknologi Tbk', 'sector': 'Teknologi', 'basePrice': 430.0, 'volStr': '3.2M', 'valStr': 'Rp 137.6 M', 'mcap': 'Rp 25,3 T', 'per': -5.2, 'pbv': 0.55, 'foreign': '+Rp 4,8 M'},
+      {'ticker': 'BBCA', 'name': 'Bank Central Asia Tbk', 'sector': 'Perbankan', 'basePrice': 6225.0, 'prevClose': 6300.0, 'change': -75.0, 'changePct': -1.19, 'volStr': '75.6M', 'valStr': 'Rp 471.2 M', 'mcap': 'Rp 767,4 T', 'per': 14.8, 'pbv': 2.85, 'foreign': '-Rp 42,8 M'},
+      {'ticker': 'BBRI', 'name': 'Bank Rakyat Indonesia Tbk', 'sector': 'Perbankan', 'basePrice': 3140.0, 'prevClose': 3190.0, 'change': -50.0, 'changePct': -1.57, 'volStr': '124.5M', 'valStr': 'Rp 391.2 M', 'mcap': 'Rp 475,9 T', 'per': 9.2, 'pbv': 1.65, 'foreign': '-Rp 18,4 M'},
+      {'ticker': 'TLKM', 'name': 'Telkom Indonesia Tbk', 'sector': 'Telko', 'basePrice': 2410.0, 'prevClose': 2440.0, 'change': -30.0, 'changePct': -1.23, 'volStr': '85.8K', 'valStr': 'Rp 206.6 M', 'mcap': 'Rp 238,4 T', 'per': 11.6, 'pbv': 1.80, 'foreign': '-Rp 24,5 M'},
+      {'ticker': 'ASII', 'name': 'Astra International Tbk', 'sector': 'Otomotif', 'basePrice': 4770.0, 'prevClose': 4750.0, 'change': 20.0, 'changePct': 0.42, 'volStr': '32.4K', 'valStr': 'Rp 154.8 M', 'mcap': 'Rp 193,5 T', 'per': 6.2, 'pbv': 0.95, 'foreign': '+Rp 18,2 M'},
+      {'ticker': 'GOTO', 'name': 'GoTo Gojek Tokopedia Tbk', 'sector': 'Teknologi', 'basePrice': 50.0, 'prevClose': 50.0, 'change': 0.0, 'changePct': 0.0, 'volStr': '241.4M', 'valStr': 'Rp 120.2 M', 'mcap': 'Rp 60,6 T', 'per': -8.4, 'pbv': 0.62, 'foreign': '+Rp 31,6 M'},
+      {'ticker': 'AMMN', 'name': 'Amman Mineral Internasional Tbk', 'sector': 'Tambang', 'basePrice': 4730.0, 'prevClose': 4870.0, 'change': -140.0, 'changePct': -2.87, 'volStr': '45.4K', 'valStr': 'Rp 215.1 M', 'mcap': 'Rp 342,2 T', 'per': 22.5, 'pbv': 4.12, 'foreign': '-Rp 10,5 M'},
+      {'ticker': 'ICBP', 'name': 'Indofood CBP Sukses Makmur Tbk', 'sector': 'Konsumer', 'basePrice': 6975.0, 'prevClose': 6875.0, 'change': 100.0, 'changePct': 1.45, 'volStr': '15.5K', 'valStr': 'Rp 108.8 M', 'mcap': 'Rp 81,6 T', 'per': 12.4, 'pbv': 2.12, 'foreign': '+Rp 15,2 M'},
+      {'ticker': 'UNVR', 'name': 'Unilever Indonesia Tbk', 'sector': 'Konsumer', 'basePrice': 1620.0, 'prevClose': 1630.0, 'change': -10.0, 'changePct': -0.61, 'volStr': '40.1K', 'valStr': 'Rp 64.4 M', 'mcap': 'Rp 61,5 T', 'per': 16.1, 'pbv': 8.8, 'foreign': '-Rp 12,8 M'},
+      {'ticker': 'BMRI', 'name': 'Bank Mandiri Tbk', 'sector': 'Perbankan', 'basePrice': 4070.0, 'prevClose': 4190.0, 'change': -120.0, 'changePct': -2.86, 'volStr': '82.0M', 'valStr': 'Rp 334.1 M', 'mcap': 'Rp 379,8 T', 'per': 8.2, 'pbv': 1.48, 'foreign': '+Rp 25,3 M'},
+      {'ticker': 'MDKA', 'name': 'Merdeka Copper Gold Tbk', 'sector': 'Tambang', 'basePrice': 3060.0, 'prevClose': 3080.0, 'change': -20.0, 'changePct': -0.65, 'volStr': '32.3K', 'valStr': 'Rp 98.1 M', 'mcap': 'Rp 74,4 T', 'per': 24.5, 'pbv': 2.85, 'foreign': '+Rp 12,1 M'},
+      {'ticker': 'ANTM', 'name': 'Aneka Tambang Tbk', 'sector': 'Tambang', 'basePrice': 3270.0, 'prevClose': 3280.0, 'change': -10.0, 'changePct': -0.30, 'volStr': '51.8M', 'valStr': 'Rp 169.3 M', 'mcap': 'Rp 78,6 T', 'per': 11.9, 'pbv': 2.12, 'foreign': '-Rp 8,4 M'},
+      {'ticker': 'ADRO', 'name': 'Adaro Energy Indonesia Tbk', 'sector': 'Tambang', 'basePrice': 2560.0, 'prevClose': 2600.0, 'change': -40.0, 'changePct': -1.54, 'volStr': '40.6K', 'valStr': 'Rp 103.0 M', 'mcap': 'Rp 81,8 T', 'per': 4.8, 'pbv': 0.95, 'foreign': '+Rp 18,7 M'},
+      {'ticker': 'BREN', 'name': 'Barito Renewables Energy Tbk', 'sector': 'Energi', 'basePrice': 3100.0, 'prevClose': 3130.0, 'change': -30.0, 'changePct': -0.96, 'volStr': '62.1K', 'valStr': 'Rp 192.3 M', 'mcap': 'Rp 207,2 T', 'per': 45.0, 'pbv': 11.5, 'foreign': '+Rp 22,4 M'},
+      {'ticker': 'INDF', 'name': 'Indofood Sukses Makmur Tbk', 'sector': 'Konsumer', 'basePrice': 6950.0, 'prevClose': 6925.0, 'change': 25.0, 'changePct': 0.36, 'volStr': '18.2K', 'valStr': 'Rp 126.5 M', 'mcap': 'Rp 61,8 T', 'per': 6.5, 'pbv': 0.98, 'foreign': '+Rp 10,2 M'},
+      {'ticker': 'CPIN', 'name': 'Charoen Pokphand Indonesia Tbk', 'sector': 'Konsumer', 'basePrice': 3020.0, 'prevClose': 3080.0, 'change': -60.0, 'changePct': -1.95, 'volStr': '24.8K', 'valStr': 'Rp 74.3 M', 'mcap': 'Rp 49,4 T', 'per': 14.2, 'pbv': 2.85, 'foreign': '-Rp 5,6 M'},
+      {'ticker': 'ACES', 'name': 'Ace Hardware Indonesia Tbk', 'sector': 'Ritel', 'basePrice': 344.0, 'prevClose': 348.0, 'change': -4.0, 'changePct': -1.15, 'volStr': '55.5M', 'valStr': 'Rp 19.0 M', 'mcap': 'Rp 5,9 T', 'per': 12.8, 'pbv': 1.85, 'foreign': '-Rp 2,1 M'},
+      {'ticker': 'PANI', 'name': 'Pantai Indah Kapuk Dua Tbk', 'sector': 'Properti', 'basePrice': 4960.0, 'prevClose': 5075.0, 'change': -115.0, 'changePct': -2.27, 'volStr': '12.5K', 'valStr': 'Rp 62.5 M', 'mcap': 'Rp 91,5 T', 'per': 55.0, 'pbv': 9.8, 'foreign': '+Rp 35,3 M'},
+      {'ticker': 'EMTK', 'name': 'Elang Mahkota Teknologi Tbk', 'sector': 'Teknologi', 'basePrice': 430.0, 'prevClose': 446.0, 'change': -16.0, 'changePct': -3.59, 'volStr': '23.2M', 'valStr': 'Rp 9.6 M', 'mcap': 'Rp 26,3 T', 'per': -4.2, 'pbv': 0.52, 'foreign': '+Rp 4,8 M'},
     ];
 
     for (var item in rawData) {
-      final double baseP = item['basePrice'] as double;
+      final ticker = item['ticker'] as String;
+      final cached = _globalStockCache[ticker];
+
+      final double realP = (cached?['price'] as num?)?.toDouble() ?? (item['basePrice'] as double);
+      final double realChange = (cached?['change'] as num?)?.toDouble() ?? (item['change'] as double);
+      final double realChangePct = (cached?['changePct'] as num?)?.toDouble() ?? (item['changePct'] as double);
+      final double realOpen = (cached?['open'] as num?)?.toDouble() ?? realP;
+      final double realHigh = (cached?['high'] as num?)?.toDouble() ?? (realP + 50.0);
+      final double realLow = (cached?['low'] as num?)?.toDouble() ?? (realP - 50.0);
+      final double realPrevClose = (cached?['prevClose'] as num?)?.toDouble() ?? (item['prevClose'] as double);
 
       // Generate candles per timeframe
       List<Map<String, dynamic>> generateCandleSet(String tf) {
         final List<Map<String, dynamic>> res = [];
-        double currP = baseP * (tf == '1Y' ? 0.78 : (tf == '3M' ? 0.88 : 0.94));
+        double currP = realP * (tf == '1Y' ? 0.78 : (tf == '3M' ? 0.88 : 0.94));
         int hour = 9;
         int minute = 30;
         int day = 1;
@@ -184,11 +241,11 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
         for (int i = 0; i < 32; i++) {
           final factor = tf == '1Y' ? 0.035 : (tf == '3M' ? 0.025 : 0.015);
-          final change = (_rnd.nextDouble() - 0.46) * (baseP * factor);
+          final change = (_rnd.nextDouble() - 0.46) * (realP * factor);
           final openP = currP;
-          final closeP = openP + change;
-          final highP = max(openP, closeP) + (_rnd.nextDouble() * baseP * (factor * 0.5));
-          final lowP = min(openP, closeP) - (_rnd.nextDouble() * baseP * (factor * 0.5));
+          final closeP = (i == 31) ? realP : openP + change;
+          final highP = max(openP, closeP) + (_rnd.nextDouble() * realP * (factor * 0.5));
+          final lowP = min(openP, closeP) - (_rnd.nextDouble() * realP * (factor * 0.5));
           final vol = _rnd.nextInt(90000) + 20000;
 
           String timeStr = "";
@@ -234,22 +291,18 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       };
 
       final candles = timeframesMap['1D']!;
-      final firstC = candles.first['o'] as double;
-      final lastC = candles.last['c'] as double;
-      final diff = lastC - firstC;
-      final diffPct = (diff / firstC) * 100;
 
       _allStocks.add({
         'ticker': item['ticker'],
         'name': item['name'],
         'sector': item['sector'],
-        'price': lastC,
-        'change': diff,
-        'changePct': double.parse(diffPct.toStringAsFixed(2)),
-        'open': firstC,
-        'high': candles.map((c) => c['h'] as double).reduce(max),
-        'low': candles.map((c) => c['l'] as double).reduce(min),
-        'prevClose': firstC,
+        'price': realP,
+        'change': realChange,
+        'changePct': realChangePct,
+        'open': realOpen,
+        'high': realHigh,
+        'low': realLow,
+        'prevClose': realPrevClose,
         'volume': item['volStr'],
         'timeframesMap': timeframesMap,
         'value': item['valStr'],
