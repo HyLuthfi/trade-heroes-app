@@ -566,7 +566,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                               const Icon(Icons.bookmark_rounded, color: Color(0xff6ee7b7), size: 13),
                               const SizedBox(width: 5),
                               Text(
-                                "BAGIAN 1 • LEVEL $activeLevelId / 10",
+                                appState.completedLevels.length >= 10
+                                    ? "BAGIAN 1 • SEMUA LEVEL SELESAI"
+                                    : "BAGIAN 1 • LEVEL $activeLevelId / 10",
                                 style: const TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 10.5,
@@ -730,18 +732,33 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                           padding: EdgeInsets.zero,
                         ),
                         onPressed: () {
+                          AudioService.playClick();
+                          // Smoothly scroll and center back to the active level if scrolled away
+                          if (_scrollController.hasClients) {
+                            final double activeY = (activeLevel['y'] as double);
+                            final double targetScroll = (activeY - 180.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+                            _scrollController.animateTo(
+                              targetScroll,
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeOutCubic,
+                            );
+                          }
                           setState(() {
                             _selectedLevelId = activeLevelId;
                           });
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.play_arrow_rounded, size: 20, color: Color(0xff047857)),
-                            SizedBox(width: 4),
+                          children: [
+                            Icon(
+                              appState.completedLevels.length >= 10 ? Icons.replay_rounded : Icons.play_arrow_rounded,
+                              size: 20,
+                              color: const Color(0xff047857),
+                            ),
+                            const SizedBox(width: 4),
                             Text(
-                              "LANJUTKAN BELAJAR",
-                              style: TextStyle(
+                              appState.completedLevels.length >= 10 ? "REVIEW LEVEL 10" : "LANJUTKAN BELAJAR",
+                              style: const TextStyle(
                                 fontFamily: 'Outfit',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w900,
@@ -762,7 +779,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 child: SingleChildScrollView(
                   controller: _scrollController,
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 85),
+                  padding: const EdgeInsets.only(bottom: 115),
                   child: Center(
                       child: Container(
                         width: mapWidth,
@@ -1084,15 +1101,23 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 return Positioned(
                                   left: x - 46, // Centered perfectly (width is 92, so center is exactly x)
                                   top: y - 68,  // Positioned directly above active node
-                                  child: AnimatedBuilder(
-                                    animation: _bobAnimation,
-                                    builder: (context, child) {
-                                      return Transform.translate(
-                                        offset: Offset(0, _bobAnimation.value),
-                                        child: child,
-                                      );
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      AudioService.playClick();
+                                      setState(() {
+                                        _selectedLevelId = activeLevelId;
+                                      });
                                     },
-                                    child: _buildMulaiBubble(),
+                                    child: AnimatedBuilder(
+                                      animation: _bobAnimation,
+                                      builder: (context, child) {
+                                        return Transform.translate(
+                                          offset: Offset(0, _bobAnimation.value),
+                                          child: child,
+                                        );
+                                      },
+                                      child: _buildMulaiBubble(),
+                                    ),
                                   ),
                                 );
                               },
@@ -1748,10 +1773,6 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  Widget _buildMascotWidget() {
-    return const Text("🐂", style: TextStyle(fontSize: 42));
   }
 
   Widget _buildMulaiBubble() {
