@@ -69,7 +69,7 @@ class RankProgressionModal extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   const Text(
-                    "Jenjang Karier Trader",
+                    "Jenjang Karier",
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 18,
@@ -79,95 +79,116 @@ class RankProgressionModal extends StatelessWidget {
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      XpRewardModal.show(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xff10b981).withOpacity(0.18),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.card_giftcard_rounded, color: Color(0xff34d399), size: 14),
-                          const SizedBox(width: 4),
-                          const Text(
-                            "Hadiah XP",
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xff34d399),
-                            ),
-                          ),
-                          if (appState.unclaimedMilestonesCount > 0) ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xffef4444),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.08),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      LeaderboardModal.show(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xfff59e0b).withOpacity(0.18),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.emoji_events_rounded, color: Color(0xfffbbf24), size: 14),
-                          SizedBox(width: 4),
-                          Text(
-                            "Liga Trader",
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xfffbbf24),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.08),
-                      ),
-                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-                    ),
-                  ),
-                ],
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // Sub-bar Navigasi Cepat (Hadiah XP & Liga Trader)
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    XpRewardModal.show(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff064e3b).withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: appState.unclaimedMilestonesCount > 0
+                            ? const Color(0xff10b981)
+                            : const Color(0xff10b981).withOpacity(0.3),
+                        width: 1.1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.card_giftcard_rounded, color: Color(0xff34d399), size: 15),
+                        const SizedBox(width: 6),
+                        const Text(
+                          "Jalur Hadiah XP",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xff34d399),
+                          ),
+                        ),
+                        if (appState.unclaimedMilestonesCount > 0) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xffef4444),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              "${appState.unclaimedMilestonesCount}",
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    LeaderboardModal.show(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff78350f).withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.35), width: 1.1),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.emoji_events_rounded, color: Color(0xfffbbf24), size: 15),
+                        SizedBox(width: 6),
+                        Text(
+                          "Liga Trader BEI",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xfffbbf24),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
 
           // Active Rank Hero Card
           Container(

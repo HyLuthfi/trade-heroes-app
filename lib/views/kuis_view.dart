@@ -1014,28 +1014,45 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                         isCompleted: isCompleted,
                                         isUnlocked: isUnlocked,
                                       ),
-                                      // 3 Golden Stars for completed levels
+                                      // Candy Crush Style Dynamic Stars for completed levels
                                       if (isCompleted)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 3),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xff182232).withOpacity(0.8),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.5), width: 0.8),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: const [
-                                                Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 12),
-                                                SizedBox(width: 1),
-                                                Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 12),
-                                                SizedBox(width: 1),
-                                                Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 12),
-                                              ],
-                                            ),
-                                          ),
+                                        Builder(
+                                          builder: (context) {
+                                            final stars = appState.getStarsForLevel(id);
+                                            return Padding(
+                                              padding: const EdgeInsets.only(top: 3),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xff182232).withOpacity(0.9),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.5), width: 0.8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      stars >= 1 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                      color: stars >= 1 ? const Color(0xfff59e0b) : const Color(0xff475569),
+                                                      size: 12,
+                                                    ),
+                                                    const SizedBox(width: 1),
+                                                    Icon(
+                                                      stars >= 2 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                      color: stars >= 2 ? const Color(0xfff59e0b) : const Color(0xff475569),
+                                                      size: 13,
+                                                    ),
+                                                    const SizedBox(width: 1),
+                                                    Icon(
+                                                      stars >= 3 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                      color: stars >= 3 ? const Color(0xfff59e0b) : const Color(0xff475569),
+                                                      size: 12,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
                                         ),
                                     ],
                                   ),

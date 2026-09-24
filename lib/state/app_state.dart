@@ -13,6 +13,7 @@ class AppState extends ChangeNotifier {
   int _dailyXp = 0;
   int _streak = 0;
   List<int> _completedLevels = [1, 2, 3];
+  Map<int, int> _levelStars = {1: 3, 2: 3, 3: 3}; // levelId -> stars (1, 2, or 3) Candy Crush style
   List<int> _readModules = [];
   List<Map<String, dynamic>> _favorites = []; // { 'levelId': int, 'qIndex': int, 'questionText': String }
   List<String> _unlockedBadges = [];
@@ -56,6 +57,9 @@ class AppState extends ChangeNotifier {
   int get dailyXp => _dailyXp;
   int get streak => _streak;
   List<int> get completedLevels => _completedLevels;
+  Map<int, int> get levelStars => _levelStars;
+
+  int getStarsForLevel(int levelId) => _levelStars[levelId] ?? 0;
   List<int> get readModules => _readModules;
   List<Map<String, dynamic>> get favorites => _favorites;
   List<String> get unlockedBadges => _unlockedBadges;
@@ -561,6 +565,13 @@ class AppState extends ChangeNotifier {
     if (_completedLevels.isEmpty) {
       _completedLevels = [1, 2, 3];
     }
+    if (json['levelStars'] != null && json['levelStars'] is Map) {
+      _levelStars = (json['levelStars'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    } else {
+      _levelStars = {1: 3, 2: 3, 3: 3};
+    }
     _readModules = List<int>.from(json['readModules'] ?? []);
     _favorites = List<Map<String, dynamic>>.from(json['favorites'] ?? []);
     _unlockedBadges = List<String>.from(json['unlockedBadges'] ?? []);
@@ -634,6 +645,11 @@ class AppState extends ChangeNotifier {
       _completedLevels = (data['completed_levels'] as List).map((x) => (x as num).toInt()).toList();
       if (_completedLevels.isEmpty) _completedLevels = [1, 2, 3];
     }
+    if (data['level_stars'] != null && data['level_stars'] is Map) {
+      _levelStars = (data['level_stars'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    }
     if (data['read_modules'] != null && data['read_modules'] is List) {
       _readModules = (data['read_modules'] as List).map((x) => (x as num).toInt()).toList();
     }
@@ -671,6 +687,7 @@ class AppState extends ChangeNotifier {
       'dailyXp': _dailyXp,
       'streak': _streak,
       'completedLevels': _completedLevels,
+      'levelStars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
       'readModules': _readModules,
       'favorites': _favorites,
       'unlockedBadges': _unlockedBadges,
@@ -718,6 +735,7 @@ class AppState extends ChangeNotifier {
       'daily_xp': _dailyXp,
       'streak': _streak,
       'completed_levels': _completedLevels,
+      'level_stars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
       'read_modules': _readModules,
       'favorites': _favorites,
       'unlocked_badges': _unlockedBadges,
@@ -1297,13 +1315,17 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Level completed
-  void completeLevel(int levelId) {
+  // Level completed with Candy Crush style Stars (1, 2, or 3)
+  void completeLevel(int levelId, {int stars = 3}) {
     if (!_completedLevels.contains(levelId)) {
       _completedLevels.add(levelId);
-      _saveState();
-      notifyListeners();
     }
+    final curStars = _levelStars[levelId] ?? 0;
+    if (stars > curStars) {
+      _levelStars[levelId] = stars;
+    }
+    _saveState();
+    notifyListeners();
   }
 
   // Award Anti Boncos if no mistakes
