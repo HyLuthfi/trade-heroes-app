@@ -12,6 +12,22 @@ import concurrent.futures
 _gemini_keys_cache = []
 _gemini_key_index = 0
 
+def get_9router_key() -> str:
+    """Retrieve active API key for 9Router from local SQLite database."""
+    db_path = os.path.expanduser('~/AppData/Roaming/9router/db/data.sqlite')
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("SELECT key FROM apiKeys WHERE isActive=1 LIMIT 1;")
+            row = c.fetchone()
+            conn.close()
+            if row and row[0]:
+                return row[0].strip()
+        except Exception:
+            pass
+    return "sk-8148a195e7a36028-11a"
+
 def get_gemini_keys():
     """Retrieve Gemini API keys from 9Router local database or environment variables."""
     global _gemini_keys_cache
@@ -44,7 +60,6 @@ def get_gemini_keys():
         except Exception as e:
             print(f"Notice: Failed reading 9Router DB for Gemini keys: {e}")
 
-    # Prioritize healthy keys (rotate initial index to confirmed responsive keys)
     _gemini_keys_cache = keys
     return keys
 
@@ -59,6 +74,7 @@ def clean_text_for_speech(text: str) -> str:
     t = re.sub(r'\*(.*?)\*', r'\1', t)
     t = re.sub(r'#+\s*', '', t)
     t = re.sub(r'[•\-\*]\s+', '', t)
+    t = re.sub(r'[🎙️⚡🚀📊📈📉🔥👑⭐✨💎]', '', t)
     t = t.replace('->', ' ke ')
     t = re.sub(r'[\[\]\(\)\{\}]', ' ', t)
     t = re.sub(r'\s+', ' ', t).strip()
@@ -79,13 +95,44 @@ def wrap_pcm_wav(pcm_bytes: bytes, sample_rate: int = 24000, channels: int = 1, 
     )
     return riff_header + fmt_chunk + data_chunk + pcm_bytes
 
+def synthesize_via_9router(clean_text: str, voice: str = "charon") -> dict:
+    """Synthesize speech natively through 9Router's /v1/audio/speech endpoint."""
+    key = get_9router_key()
+    url = "http://127.0.0.1:20128/v1/audio/speech"
+    models = ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"]
+    for m in models:
+        try:
+            payload = {
+                "model": m,
+                "input": clean_text,
+                "voice": voice.lower(),
+                "response_format": "mp3"
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {key}"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                if resp.status == 200:
+                    body = resp.read()
+                    if body:
+                        mime = resp.headers.get('Content-Type') or 'audio/wav'
+                        prefix = "data:audio/mp3;base64," if "mp3" in mime.lower() else "data:audio/wav;base64,"
+                        return {
+                            "audio": f"{prefix}{base64.b64encode(body).decode('utf-8')}",
+                            "provider": f"9Router Media (Gemini {voice.capitalize()})"
+                        }
+        except Exception as e:
+            print(f"9Router TTS ({m}) notice: {e}, trying next...")
+            continue
+    return None
+
 def synthesize_edge_tts(clean_text: str, voice: str = "id-ID-ArdiNeural") -> str:
-    """
-    Generate audio using Microsoft Edge TTS.
-    Voices:
-    - id-ID-ArdiNeural (Cowok / Pria)
-    - id-ID-GadisNeural (Cewek / Wanita)
-    """
+    """Generate audio using Microsoft Edge TTS fallback."""
     try:
         import edge_tts
 
@@ -115,20 +162,15 @@ def synthesize_edge_tts(clean_text: str, voice: str = "id-ID-ArdiNeural") -> str
 
 def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
     """
-    Main TTS router with explicit model detection.
-    voice_engine options:
-    - 'gemini_puck': Google Gemini (Puck - Cowok Enerjik)
-    - 'gemini_charon': Google Gemini (Charon - Cowok Bariton)
-    - 'microsoft_ardi': Microsoft Edge (Ardi - Cowok Berwibawa)
-    - 'microsoft_gadis': Microsoft Edge (Gadis - Cewek Edukatif)
-    - 'auto': Coba Gemini Cowok (Puck) dulu, jika limit/timeout -> otomatis Microsoft Cowok (Ardi).
+    Main TTS router.
+    Prioritizes 9Router /v1/audio/speech with fallback to direct Gemini key pool and Edge TTS.
     """
     global _gemini_key_index
     clean_text = clean_text_for_speech(text)
     if not clean_text:
         return {"audio": "", "provider": "None"}
 
-    # 1. Direct Microsoft Edge selection
+    # 1. Direct Microsoft Edge selection if requested
     if voice_engine == "microsoft_ardi" or voice_engine == "ardi":
         audio = synthesize_edge_tts(clean_text, voice="id-ID-ArdiNeural")
         return {"audio": audio, "provider": "Microsoft Edge (Ardi - Cowok)"}
@@ -137,16 +179,21 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
         audio = synthesize_edge_tts(clean_text, voice="id-ID-GadisNeural")
         return {"audio": audio, "provider": "Microsoft Edge (Gadis - Cewek)"}
 
-    # 2. Gemini selection or Auto (Default: Charon)
+    # 2. Gemini voice selection (Default: Charon)
     gemini_voice = "Charon"
     if voice_engine == "gemini_puck" or voice_engine == "puck":
         gemini_voice = "Puck"
-    model = "gemini-3.8-flash-lite-tts"
 
+    # --- PRIMARY PATH: 9Router Native Media /v1/audio/speech ---
+    res_9router = synthesize_via_9router(clean_text, voice=gemini_voice)
+    if res_9router and res_9router.get("audio"):
+        return res_9router
+
+    # --- FAIL-SAFE PATH 1: Direct Gemini Key Pool ---
+    model = "gemini-3.8-flash-lite-tts"
     keys = get_gemini_keys()
     num_keys = len(keys)
 
-    # If Gemini requested or Auto mode, attempt Gemini TTS with healthy keys
     if num_keys > 0:
         payload = {
             "contents": [{"parts": [{"text": clean_text}]}],
@@ -163,11 +210,8 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
         }
         json_bytes = json.dumps(payload).encode('utf-8')
 
-        # Pool of confirmed active keys with healthy quotas
         active_indices = [0, 1, 3, 5, 6, 7, 10, 11, 12, 13, 15, 16, 17, 19, 20]
-        # Always advance start index on each request for genuine round-robin
         _gemini_key_index = (_gemini_key_index + 1) % len(active_indices)
-
         max_attempts_count = min(6, len(active_indices))
         attempts = [active_indices[(_gemini_key_index + i) % len(active_indices)] for i in range(max_attempts_count)]
 
@@ -194,7 +238,6 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
                                 b64 = (audio_part.get("inlineData") or audio_part.get("inline_data") or {}).get("data", "")
                                 if b64:
                                     raw_audio = base64.b64decode(b64)
-                                    # If already standard RIFF WAV (Gemini 3.8/2.5 default), use directly
                                     if raw_audio.startswith(b'RIFF'):
                                         wav = raw_audio
                                     else:
@@ -207,12 +250,7 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
                 print(f"Gemini Key #{idx} notice: {ex}, trying next...")
                 continue
 
-    # Fallback or Forced Microsoft
+    # --- FAIL-SAFE PATH 2: Microsoft Edge Neural TTS ---
     print("Switching to Microsoft Edge (Ardi - Cowok)...")
     audio = synthesize_edge_tts(clean_text, voice="id-ID-ArdiNeural")
     return {"audio": audio, "provider": "Microsoft Edge (Ardi - Cowok)"}
-
-def synthesize_gemini_tts(text: str, voice: str = "auto") -> str:
-    """Backward compatibility helper returning data URI string."""
-    res = synthesize_voice(text, voice_engine=voice)
-    return res.get("audio", "")
