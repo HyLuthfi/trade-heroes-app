@@ -1,21 +1,7 @@
-import 'dart:js_interop';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
-
-@JS('playTradeSound')
-external void _jsPlayTradeSound(JSString name, JSNumber vol);
-
-@JS('startTradeBgm')
-external void _jsStartTradeBgm(JSNumber vol);
-
-@JS('stopTradeBgm')
-external void _jsStopTradeBgm();
-
-@JS('setTradeAudioMuted')
-external void _jsSetTradeAudioMuted(JSBoolean muted);
-
-@JS('setTradeBgmTrack')
-external void _jsSetTradeBgmTrack(JSString track);
+import 'audio_stub.dart'
+    if (dart.library.js_interop) 'audio_web.dart' as platform_audio;
 
 /// Contextual SFX engine — sounds auto-match the interaction type.
 /// Bubble sounds for casual UI taps, Arcade sounds for confirmations.
@@ -59,7 +45,7 @@ class AudioService {
     if (!availableBgms.contains(track)) return;
     _currentBgm = track;
     if (kIsWeb) {
-      try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
+      platform_audio.jsSetTradeBgmTrack(track);
     }
     if (_bgmPlaying) {
       stopBgm().then((_) => startBgm());
@@ -69,7 +55,7 @@ class AudioService {
   static void setAudioEnabled(bool enabled) {
     _isAudioEnabled = enabled;
     if (kIsWeb) {
-      try { _jsSetTradeAudioMuted((!enabled).toJS); } catch (_) {}
+      platform_audio.jsSetTradeAudioMuted(!enabled);
     } else {
       if (!enabled) stopBgm();
     }
@@ -81,7 +67,7 @@ class AudioService {
     if (kIsWeb) {
       try {
         // Play via JS with theme prefix: "bubble/click" or "arcade/correct"
-        _jsPlayTradeSound('$theme/$name'.toJS, volume.toJS);
+        platform_audio.jsPlayTradeSound('$theme/$name', volume);
         return;
       } catch (e) {
         debugPrint("Web JS Audio error: $e");
@@ -127,10 +113,10 @@ class AudioService {
     if (!_isAudioEnabled) return;
     _bgmPlaying = false;
     if (kIsWeb) {
-      try { _jsStopTradeBgm(); } catch (_) {}
-      try { _jsSetTradeBgmTrack(track.toJS); } catch (_) {}
+      platform_audio.jsStopTradeBgm();
+      platform_audio.jsSetTradeBgmTrack(track);
       Future.delayed(const Duration(milliseconds: 100), () {
-        try { _jsStartTradeBgm((0.35).toJS); } catch (_) {}
+        platform_audio.jsStartTradeBgm(0.35);
         _bgmPlaying = true;
       });
     } else {
@@ -148,7 +134,7 @@ class AudioService {
   static void stopPreview() {
     _bgmPlaying = false;
     if (kIsWeb) {
-      try { _jsStopTradeBgm(); } catch (_) {}
+      platform_audio.jsStopTradeBgm();
     } else {
       _mobileBgmPlayer.stop();
     }
@@ -158,7 +144,8 @@ class AudioService {
     if (!_isAudioEnabled || _bgmPlaying) return;
     _bgmPlaying = true;
     if (kIsWeb) {
-      try { _jsStartTradeBgm((0.14).toJS); return; } catch (_) {}
+      platform_audio.jsStartTradeBgm(0.14);
+      return;
     }
     try {
       await _mobileBgmPlayer.setReleaseMode(ReleaseMode.loop);
@@ -174,7 +161,8 @@ class AudioService {
   static Future<void> stopBgm() async {
     _bgmPlaying = false;
     if (kIsWeb) {
-      try { _jsStopTradeBgm(); return; } catch (_) {}
+      platform_audio.jsStopTradeBgm();
+      return;
     }
     try { await _mobileBgmPlayer.stop(); } catch (e) {
       debugPrint("Mobile BGM stop error: $e");

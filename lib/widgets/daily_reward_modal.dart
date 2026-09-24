@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../state/app_state.dart';
 
 class DailyRewardModal extends StatelessWidget {
@@ -17,6 +18,12 @@ class DailyRewardModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final language = appState.language;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(language, key, params: params);
+
     final bool canClaimToday = appState.canClaimDailyToday;
     final List<int> claimedDays = appState.claimedDailyDays;
 
@@ -25,20 +32,32 @@ class DailyRewardModal extends StatelessWidget {
     if (currentDay == 0) currentDay = 7;
 
     final List<Map<String, dynamic>> daysData = [
-      {'day': 1, 'rewardStr': '+50 XP', 'xp': 50, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
-      {'day': 2, 'rewardStr': '+2 Petir ⚡', 'xp': 20, 'petir': 2, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
-      {'day': 3, 'rewardStr': '+100 XP', 'xp': 100, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
-      {'day': 4, 'rewardStr': '+3 Petir ⚡', 'xp': 30, 'petir': 3, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
-      {'day': 5, 'rewardStr': '+150 XP', 'xp': 150, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
-      {'day': 6, 'rewardStr': '+5 Petir ⚡', 'xp': 50, 'petir': 5, 'icon': Icons.bolt_rounded, 'color': const Color(0xff34d399)},
-      {'day': 7, 'rewardStr': '+300 XP 👑', 'xp': 300, 'petir': 5, 'icon': Icons.workspace_premium_rounded, 'color': const Color(0xfffbbf24)},
+      {'day': 1, 'xp': 50, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
+      {'day': 2, 'xp': 20, 'petir': 2, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
+      {'day': 3, 'xp': 100, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
+      {'day': 4, 'xp': 30, 'petir': 3, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
+      {'day': 5, 'xp': 150, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
+      {'day': 6, 'xp': 50, 'petir': 5, 'icon': Icons.bolt_rounded, 'color': const Color(0xff34d399)},
+      {'day': 7, 'xp': 300, 'petir': 5, 'icon': Icons.workspace_premium_rounded, 'color': const Color(0xfffbbf24)},
     ];
 
+    String formatRewardString(Map<String, dynamic> item) {
+      final petir = item['petir'] as int;
+      final xp = item['xp'] as int;
+      if (item['day'] == 7) {
+        return "+$xp XP 👑";
+      } else if (petir > 0) {
+        return tr('daily_reward.reward_petir', params: {'count': '$petir'});
+      } else {
+        return tr('daily_reward.reward_xp', params: {'count': '$xp'});
+      }
+    }
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xff0f172a),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Color(0xff10b981), width: 2.0)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xff0f172a) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(top: BorderSide(color: isDark ? const Color(0xff10b981) : const Color(0xff059669), width: 2.0)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: Column(
@@ -49,7 +68,7 @@ class DailyRewardModal extends StatelessWidget {
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: isDark ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.15),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -60,35 +79,43 @@ class DailyRewardModal extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xff065f46),
+              color: isDark ? const Color(0xff065f46) : const Color(0xffd1fae5),
               border: Border.all(color: const Color(0xff10b981), width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xff10b981).withOpacity(0.5),
+                  color: const Color(0xff10b981).withOpacity(isDark ? 0.5 : 0.25),
                   blurRadius: 24,
                   spreadRadius: 2,
                 ),
               ],
             ),
-            child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 36),
+            child: Icon(
+              Icons.card_giftcard_rounded,
+              color: isDark ? Colors.white : const Color(0xff059669),
+              size: 36,
+            ),
           ),
           const SizedBox(height: 12),
 
-          const Text(
-            "HADIAH LOG-IN HARIAN",
+          Text(
+            tr('daily_reward.title'),
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: isDark ? Colors.white : const Color(0xff0f172a),
               letterSpacing: 1.0,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            "Absen setiap hari untuk mengklaim bonus XP & energi Petir gratis!",
+          Text(
+            tr('daily_reward.subtitle'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xff94a3b8)),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.5,
+              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -109,23 +136,28 @@ class DailyRewardModal extends StatelessWidget {
               final bool isClaimed = claimedDays.contains(dayNum);
               final bool isCurrent = dayNum == currentDay && canClaimToday;
               final Color color = dayItem['color'] as Color;
+              final String rewardLabel = formatRewardString(dayItem);
 
               return Container(
                 decoration: BoxDecoration(
                   color: isClaimed
-                      ? const Color(0xff064e3b).withOpacity(0.4)
-                      : (isCurrent ? const Color(0xff065f46) : const Color(0xff1e293b)),
+                      ? (isDark ? const Color(0xff064e3b).withOpacity(0.4) : const Color(0xffecfdf5))
+                      : (isCurrent
+                          ? (isDark ? const Color(0xff065f46) : const Color(0xffd1fae5))
+                          : (isDark ? const Color(0xff1e293b) : const Color(0xfff8fafc))),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isCurrent
                         ? const Color(0xff10b981)
-                        : (isClaimed ? const Color(0xff059669) : Colors.white.withOpacity(0.08)),
+                        : (isClaimed
+                            ? const Color(0xff059669)
+                            : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0))),
                     width: isCurrent ? 2.0 : 1.0,
                   ),
                   boxShadow: isCurrent
                       ? [
                           BoxShadow(
-                            color: const Color(0xff10b981).withOpacity(0.4),
+                            color: const Color(0xff10b981).withOpacity(isDark ? 0.4 : 0.25),
                             blurRadius: 10,
                           ),
                         ]
@@ -135,12 +167,14 @@ class DailyRewardModal extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Hari $dayNum",
+                      tr('daily_reward.day', params: {'day': '$dayNum'}),
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: isCurrent ? Colors.white : const Color(0xff94a3b8),
+                        color: isCurrent
+                            ? (isDark ? Colors.white : const Color(0xff065f46))
+                            : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -150,13 +184,15 @@ class DailyRewardModal extends StatelessWidget {
                       Icon(dayItem['icon'] as IconData, color: color, size: 24),
                     const SizedBox(height: 4),
                     Text(
-                      isClaimed ? "Klaim" : dayItem['rewardStr'] as String,
+                      isClaimed ? tr('daily_reward.claimed') : rewardLabel,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 10.5,
                         fontWeight: FontWeight.w900,
-                        color: isClaimed ? const Color(0xff34d399) : Colors.white,
+                        color: isClaimed
+                            ? const Color(0xff059669)
+                            : (isDark ? Colors.white : const Color(0xff0f172a)),
                       ),
                     ),
                   ],
@@ -169,7 +205,9 @@ class DailyRewardModal extends StatelessWidget {
           // Main Action Claim Button 3D
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: canClaimToday ? const Color(0xff059669) : const Color(0xff334155),
+              backgroundColor: canClaimToday
+                  ? const Color(0xff059669)
+                  : (isDark ? const Color(0xff334155) : const Color(0xffcbd5e1)),
               minimumSize: const Size(double.infinity, 50),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               elevation: canClaimToday ? 4 : 0,
@@ -180,6 +218,7 @@ class DailyRewardModal extends StatelessWidget {
                       (d) => d['day'] == currentDay,
                       orElse: () => daysData.first,
                     );
+                    final rewardLabel = formatRewardString(todayData);
 
                     appState.claimDailyReward(
                       currentDay,
@@ -197,7 +236,7 @@ class DailyRewardModal extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                "Selamat! Anda mendapatkan ${todayData['rewardStr']}! 🥳",
+                                tr('daily_reward.claim_success', params: {'reward': rewardLabel}),
                                 style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
                               ),
                             ),
@@ -219,8 +258,8 @@ class DailyRewardModal extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   canClaimToday
-                      ? "KLAIM HADIAH HARI INI 🎁"
-                      : "SUDAH DIKLAIM (KEMBALI BESOK)",
+                      ? tr('daily_reward.claim_today')
+                      : tr('daily_reward.already_claimed'),
                   style: const TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 14,

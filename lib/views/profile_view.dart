@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
@@ -17,6 +18,10 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   bool _isUploadingAvatar = false;
+
+  String _tr(AppState appState, String key, {Map<String, String> params = const {}}) {
+    return AppTranslations.text(appState.language, key, params: params);
+  }
 
   final List<Map<String, dynamic>> _badges = const [
     {
@@ -81,7 +86,7 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xff0f172a),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xff10b981), width: 1.5)),
-        title: const Text("Pilih Avatar Trader", style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: Text(_tr(appState, 'profile.avatar_picker'), style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: double.maxFinite,
           child: GridView.builder(
@@ -141,15 +146,15 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xff0f172a),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xff10b981), width: 1.5)),
-        title: const Text("Edit Informasi Profil", style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: Text(_tr(appState, 'profile.edit_info'), style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
               style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                labelText: "Nama Pengguna",
+              decoration: InputDecoration(
+                labelText: _tr(appState, 'profile.name_label'),
                 labelStyle: TextStyle(color: Color(0xff94a3b8)),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff334155))),
                 focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff10b981))),
@@ -159,8 +164,8 @@ class _ProfileViewState extends State<ProfileView> {
             TextField(
               controller: emailController,
               style: const TextStyle(color: Colors.white, fontFamily: 'Outfit'),
-              decoration: const InputDecoration(
-                labelText: "Alamat Email",
+              decoration: InputDecoration(
+                labelText: _tr(appState, 'profile.email_label'),
                 labelStyle: TextStyle(color: Color(0xff94a3b8)),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff334155))),
                 focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff10b981))),
@@ -171,7 +176,7 @@ class _ProfileViewState extends State<ProfileView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("BATAL", style: TextStyle(color: Color(0xff94a3b8), fontWeight: FontWeight.bold)),
+            child: Text(_tr(appState, 'profile.cancel'), style: const TextStyle(color: Color(0xff94a3b8), fontWeight: FontWeight.bold)),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
@@ -187,7 +192,7 @@ class _ProfileViewState extends State<ProfileView> {
               );
             },
             icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-            label: const Text("SIMPAN", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
+            label: Text(_tr(appState, 'profile.save'), style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -324,8 +329,8 @@ class _ProfileViewState extends State<ProfileView> {
           return AlertDialog(
             backgroundColor: const Color(0xff1e293b),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Text(
-              "Pilih Musik Latar",
+            title: Text(
+              _tr(appState, 'settings.choose_bgm'),
               style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
             ),
             content: SizedBox(
@@ -420,7 +425,7 @@ class _ProfileViewState extends State<ProfileView> {
                   }
                   Navigator.of(ctx).pop();
                 },
-                child: const Text("TUTUP", style: TextStyle(color: Color(0xff10b981), fontWeight: FontWeight.bold)),
+                child: Text(_tr(appState, 'profile.close'), style: const TextStyle(color: Color(0xff10b981), fontWeight: FontWeight.bold)),
               ),
             ],
           );
@@ -430,79 +435,261 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   void _showLanguageSelectorDialog(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff1e293b),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          "Pilih Bahasa Aplikasi",
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+        backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.12) : colors.outlineVariant.withOpacity(0.4),
+            width: 1.2,
+          ),
+        ),
+        title: Text(
+          _tr(appState, 'settings.language'),
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xff0f172a),
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              tileColor: appState.language == 'id' ? const Color(0xff064e3b) : null,
-              title: const Text("Bahasa Indonesia", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
-              trailing: appState.language == 'id' ? const Icon(Icons.check_circle_rounded, color: Color(0xff10b981)) : null,
-              onTap: () {
-                appState.setLanguage('id');
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Bahasa disetel ke Bahasa Indonesia")),
-                );
-              },
+            // Option 1: Bahasa Indonesia
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  try {
+                    AudioService.playClick();
+                  } catch (_) {}
+                  Navigator.of(ctx).pop();
+                  appState.setLanguage('id');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: isDark ? const Color(0xff064e3b) : const Color(0xff10b981),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                AppTranslations.text('id', 'settings.language_saved_id'),
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: appState.language == 'id'
+                        ? (isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5))
+                        : (isDark ? const Color(0xff0f172a).withOpacity(0.5) : const Color(0xfff1f5f9)),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: appState.language == 'id'
+                          ? const Color(0xff10b981)
+                          : (isDark ? Colors.white.withOpacity(0.08) : colors.outlineVariant.withOpacity(0.3)),
+                      width: appState.language == 'id' ? 1.8 : 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text("🇮🇩", style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _tr(appState, 'settings.language_id'),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: appState.language == 'id' ? FontWeight.w900 : FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (appState.language == 'id')
+                        const Icon(Icons.check_circle_rounded, color: Color(0xff10b981), size: 22),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 6),
-            ListTile(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              tileColor: appState.language == 'en' ? const Color(0xff064e3b) : null,
-              title: const Text("English (US)", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
-              trailing: appState.language == 'en' ? const Icon(Icons.check_circle_rounded, color: Color(0xff10b981)) : null,
-              onTap: () {
-                appState.setLanguage('en');
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Language set to English (US)")),
-                );
-              },
+            const SizedBox(height: 10),
+            // Option 2: English (US)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  try {
+                    AudioService.playClick();
+                  } catch (_) {}
+                  Navigator.of(ctx).pop();
+                  appState.setLanguage('en');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: isDark ? const Color(0xff064e3b) : const Color(0xff10b981),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                AppTranslations.text('en', 'settings.language_saved_en'),
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: appState.language == 'en'
+                        ? (isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5))
+                        : (isDark ? const Color(0xff0f172a).withOpacity(0.5) : const Color(0xfff1f5f9)),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: appState.language == 'en'
+                          ? const Color(0xff10b981)
+                          : (isDark ? Colors.white.withOpacity(0.08) : colors.outlineVariant.withOpacity(0.3)),
+                      width: appState.language == 'en' ? 1.8 : 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text("🇺🇸", style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _tr(appState, 'settings.language_en'),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: appState.language == 'en' ? FontWeight.w900 : FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (appState.language == 'en')
+                        const Icon(Icons.check_circle_rounded, color: Color(0xff10b981), size: 22),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              _tr(appState, 'profile.close'),
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                color: Color(0xff10b981),
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   void _showFaqModal(BuildContext context) {
-    final faqs = [
-      {
-        'q': "Bagaimana cara kerja Sistem Nyawa Petir?",
-        'a': "Pengguna memiliki 5 nyawa petir. Menjawab salah kuis akan mengurangi 1 petir. Petir pulih otomatis 1 poin setiap 60 detik atau dapat diisi ulang instan lewat tontonan iklan simulasi / VIP Pass."
-      },
-      {
-        'q': "Apa saja keuntungan VIP Gold Pass?",
-        'a': "VIP Gold Pass memberikan Nyawa Tak Terbatas (∞ Petir), bebas dari penayangan iklan pop-up, serta akses eksklusif ke seluruh modul analisis materi."
-      },
-      {
-        'q': "Apakah simulator pasar saham ini menggunakan uang sungguhan?",
-        'a': "Tidak. Trade Heroes adalah platform simulasi dan edukasi pasar modal murni. Seluruh transaksi, saldo kas virtual, dan kuis tidak melibatkan uang atau risiko finansial nyata."
-      },
-      {
-        'q': "Bagaimana cara mempertahankan Streak Belajar?",
-        'a': "Selesaikan minimal 1 kuis atau selesaikan membaca 1 modul materi setiap hari sebelum pukul 23:59 WIB untuk mempertahankan dan menaikkan streak berturut-turut Anda."
-      },
-      {
-        'q': "Bagaimana data saya tersimpan?",
-        'a': "Data progress, XP, streak, dan medali Anda otomatis tersimpan di cloud terenkripsi Supabase sehingga dapat diakses antar-perangkat kapan saja."
-      }
-    ];
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final appState = Provider.of<AppState>(context, listen: false);
+    final isEn = appState.language == 'en';
+
+    final faqs = isEn
+        ? [
+            {
+              'q': "How does the Lightning Lives system work?",
+              'a': "Users have 5 lightning lives. Answering a quiz question incorrectly deducts 1 life. Lives recharge automatically at 1 point every 60 seconds, or can be refilled instantly via simulated ads or VIP Pass."
+            },
+            {
+              'q': "What are the benefits of VIP Gold Pass?",
+              'a': "VIP Gold Pass grants Unlimited Lives (∞ Lightning), completely ad-free learning, and exclusive access to all premium learning and strategy modules."
+            },
+            {
+              'q': "Does this stock market simulator use real money?",
+              'a': "No. Trade Heroes is strictly an educational stock market simulation platform. All transactions, virtual cash balances, and quizzes involve no real money or financial risk."
+            },
+            {
+              'q': "How do I maintain my Learning Streak?",
+              'a': "Complete at least 1 quiz or finish reading 1 module daily before 23:59 WIB to maintain and increase your streak."
+            },
+            {
+              'q': "How is my progress saved?",
+              'a': "Your progress, XP, streak, and badges are automatically saved in the encrypted Supabase cloud, accessible across all your devices anytime."
+            }
+          ]
+        : [
+            {
+              'q': "Bagaimana cara kerja Sistem Nyawa Petir?",
+              'a': "Pengguna memiliki 5 nyawa petir. Menjawab salah kuis akan mengurangi 1 petir. Petir pulih otomatis 1 poin setiap 60 detik atau dapat diisi ulang instan lewat tontonan iklan simulasi / VIP Pass."
+            },
+            {
+              'q': "Apa saja keuntungan VIP Gold Pass?",
+              'a': "VIP Gold Pass memberikan Nyawa Tak Terbatas (∞ Petir), bebas dari penayangan iklan pop-up, serta akses eksklusif ke seluruh modul analisis materi."
+            },
+            {
+              'q': "Apakah simulator pasar saham ini menggunakan uang sungguhan?",
+              'a': "Tidak. Trade Heroes adalah platform simulasi dan edukasi pasar modal murni. Seluruh transaksi, saldo kas virtual, dan kuis tidak melibatkan uang atau risiko finansial nyata."
+            },
+            {
+              'q': "Bagaimana cara mempertahankan Streak Belajar?",
+              'a': "Selesaikan minimal 1 kuis atau selesaikan membaca 1 modul materi setiap hari sebelum pukul 23:59 WIB untuk mempertahankan dan menaikkan streak berturut-turut Anda."
+            },
+            {
+              'q': "Bagaimana data saya tersimpan?",
+              'a': "Data progress, XP, streak, dan medali Anda otomatis tersimpan di cloud terenkripsi Supabase sehingga dapat diakses antar-perangkat kapan saja."
+            }
+          ];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xff0f172a),
+      backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -521,46 +708,69 @@ class _ProfileViewState extends State<ProfileView> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xff475569),
+                    color: isDark ? const Color(0xff475569) : const Color(0xffcbd5e1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
-                children: const [
-                  Icon(Icons.help_outline_rounded, color: Color(0xffec4899), size: 22),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.help_outline_rounded, color: Color(0xffec4899), size: 22),
+                  const SizedBox(width: 8),
                   Text(
-                    "Pusat Bantuan & FAQ",
-                    style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    _tr(appState, 'profile.help_faq'),
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xff0f172a),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              const Text(
-                "Pertanyaan umum seputar fitur & panduan Trade Heroes",
-                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8)),
+              Text(
+                isEn
+                    ? "Frequently asked questions about Trade Heroes features & guides"
+                    : "Pertanyaan umum seputar fitur & panduan Trade Heroes",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                ),
               ),
               const SizedBox(height: 16),
               ...faqs.map((f) => Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xff1e293b),
+                  color: isDark ? const Color(0xff1e293b) : const Color(0xfff8fafc),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withOpacity(0.08) : colors.outlineVariant.withOpacity(0.4),
+                  ),
                 ),
                 child: ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                   title: Text(
                     f['q']!,
-                    style: const TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xff0f172a),
+                    ),
                   ),
                   children: [
                     Text(
                       f['a']!,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.45),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: isDark ? const Color(0xffcbd5e1) : const Color(0xff334155),
+                        height: 1.45,
+                      ),
                     ),
                   ],
                 ),
@@ -569,18 +779,24 @@ class _ProfileViewState extends State<ProfileView> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xff064e3b),
+                  color: isDark ? const Color(0xff064e3b) : const Color(0xffecfdf5),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xff10b981), width: 1.2),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(Icons.mail_outline_rounded, color: Color(0xff34d399), size: 20),
-                    SizedBox(width: 10),
+                  children: [
+                    const Icon(Icons.mail_outline_rounded, color: Color(0xff10b981), size: 20),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        "Butuh bantuan lain? Hubungi Tim Support kami di support@tradeheroes.app",
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xffa7f3d0)),
+                        isEn
+                            ? "Need more help? Contact our Support Team at support@tradeheroes.app"
+                            : "Butuh bantuan lain? Hubungi Tim Support kami di support@tradeheroes.app",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11.5,
+                          color: isDark ? const Color(0xffa7f3d0) : const Color(0xff065f46),
+                        ),
                       ),
                     ),
                   ],
@@ -595,10 +811,16 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   void _showPrivacyPolicyModal(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final appState = Provider.of<AppState>(context, listen: false);
+    final isEn = appState.language == 'en';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xff0f172a),
+      backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -617,19 +839,24 @@ class _ProfileViewState extends State<ProfileView> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xff475569),
+                    color: isDark ? const Color(0xff475569) : const Color(0xffcbd5e1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
-                children: const [
-                  Icon(Icons.privacy_tip_outlined, color: Color(0xff94a3b8), size: 22),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.privacy_tip_outlined, color: Color(0xff94a3b8), size: 22),
+                  const SizedBox(width: 8),
                   Text(
-                    "Kebijakan Privasi & Syarat Ketentuan",
-                    style: TextStyle(fontFamily: 'Outfit', fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                    isEn ? "Privacy Policy & Terms of Service" : "Kebijakan Privasi & Syarat Ketentuan",
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xff0f172a),
+                    ),
                   ),
                 ],
               ),
@@ -637,41 +864,85 @@ class _ProfileViewState extends State<ProfileView> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xff1e293b),
+                  color: isDark ? const Color(0xff1e293b) : const Color(0xfff8fafc),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withOpacity(0.08) : colors.outlineVariant.withOpacity(0.4),
+                  ),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "1. Penyangkalan Tanggung Jawab Finansial (Disclaimer)",
-                      style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xfff59e0b)),
+                      isEn
+                          ? "1. Financial Responsibility Disclaimer"
+                          : "1. Penyangkalan Tanggung Jawab Finansial (Disclaimer)",
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xfff59e0b),
+                      ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      "Seluruh materi, simulasi trading, grafik candlestick, dan data pasar modal yang disajikan dalam aplikasi Trade Heroes bersifat semata-mata untuk tujuan edukasi dan literasi keuangan. Aplikasi ini TIDAK menyediakan saran investasi, rekomendasi saham tertentu, maupun ajakan membeli/menjual efek resmi di BEI.",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+                      isEn
+                          ? "All materials, trading simulations, candlestick charts, and market data presented in Trade Heroes are solely for educational and financial literacy purposes. This application DOES NOT provide investment advice, specific stock recommendations, or solicitations to buy/sell official securities on the IDX."
+                          : "Seluruh materi, simulasi trading, grafik candlestick, dan data pasar modal yang disajikan dalam aplikasi Trade Heroes bersifat semata-mata untuk tujuan edukasi dan literasi keuangan. Aplikasi ini TIDAK menyediakan saran investasi, rekomendasi saham tertentu, maupun ajakan membeli/menjual efek resmi di BEI.",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: isDark ? const Color(0xffcbd5e1) : const Color(0xff334155),
+                        height: 1.4,
+                      ),
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     Text(
-                      "2. Pengumpulan & Keamanan Data Pengguna",
-                      style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff34d399)),
+                      isEn
+                          ? "2. User Data Collection & Security"
+                          : "2. Pengumpulan & Keamanan Data Pengguna",
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff34d399),
+                      ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      "Kami menghormati privasi Anda. Data profil, alamat email, dan progres kuis disimpan secara aman menggunakan enkripsi Row Level Security (RLS) di server Supabase. Kami tidak menjual atau membagikan data pribadi Anda kepada pihak ketiga manapun untuk tujuan periklanan.",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+                      isEn
+                          ? "We respect your privacy. Profile data, email addresses, and quiz progress are securely stored using Row Level Security (RLS) encryption on Supabase servers. We never sell or share your personal data with any third party for advertising purposes."
+                          : "Kami menghormati privasi Anda. Data profil, alamat email, dan progres kuis disimpan secara aman menggunakan enkripsi Row Level Security (RLS) di server Supabase. Kami tidak menjual atau membagikan data pribadi Anda kepada pihak ketiga manapun untuk tujuan periklanan.",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: isDark ? const Color(0xffcbd5e1) : const Color(0xff334155),
+                        height: 1.4,
+                      ),
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     Text(
-                      "3. Hak Cipta & Konten Edukasi",
-                      style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff60a5fa)),
+                      isEn
+                          ? "3. Copyright & Educational Content"
+                          : "3. Hak Cipta & Konten Edukasi",
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff60a5fa),
+                      ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      "Seluruh kurikulum soal kuis, modul materi pasar modal, dan ilustrasi visual dilindungi oleh hak cipta pengembang platform Trade Heroes. Penggunaan konten tanpa izin untuk kepentingan komersial tidak diperkenankan.",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+                      isEn
+                          ? "All quiz curricula, stock market educational modules, and visual illustrations are protected by the copyright of Trade Heroes developers. Unauthorized use of content for commercial purposes is prohibited."
+                          : "Seluruh kurikulum soal kuis, modul materi pasar modal, dan ilustrasi visual dilindungi oleh hak cipta pengembang platform Trade Heroes. Penggunaan konten tanpa izin untuk kepentingan komersial tidak diperkenankan.",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: isDark ? const Color(0xffcbd5e1) : const Color(0xff334155),
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
@@ -684,7 +955,14 @@ class _ProfileViewState extends State<ProfileView> {
                   minimumSize: const Size(double.infinity, 44),
                 ),
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text("SAYA MENGERTI", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(
+                  isEn ? "I UNDERSTAND" : "SAYA MENGERTI",
+                  style: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -834,9 +1112,11 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xff0f172a),
+      backgroundColor: isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc),
       body: Stack(
         children: [
           // Background Image matching main app theme
@@ -851,8 +1131,8 @@ class _ProfileViewState extends State<ProfileView> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xff064e3b).withOpacity(0.9),
-                    const Color(0xff0f172a).withOpacity(0.96),
+                    isDark ? const Color(0xff064e3b).withOpacity(0.9) : const Color(0xffd1fae5).withOpacity(0.85),
+                    isDark ? const Color(0xff0f172a).withOpacity(0.96) : const Color(0xfff8fafc).withOpacity(0.96),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -872,12 +1152,15 @@ class _ProfileViewState extends State<ProfileView> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xff0f172a).withOpacity(0.92),
+                      color: isDark ? const Color(0xff0f172a).withOpacity(0.92) : Colors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xff059669).withOpacity(0.5), width: 1.4),
+                      border: Border.all(
+                        color: isDark ? const Color(0xff059669).withOpacity(0.5) : const Color(0xff10b981).withOpacity(0.3),
+                        width: 1.4,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.4),
+                          color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -909,9 +1192,9 @@ class _ProfileViewState extends State<ProfileView> {
                                   ],
                                 ),
                                 child: Container(
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Color(0xff1e293b),
+                                    color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
                                   ),
                                   alignment: Alignment.center,
                                   child: _isUploadingAvatar
@@ -945,21 +1228,21 @@ class _ProfileViewState extends State<ProfileView> {
                         // Name
                         Text(
                           appState.userName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
-                            color: Colors.white,
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
                           ),
                         ),
                         const SizedBox(height: 3),
                         // Email
                         Text(
                           appState.userEmail,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12.5,
-                            color: Color(0xff94a3b8),
+                            color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -971,16 +1254,20 @@ class _ProfileViewState extends State<ProfileView> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
                               gradient: appState.isPremium
-                                  ? const LinearGradient(colors: [Color(0xff1e293b), Color(0xff334155)])
+                                  ? (isDark
+                                      ? const LinearGradient(colors: [Color(0xff1e293b), Color(0xff334155)])
+                                      : const LinearGradient(colors: [Color(0xfff1f5f9), Color(0xffe2e8f0)]))
                                   : const LinearGradient(colors: [Color(0xff78350f), Color(0xffea580c)]),
                               border: Border.all(
-                                color: appState.isPremium ? Colors.white.withOpacity(0.2) : const Color(0xfff59e0b),
+                                color: appState.isPremium
+                                    ? (isDark ? Colors.white.withOpacity(0.2) : const Color(0xffcbd5e1))
+                                    : const Color(0xfff59e0b),
                                 width: 1.2,
                               ),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
                                   blurRadius: 6,
                                 ),
                               ],
@@ -1003,20 +1290,26 @@ class _ProfileViewState extends State<ProfileView> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        appState.isPremium ? "MEMBER PREMIUM" : "AKUN GRATIS",
-                                        style: const TextStyle(
+                                        appState.isPremium
+                                            ? _tr(appState, 'profile.premium_member')
+                                            : _tr(appState, 'profile.free_account'),
+                                        style: TextStyle(
                                           fontFamily: 'Outfit',
                                           fontWeight: FontWeight.w900,
                                           fontSize: 14,
-                                          color: Colors.white,
+                                          color: appState.isPremium && !isDark ? const Color(0xff0f172a) : Colors.white,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         appState.isPremium
-                                            ? "Nyawa petir tak terbatas & bebas iklan."
-                                            : "Upgrade ke Premium untuk nyawa tak terbatas!",
-                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xffcbd5e1)),
+                                            ? _tr(appState, 'profile.premium_benefit')
+                                            : _tr(appState, 'profile.premium_upgrade'),
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 10.5,
+                                          color: appState.isPremium && !isDark ? const Color(0xff475569) : const Color(0xffcbd5e1),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1028,9 +1321,9 @@ class _ProfileViewState extends State<ProfileView> {
                                       color: const Color(0xfff59e0b),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text(
-                                      "UPGRADE",
-                                      style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black),
+                                    child: Text(
+                                      _tr(appState, 'profile.upgrade'),
+                                      style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black),
                                     ),
                                   ),
                               ],
@@ -1043,12 +1336,17 @@ class _ProfileViewState extends State<ProfileView> {
 
                   const SizedBox(height: 22),
                   Row(
-                    children: const [
-                      Icon(Icons.bar_chart_rounded, color: Color(0xff10b981), size: 20),
-                      SizedBox(width: 8),
+                    children: [
+                      const Icon(Icons.bar_chart_rounded, color: Color(0xff10b981), size: 20),
+                      const SizedBox(width: 8),
                       Text(
-                        "Statistik Belajar",
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                        _tr(appState, 'profile.statistics'),
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? Colors.white : const Color(0xff0f172a),
+                        ),
                       ),
                     ],
                   ),
@@ -1063,21 +1361,26 @@ class _ProfileViewState extends State<ProfileView> {
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.45,
                     children: [
-                      _buildStatCard("Total XP", "${appState.xp} XP", iconData: Icons.monetization_on_rounded, color: const Color(0xfff59e0b)),
-                      _buildStatCard("XP Hari Ini", "${appState.dailyXp} / 50", iconData: Icons.track_changes_rounded, color: const Color(0xff3b82f6)),
-                      _buildStatCard("Streak Belajar", "${appState.streak} Hari", iconData: Icons.local_fire_department_rounded, color: const Color(0xffef4444)),
-                      _buildStatCard("Level Selesai", "${appState.completedLevels.length} / 10", iconData: Icons.emoji_events_rounded, color: const Color(0xff10b981)),
+                      _buildStatCard(context, _tr(appState, 'profile.total_xp'), "${appState.xp} XP", iconData: Icons.monetization_on_rounded, color: const Color(0xfff59e0b)),
+                      _buildStatCard(context, _tr(appState, 'profile.xp_today'), "${appState.dailyXp} / 50", iconData: Icons.track_changes_rounded, color: const Color(0xff3b82f6)),
+                      _buildStatCard(context, _tr(appState, 'profile.streak'), "${appState.streak} ${_tr(appState, 'profile.days_unit')}", iconData: Icons.local_fire_department_rounded, color: const Color(0xffef4444)),
+                      _buildStatCard(context, _tr(appState, 'profile.levels_completed'), "${appState.completedLevels.length} / 10", iconData: Icons.emoji_events_rounded, color: const Color(0xff10b981)),
                     ],
                   ),
 
                   const SizedBox(height: 24),
                   Row(
-                    children: const [
-                      Icon(Icons.military_tech_rounded, color: Color(0xfff59e0b), size: 22),
-                      SizedBox(width: 8),
+                    children: [
+                      const Icon(Icons.military_tech_rounded, color: Color(0xfff59e0b), size: 22),
+                      const SizedBox(width: 8),
                       Text(
-                        "Medali Pencapaian",
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                        _tr(appState, 'profile.badges'),
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? Colors.white : const Color(0xff0f172a),
+                        ),
                       ),
                     ],
                   ),
@@ -1105,10 +1408,10 @@ class _ProfileViewState extends State<ProfileView> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xff0f172a).withOpacity(0.9),
+                            color: isDark ? const Color(0xff0f172a).withOpacity(0.9) : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isUnlocked ? badgeColor : Colors.white.withOpacity(0.1),
+                              color: isUnlocked ? badgeColor : (isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0)),
                               width: isUnlocked ? 1.5 : 1.0,
                             ),
                             boxShadow: isUnlocked
@@ -1118,7 +1421,15 @@ class _ProfileViewState extends State<ProfileView> {
                                       blurRadius: 8,
                                     ),
                                   ]
-                                : null,
+                                : (!isDark
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.04),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1129,10 +1440,10 @@ class _ProfileViewState extends State<ProfileView> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isUnlocked ? badgeColor : const Color(0xff475569),
+                                    color: isUnlocked ? badgeColor : (isDark ? const Color(0xff475569) : const Color(0xffcbd5e1)),
                                     width: isUnlocked ? 2.5 : 1.5,
                                   ),
-                                  color: const Color(0xff1e293b),
+                                  color: isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9),
                                 ),
                                 alignment: Alignment.center,
                                 child: Icon(
@@ -1151,7 +1462,9 @@ class _ProfileViewState extends State<ProfileView> {
                                   fontFamily: 'Outfit',
                                   fontSize: 11.5,
                                   fontWeight: isUnlocked ? FontWeight.w900 : FontWeight.bold,
-                                  color: isUnlocked ? Colors.white : const Color(0xff94a3b8),
+                                  color: isUnlocked
+                                      ? (isDark ? Colors.white : const Color(0xff0f172a))
+                                      : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
                                 ),
                               ),
                             ],
@@ -1174,8 +1487,10 @@ class _ProfileViewState extends State<ProfileView> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xff78350f), Color(0xff1e293b)],
+                          gradient: LinearGradient(
+                            colors: isDark
+                                ? const [Color(0xff78350f), Color(0xff1e293b)]
+                                : const [Color(0xfffef3c7), Color(0xffffffff)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -1183,7 +1498,7 @@ class _ProfileViewState extends State<ProfileView> {
                           border: Border.all(color: const Color(0xfff59e0b), width: 1.2),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xfff59e0b).withOpacity(0.2),
+                              color: const Color(0xfff59e0b).withOpacity(isDark ? 0.2 : 0.15),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -1203,20 +1518,24 @@ class _ProfileViewState extends State<ProfileView> {
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
+                                children: [
                                   Text(
-                                    "Admin Console & CMS",
+                                    _tr(appState, 'profile.admin_console'),
                                     style: TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
-                                      color: Colors.white,
+                                      color: isDark ? Colors.white : const Color(0xff0f172a),
                                     ),
                                   ),
-                                  SizedBox(height: 2),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    "Kelola trader, status VIP, kurikulum, & metrik",
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xffcbd5e1)),
+                                    _tr(appState, 'profile.admin_console_subtitle'),
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 11.5,
+                                      color: isDark ? const Color(0xffcbd5e1) : const Color(0xff64748b),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1231,12 +1550,17 @@ class _ProfileViewState extends State<ProfileView> {
 
                   // 4. Settings & Preferences Section Header
                   Row(
-                    children: const [
-                      Icon(Icons.settings_rounded, color: Color(0xff3b82f6), size: 22),
-                      SizedBox(width: 8),
+                    children: [
+                      const Icon(Icons.settings_rounded, color: Color(0xff3b82f6), size: 22),
+                      const SizedBox(width: 8),
                       Text(
-                        "Pengaturan & Preferensi",
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                        _tr(appState, 'profile.settings'),
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? Colors.white : const Color(0xff0f172a),
+                        ),
                       ),
                     ],
                   ),
@@ -1245,110 +1569,137 @@ class _ProfileViewState extends State<ProfileView> {
                   // Settings Card Group
                   Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xff0f172a).withOpacity(0.92),
+                      color: isDark ? const Color(0xff0f172a).withOpacity(0.92) : Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0)),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                     ),
                     child: Column(
                       children: [
                         _buildSettingSwitchTile(
+                          context: context,
                           icon: Icons.dark_mode_rounded,
                           iconColor: const Color(0xff8b5cf6),
-                          title: "Mode Gelap (Theme)",
-                          subtitle: appState.darkMode ? "Tampilan slate dark glassmorphic pro aktif" : "Mode terang diaktifkan",
+                          title: _tr(appState, 'settings.dark_mode_title'),
+                          subtitle: appState.darkMode
+                              ? _tr(appState, 'settings.dark_mode_on')
+                              : _tr(appState, 'settings.dark_mode_off'),
                           value: appState.darkMode,
                           onChanged: (val) {
                             appState.toggleDarkMode(val);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(val ? "Mode Gelap diaktifkan" : "Mode Terang diaktifkan"),
+                                content: Text(val ? _tr(appState, 'settings.dark_mode_enabled') : _tr(appState, 'settings.light_mode_enabled')),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
                           },
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingSwitchTile(
+                          context: context,
                           icon: Icons.notifications_active_rounded,
                           iconColor: const Color(0xfff59e0b),
-                          title: "Notifikasi Belajar Harian",
-                          subtitle: appState.dailyReminder ? "Pengingat streak jam 19:00 WIB aktif" : "Pengingat dinonaktifkan",
+                          title: _tr(appState, 'settings.daily_reminder_title'),
+                          subtitle: appState.dailyReminder
+                              ? _tr(appState, 'settings.daily_reminder_on')
+                              : _tr(appState, 'settings.daily_reminder_off'),
                           value: appState.dailyReminder,
                           onChanged: (val) {
                             appState.toggleDailyReminder(val);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(val ? "Pengingat belajar aktif (19:00 WIB)" : "Pengingat belajar dinonaktifkan"),
+                                content: Text(val ? _tr(appState, 'settings.daily_reminder_enabled') : _tr(appState, 'settings.daily_reminder_disabled')),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
                           },
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingSwitchTile(
+                          context: context,
                           icon: Icons.volume_up_rounded,
                           iconColor: const Color(0xff10b981),
-                          title: "Efek Suara & Haptik",
-                          subtitle: appState.soundHaptic ? "Suara kuis & getaran sentuhan aktif" : "Efek suara & getaran nonaktif",
+                          title: _tr(appState, 'settings.sound_haptic_title'),
+                          subtitle: appState.soundHaptic
+                              ? _tr(appState, 'settings.sound_haptic_on')
+                              : _tr(appState, 'settings.sound_haptic_off'),
                           value: appState.soundHaptic,
                           onChanged: (val) {
                             appState.toggleSoundHaptic(val);
                             if (val) HapticFeedback.lightImpact();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(val ? "Efek suara & haptik diaktifkan" : "Efek suara & haptik dinonaktifkan"),
+                                content: Text(val ? _tr(appState, 'settings.sound_haptic_enabled') : _tr(appState, 'settings.sound_haptic_disabled')),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
                           },
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingSwitchTile(
+                          context: context,
                           icon: Icons.music_note_rounded,
                           iconColor: const Color(0xff06b6d4),
-                          title: "Musik Latar (Lo-Fi BGM)",
-                          subtitle: appState.bgmEnabled ? "Musik ambient santai aktif" : "Musik latar dinonaktifkan",
+                          title: _tr(appState, 'settings.bgm_title'),
+                          subtitle: appState.bgmEnabled
+                              ? _tr(appState, 'settings.bgm_on')
+                              : _tr(appState, 'settings.bgm_off'),
                           value: appState.bgmEnabled,
                           onChanged: (val) {
                             appState.toggleBgm(val);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(val ? "Musik latar Lo-Fi diaktifkan" : "Musik latar dimatikan"),
+                                content: Text(val ? _tr(appState, 'settings.bgm_enabled') : _tr(appState, 'settings.bgm_disabled')),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
                           },
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingItemTile(
+                          context: context,
                           icon: Icons.library_music_rounded,
                           iconColor: const Color(0xff8b5cf6),
-                          title: "Pilih Musik Latar",
-                          trailingText: AudioService.bgmLabels[appState.bgmTrack] ?? "Default",
+                          title: _tr(appState, 'settings.choose_bgm'),
+                          trailingText: AudioService.bgmLabels[appState.bgmTrack] ?? _tr(appState, 'settings.default_bgm'),
                           onTap: () => _showBgmPickerDialog(context, appState),
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingItemTile(
+                          context: context,
                           icon: Icons.language_rounded,
                           iconColor: const Color(0xff3b82f6),
-                          title: "Bahasa Aplikasi",
-                          trailingText: appState.language == 'id' ? "Bahasa Indonesia" : "English (US)",
+                          title: _tr(appState, 'settings.language'),
+                          trailingText: appState.language == 'id'
+                              ? _tr(appState, 'settings.language_id')
+                              : _tr(appState, 'settings.language_en'),
                           onTap: () => _showLanguageSelectorDialog(context, appState),
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingItemTile(
+                          context: context,
                           icon: Icons.help_outline_rounded,
                           iconColor: const Color(0xffec4899),
-                          title: "Pusat Bantuan & FAQ",
-                          trailingText: "Bantuan",
+                          title: _tr(appState, 'profile.help_faq'),
+                          trailingText: _tr(appState, 'profile.help'),
                           onTap: () => _showFaqModal(context),
                         ),
-                        Divider(color: Colors.white.withOpacity(0.08), height: 1),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingItemTile(
+                          context: context,
                           icon: Icons.privacy_tip_outlined,
                           iconColor: const Color(0xff94a3b8),
-                          title: "Kebijakan Privasi & Syarat",
-                          trailingText: "Legal",
+                          title: _tr(appState, 'profile.privacy_terms'),
+                          trailingText: _tr(appState, 'profile.legal'),
                           onTap: () => _showPrivacyPolicyModal(context),
                         ),
                       ],
@@ -1366,8 +1717,8 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                     onPressed: () => _showLogoutConfirmationDialog(context, appState),
                     icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
-                    label: const Text(
-                      "KELUAR AKUN",
+                    label: Text(
+                      _tr(appState, 'profile.logout'),
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 14,
@@ -1379,10 +1730,14 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Center(
+                  Center(
                     child: Text(
                       "Trade Heroes v2.4.0 PRO • Build 2026.08",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b)),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: isDark ? const Color(0xff64748b) : const Color(0xff94a3b8),
+                      ),
                     ),
                   ),
                 ],
@@ -1394,14 +1749,15 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, {required IconData iconData, required Color color}) {
+  Widget _buildStatCard(BuildContext context, String label, String value, {required IconData iconData, required Color color}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Stack(
       children: [
         Positioned.fill(
           top: 3.5,
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xff022c22),
+              color: isDark ? const Color(0xff022c22) : const Color(0xffcbd5e1),
               borderRadius: BorderRadius.circular(16),
             ),
           ),
@@ -1410,9 +1766,18 @@ class _ProfileViewState extends State<ProfileView> {
           margin: const EdgeInsets.only(bottom: 3.5),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xff0f172a).withOpacity(0.92),
+            color: isDark ? const Color(0xff0f172a).withOpacity(0.92) : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+            border: Border.all(color: color.withOpacity(isDark ? 0.4 : 0.3), width: 1.2),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1448,7 +1813,11 @@ class _ProfileViewState extends State<ProfileView> {
               const SizedBox(height: 2),
               Text(
                 label,
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xffcbd5e1)),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  color: isDark ? const Color(0xffcbd5e1) : const Color(0xff64748b),
+                ),
               ),
             ],
           ),
@@ -1458,6 +1827,7 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Widget _buildSettingSwitchTile({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -1465,17 +1835,33 @@ class _ProfileViewState extends State<ProfileView> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.18),
+          color: iconColor.withOpacity(isDark ? 0.18 : 0.12),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: iconColor, size: 20),
       ),
-      title: Text(title, style: const TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.white)),
-      subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff94a3b8))),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 13.5,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : const Color(0xff0f172a),
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 11,
+          color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+        ),
+      ),
       trailing: Switch(
         value: value,
         onChanged: (newVal) {
@@ -1483,38 +1869,59 @@ class _ProfileViewState extends State<ProfileView> {
           onChanged(newVal);
         },
         activeColor: const Color(0xff10b981),
-        activeTrackColor: const Color(0xff065f46),
+        activeTrackColor: isDark ? const Color(0xff065f46) : const Color(0xffa7f3d0),
+        inactiveThumbColor: isDark ? const Color(0xff94a3b8) : const Color(0xffcbd5e1),
+        inactiveTrackColor: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0),
       ),
     );
   }
 
   Widget _buildSettingItemTile({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String title,
     required String trailingText,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
       onTap: () {
-        AudioService.playClick();
+        try {
+          AudioService.playClick();
+        } catch (_) {}
         onTap();
       },
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.18),
+          color: iconColor.withOpacity(isDark ? 0.18 : 0.12),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: iconColor, size: 20),
       ),
-      title: Text(title, style: const TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.white)),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 13.5,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : const Color(0xff0f172a),
+        ),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(trailingText, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xff94a3b8))),
+          Text(
+            trailingText,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.5,
+              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+            ),
+          ),
           const SizedBox(width: 4),
-          const Icon(Icons.chevron_right_rounded, color: Color(0xff64748b), size: 18),
+          Icon(Icons.chevron_right_rounded, color: isDark ? const Color(0xff64748b) : const Color(0xff94a3b8), size: 18),
         ],
       ),
     );
@@ -1529,8 +1936,8 @@ class _ProfileViewState extends State<ProfileView> {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.white.withOpacity(0.1)),
         ),
-        title: const Text(
-          "Keluar dari Akun?",
+        title: Text(
+          _tr(appState, 'profile.logout_confirm'),
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 18,
@@ -1541,7 +1948,7 @@ class _ProfileViewState extends State<ProfileView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("Batal", style: TextStyle(fontFamily: 'Inter', color: Color(0xff94a3b8))),
+            child: Text(_tr(appState, 'profile.logout_cancel'), style: const TextStyle(fontFamily: 'Inter', color: Color(0xff94a3b8))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -1553,7 +1960,7 @@ class _ProfileViewState extends State<ProfileView> {
               Navigator.of(ctx).pop();
               appState.logout();
             },
-            child: const Text("Keluar", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(_tr(appState, 'profile.logout_action'), style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

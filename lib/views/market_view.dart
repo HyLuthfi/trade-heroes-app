@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../services/market_data_service.dart';
+import '../l10n/app_translations.dart';
 import '../state/app_state.dart';
 
 class MarketView extends StatefulWidget {
@@ -16,11 +17,50 @@ class MarketView extends StatefulWidget {
 
 class _MarketViewState extends State<MarketView> with SingleTickerProviderStateMixin {
   int _selectedStockIdx = 0;
+
+  String _t(AppState appState, String key, String fallbackId, String fallbackEn, {Map<String, String> params = const {}}) {
+    final lang = appState.language.toLowerCase().startsWith('en') ? 'en' : 'id';
+    final translated = AppTranslations.text(lang, key, params: params);
+    if (translated == key) {
+      var text = lang == 'en' ? fallbackEn : fallbackId;
+      for (final entry in params.entries) {
+        text = text.replaceAll('{${entry.key}}', entry.value);
+      }
+      return text;
+    }
+    return translated;
+  }
+
+  String _tr(String key, String fallbackId, String fallbackEn, {Map<String, String> params = const {}}) {
+    final appState = Provider.of<AppState>(context, listen: false);
+    return _t(appState, key, fallbackId, fallbackEn, params: params);
+  }
+
+  String _getSectorLabel(String sector) {
+    switch (sector) {
+      case 'Semua':
+        return _tr('market.sector_all', 'Semua', 'All');
+      case 'Perbankan':
+        return _tr('market.sector_banking', 'Perbankan', 'Banking');
+      case 'Telko':
+        return _tr('market.sector_telecom', 'Telko', 'Telecom');
+      case 'Teknologi':
+        return _tr('market.sector_technology', 'Teknologi', 'Technology');
+      case 'Otomotif':
+        return _tr('market.sector_automotive', 'Otomotif', 'Automotive');
+      case 'Tambang':
+        return _tr('market.sector_mining', 'Tambang', 'Mining');
+      case 'Konsumer':
+        return _tr('market.sector_consumer', 'Konsumer', 'Consumer');
+      default:
+        return sector;
+    }
+  }
   String _selectedTimeframe = "1D";
   String _selectedSector = "Semua";
   bool _showMA = true;
   int _selectedTabIdx = 0; // 0: Chart, 1: Order Book, 2: Finansial, 3: Berita
-  
+
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
 
@@ -79,7 +119,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           final idx = _rnd.nextInt(_allStocks.length);
           final delta = (_rnd.nextDouble() - 0.48) * (_allStocks[idx]['price'] * 0.003);
           _allStocks[idx]['price'] = double.parse((_allStocks[idx]['price'] + delta).toStringAsFixed(1));
-          
+
           final now = DateTime.now();
           final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
           _runningTrade.insert(0, {
@@ -315,15 +355,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final filtered = _filteredStocks;
     final activeStock = filtered.isNotEmpty
         ? filtered[_selectedStockIdx.clamp(0, filtered.length - 1)]
         : _allStocks.first;
     final bool isBullish = activeStock['changePct'] >= 0;
-    final Color mainColor = isBullish ? const Color(0xff10b981) : const Color(0xffef4444);
+    final Color mainColor = isBullish
+        ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+        : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626));
 
     return Scaffold(
-      backgroundColor: const Color(0xff0b0f19), // TradingView Pro Dark
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -347,24 +393,24 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 ],
               ),
             ),
-
           ],
         ),
       ),
     );
   }
 
-
-
   // 2. Search Bar & Filter Chips
   Widget _buildSearchBarAndFilters() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final sectors = ["Semua", "Perbankan", "Telko", "Teknologi", "Otomotif", "Tambang", "Konsumer"];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-      decoration: const BoxDecoration(
-        color: Color(0xff0f172a),
-        border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
+      decoration: BoxDecoration(
+        color: isDark ? theme.scaffoldBackgroundColor : colorScheme.surface,
+        border: Border(bottom: BorderSide(color: colorScheme.outline.withOpacity(isDark ? 0.12 : 0.15))),
       ),
       child: Column(
         children: [
@@ -372,9 +418,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: const Color(0xff1e293b),
+              color: isDark ? colorScheme.surface : const Color(0xfff1f5f9),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.15)),
+              border: Border.all(color: colorScheme.outline.withOpacity(isDark ? 0.15 : 0.2)),
             ),
             child: Row(
               children: [
@@ -389,15 +435,15 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         _selectedStockIdx = 0;
                       });
                     },
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 13,
-                      color: Colors.white,
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
-                    decoration: const InputDecoration(
-                      hintText: "Cari Saham BEI (e.g. BBCA, BBRI, GOTO)...",
-                      hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff64748b)),
+                    decoration: InputDecoration(
+                      hintText: _tr('market.search_hint', 'Cari Saham BEI (e.g. BBCA, BBRI, GOTO)...', 'Search IDX Stocks (e.g. BBCA, BBRI, GOTO)...'),
+                      hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colorScheme.onSurfaceVariant.withOpacity(0.8)),
                       border: InputBorder.none,
                       isDense: true,
                     ),
@@ -411,7 +457,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         _searchQuery = "";
                       });
                     },
-                    child: const Icon(Icons.close_rounded, color: Color(0xff94a3b8), size: 18),
+                    child: Icon(Icons.close_rounded, color: colorScheme.onSurfaceVariant, size: 18),
                   ),
               ],
             ),
@@ -438,19 +484,19 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     margin: const EdgeInsets.only(right: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isSel ? const Color(0xff059669) : const Color(0xff1e293b),
+                      color: isSel ? const Color(0xff059669) : (isDark ? colorScheme.surface : const Color(0xfff1f5f9)),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isSel ? const Color(0xff10b981) : Colors.transparent,
+                        color: isSel ? const Color(0xff10b981) : colorScheme.outline.withOpacity(isDark ? 0.12 : 0.2),
                       ),
                     ),
                     child: Text(
-                      sec,
+                      _getSectorLabel(sec),
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 10.5,
                         fontWeight: FontWeight.w900,
-                        color: isSel ? Colors.white : const Color(0xff94a3b8),
+                        color: isSel ? Colors.white : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -465,23 +511,27 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 3. Watchlist Bar
   Widget _buildStockWatchlistBar(List<Map<String, dynamic>> filteredList) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     if (filteredList.isEmpty) {
       return Container(
         height: 44,
-        color: const Color(0xff0f172a),
+        color: isDark ? theme.scaffoldBackgroundColor : colorScheme.surface,
         alignment: Alignment.center,
-        child: const Text(
-          "Tidak ada saham yang cocok dengan pencarian",
-          style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff94a3b8)),
+        child: Text(
+          _tr('market.watchlist_empty', 'Tidak ada saham yang cocok dengan pencarian', 'No stocks match your search'),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: colorScheme.onSurfaceVariant),
         ),
       );
     }
 
     return Container(
       height: 48,
-      decoration: const BoxDecoration(
-        color: Color(0xff0f172a),
-        border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
+      decoration: BoxDecoration(
+        color: isDark ? theme.scaffoldBackgroundColor : colorScheme.surface,
+        border: Border(bottom: BorderSide(color: colorScheme.outline.withOpacity(isDark ? 0.12 : 0.15))),
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -491,6 +541,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           final st = filteredList[idx];
           final isSelected = idx == _selectedStockIdx;
           final isUp = st['changePct'] >= 0;
+
+          final upColor = isDark ? const Color(0xff34d399) : const Color(0xff059669);
+          final downColor = isDark ? const Color(0xfff87171) : const Color(0xffdc2626);
 
           return GestureDetector(
             onTap: () {
@@ -505,10 +558,10 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xff059669) : const Color(0xff1e293b),
+                color: isSelected ? const Color(0xff059669) : (isDark ? colorScheme.surface : const Color(0xfff1f5f9)),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? const Color(0xff10b981) : Colors.white.withOpacity(0.08),
+                  color: isSelected ? const Color(0xff10b981) : colorScheme.outline.withOpacity(isDark ? 0.12 : 0.2),
                   width: isSelected ? 1.4 : 1.0,
                 ),
               ),
@@ -520,17 +573,17 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       fontFamily: 'Outfit',
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : const Color(0xffcbd5e1),
+                      color: isSelected ? Colors.white : colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     "Rp ${st['price'].toInt()}",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isSelected ? Colors.white : colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -540,7 +593,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       fontFamily: 'Outfit',
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: isUp ? const Color(0xff34d399) : const Color(0xfff87171),
+                      color: isSelected
+                          ? (isUp ? const Color(0xffa7f3d0) : const Color(0xfffca5a5))
+                          : (isUp ? upColor : downColor),
                     ),
                   ),
                 ],
@@ -554,17 +609,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 4. Pro Terminal Tab Bar with Vector Material Icons
   Widget _buildTerminalTabSelector() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final tabs = [
-      {'label': 'Grafik', 'icon': Icons.candlestick_chart_rounded},
-      {'label': 'Order Book', 'icon': Icons.format_list_numbered_rounded},
-      {'label': 'Berita', 'icon': Icons.newspaper_rounded},
+      {'label': _tr('market.tab_chart', 'Grafik', 'Chart'), 'icon': Icons.candlestick_chart_rounded},
+      {'label': _tr('market.tab_order_book', 'Order Book', 'Order Book'), 'icon': Icons.format_list_numbered_rounded},
+      {'label': _tr('market.tab_news', 'Berita', 'News'), 'icon': Icons.newspaper_rounded},
     ];
 
     return Container(
       height: 42,
-      decoration: const BoxDecoration(
-        color: Color(0xff0f172a),
-        border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
+      decoration: BoxDecoration(
+        color: isDark ? theme.scaffoldBackgroundColor : colorScheme.surface,
+        border: Border(bottom: BorderSide(color: colorScheme.outline.withOpacity(isDark ? 0.12 : 0.15))),
       ),
       child: Row(
         children: List.generate(tabs.length, (idx) {
@@ -598,7 +657,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         Icon(
                           item['icon'] as IconData,
                           size: 14,
-                          color: isSelected ? const Color(0xff10b981) : const Color(0xff94a3b8),
+                          color: isSelected ? const Color(0xff10b981) : colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -607,7 +666,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                             fontFamily: 'Outfit',
                             fontSize: 10.5,
                             fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
-                            color: isSelected ? const Color(0xff10b981) : const Color(0xff94a3b8),
+                            color: isSelected ? const Color(0xff10b981) : colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -624,6 +683,10 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // TAB 1: TRADINGVIEW ULTRA CHART ENGINE
   Widget _buildTradingViewUltraChartTab(Map<String, dynamic> stock, Color mainColor) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final bool isUp = stock['changePct'] >= 0;
     final Map<String, List<Map<String, dynamic>>> tfMap = stock['timeframesMap'] as Map<String, List<Map<String, dynamic>>>? ?? {};
     final candles = tfMap[_selectedTimeframe] ?? (stock['candles'] as List<Map<String, dynamic>>? ?? []);
@@ -644,27 +707,27 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     children: [
                       Text(
                         stock['ticker'],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        stock['sector'],
-                        style: const TextStyle(
+                        _getSectorLabel(stock['sector'] as String? ?? ''),
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 11,
-                          color: Color(0xff64748b),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xff064e3b),
+                          color: isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
                         ),
@@ -681,12 +744,12 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              _isLoadingRealData ? "REFRESHING..." : "LIVE BEI",
-                              style: const TextStyle(
+                              _isLoadingRealData ? _tr('market.refreshing', 'REFRESHING...', 'REFRESHING...') : _tr('market.live_badge', 'LIVE BEI', 'LIVE IDX'),
+                              style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xff10b981),
+                                color: isDark ? const Color(0xff10b981) : const Color(0xff059669),
                               ),
                             ),
                           ],
@@ -696,10 +759,10 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   ),
                   Text(
                     stock['name'],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
-                      color: Color(0xff94a3b8),
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -739,18 +802,18 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xff111827),
+              color: isDark ? const Color(0xff111827) : colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : colorScheme.outline.withOpacity(0.15)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMetricCell("Open", "Rp ${stock['open'].toInt()}"),
-                _buildMetricCell("High", "Rp ${stock['high'].toInt()}"),
-                _buildMetricCell("Low", "Rp ${stock['low'].toInt()}"),
-                _buildMetricCell("Val (Rp)", stock['value']),
-                _buildMetricCell("Foreign", stock['foreignNet']),
+                _buildMetricCell(_tr('market.metric_open', 'Open', 'Open'), "Rp ${stock['open'].toInt()}"),
+                _buildMetricCell(_tr('market.metric_high', 'High', 'High'), "Rp ${stock['high'].toInt()}"),
+                _buildMetricCell(_tr('market.metric_low', 'Low', 'Low'), "Rp ${stock['low'].toInt()}"),
+                _buildMetricCell(_tr('market.metric_value', 'Val (Rp)', 'Val (IDR)'), stock['value']),
+                _buildMetricCell(_tr('market.metric_foreign', 'Foreign', 'Foreign'), stock['foreignNet']),
               ],
             ),
           ),
@@ -774,8 +837,11 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: isSel ? const Color(0xff059669) : const Color(0xff1e293b),
+                        color: isSel ? const Color(0xff059669) : (isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9)),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSel ? const Color(0xff10b981) : (isDark ? Colors.transparent : colorScheme.outline.withOpacity(0.15)),
+                        ),
                       ),
                       child: Text(
                         tf,
@@ -783,7 +849,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           fontFamily: 'Outfit',
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
-                          color: isSel ? Colors.white : const Color(0xff94a3b8),
+                          color: isSel ? Colors.white : (isDark ? const Color(0xff94a3b8) : colorScheme.onSurfaceVariant),
                         ),
                       ),
                     ),
@@ -800,13 +866,23 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: _showMA ? const Color(0xff78350f).withOpacity(0.4) : const Color(0xff1e293b),
+                    color: _showMA
+                        ? (isDark ? const Color(0xff78350f).withOpacity(0.4) : const Color(0xfffef3c7))
+                        : (isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9)),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _showMA ? const Color(0xfff59e0b) : Colors.transparent),
+                    border: Border.all(
+                      color: _showMA ? const Color(0xfff59e0b) : (isDark ? Colors.transparent : colorScheme.outline.withOpacity(0.15)),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.show_chart_rounded, color: _showMA ? const Color(0xfff59e0b) : const Color(0xff94a3b8), size: 14),
+                      Icon(
+                        Icons.show_chart_rounded,
+                        color: _showMA
+                            ? (isDark ? const Color(0xfff59e0b) : const Color(0xffd97706))
+                            : colorScheme.onSurfaceVariant,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         "EMA20",
@@ -814,7 +890,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           fontFamily: 'Outfit',
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
-                          color: _showMA ? const Color(0xfffbbf24) : const Color(0xff94a3b8),
+                          color: _showMA
+                              ? (isDark ? const Color(0xfffbbf24) : const Color(0xffb45309))
+                              : colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -830,20 +908,29 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             Builder(builder: (context) {
               final c = candles[_hoveredCandleIdx!];
               final isCUp = (c['c'] as num) >= (c['o'] as num);
-              final cColor = isCUp ? const Color(0xff34d399) : const Color(0xfff87171);
+              final cColor = isCUp
+                  ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                  : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626));
 
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xff1e293b),
+                  color: isDark ? const Color(0xff1e293b) : colorScheme.surface,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xff10b981).withOpacity(0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Time: ${c['time']}", style: const TextStyle(fontFamily: 'Outfit', fontSize: 10.5, color: Colors.white)),
+                    Text(_tr('market.crosshair_time', "Time: ${c['time']}", "Time: ${c['time']}", params: {'time': "${c['time']}"}), style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, color: colorScheme.onSurface)),
                     Text("O: ${c['o']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
                     Text("H: ${c['h']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
                     Text("L: ${c['l']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 10.5, fontWeight: FontWeight.bold, color: cColor)),
@@ -876,7 +963,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               height: 340,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xff0f172a),
+                color: isDark ? const Color(0xff0f172a) : colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xff10b981).withOpacity(0.3), width: 1.2),
               ),
@@ -891,6 +978,14 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       lowPrice: stock['low'],
                       showMA: _showMA,
                       touchOffset: _touchOffset,
+                      gridColor: isDark ? Colors.white.withOpacity(0.04) : colorScheme.outline.withOpacity(0.12),
+                      textColor: isDark ? Colors.white.withOpacity(0.45) : colorScheme.onSurfaceVariant.withOpacity(0.8),
+                      bullishColor: const Color(0xff10b981),
+                      bearishColor: const Color(0xffef4444),
+                      maColor: const Color(0xfff59e0b),
+                      crosshairColor: const Color(0xfff59e0b),
+                      lastPriceBadgeColor: const Color(0xff10b981),
+                      lastPriceTextColor: Colors.white,
                       onHoverIndex: (idx) {
                         if (_hoveredCandleIdx != idx) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -914,16 +1009,28 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   Widget _buildMetricCell(String label, String val) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       children: [
         Text(
           label,
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Color(0xff64748b)),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 9.5,
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           val,
-          style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            color: colorScheme.onSurface,
+          ),
         ),
       ],
     );
@@ -931,18 +1038,22 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // TAB 2: ORDER BOOK
   Widget _buildOrderBookTab(Map<String, dynamic> stock) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "ORDER BOOK (5-LEVEL BID / OFFER DEPTH)",
+          Text(
+            _tr('market.order_book_title', 'ORDER BOOK (5-LEVEL BID / OFFER DEPTH)', 'ORDER BOOK (5-LEVEL BID / OFFER DEPTH)'),
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 13,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: colorScheme.onSurface,
               letterSpacing: 0.5,
             ),
           ),
@@ -954,7 +1065,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xff111827),
+                    color: isDark ? const Color(0xff111827) : colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xff059669).withOpacity(0.4)),
                   ),
@@ -962,12 +1073,20 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 6),
-                        decoration: const BoxDecoration(
-                          color: Color(0xff064e3b),
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5),
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
                         ),
                         alignment: Alignment.center,
-                        child: const Text("BID (BELI)", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xff34d399))),
+                        child: Text(
+                          _tr('market.bid_label', 'BID (BELI)', 'BID (BUY)'),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? const Color(0xff34d399) : const Color(0xff059669),
+                          ),
+                        ),
                       ),
                       ..._bids.map((b) => _buildProOrderBookRow(b['price'], b['vol'], b['pct'], true)),
                     ],
@@ -978,7 +1097,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xff111827),
+                    color: isDark ? const Color(0xff111827) : colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xffef4444).withOpacity(0.4)),
                   ),
@@ -986,12 +1105,20 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 6),
-                        decoration: const BoxDecoration(
-                          color: Color(0xff78350f),
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xff78350f) : const Color(0xfffee2e2),
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
                         ),
                         alignment: Alignment.center,
-                        child: const Text("OFFER (JUAL)", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xfff87171))),
+                        child: Text(
+                          _tr('market.offer_label', 'OFFER (JUAL)', 'OFFER (SELL)'),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? const Color(0xfff87171) : const Color(0xffdc2626),
+                          ),
+                        ),
                       ),
                       ..._offers.map((o) => _buildProOrderBookRow(o['price'], o['vol'], o['pct'], false)),
                     ],
@@ -1002,13 +1129,13 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 20),
 
-          const Text(
-            "RUNNING TRADE (LIVE EXECUTION FEED)",
+          Text(
+            _tr('market.running_trade_title', 'RUNNING TRADE (LIVE EXECUTION FEED)', 'RUNNING TRADE (LIVE EXECUTION FEED)'),
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 13,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: colorScheme.onSurface,
               letterSpacing: 0.5,
             ),
           ),
@@ -1016,29 +1143,34 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xff111827),
+              color: isDark ? const Color(0xff111827) : colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : colorScheme.outline.withOpacity(0.15)),
             ),
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: min(7, _runningTrade.length),
-              separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.05), height: 1),
+              separatorBuilder: (_, __) => Divider(
+                color: isDark ? Colors.white.withOpacity(0.05) : colorScheme.outline.withOpacity(0.1),
+                height: 1,
+              ),
               itemBuilder: (context, idx) {
                 final rt = _runningTrade[idx];
                 final isBuy = rt['type'] == 'BUY';
-                final col = isBuy ? const Color(0xff34d399) : const Color(0xfff87171);
+                final col = isBuy
+                    ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                    : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626));
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(rt['time'], style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b))),
-                      Text(rt['ticker'], style: const TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white)),
+                      Text(rt['time'], style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                      Text(rt['ticker'], style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: colorScheme.onSurface)),
                       Text("Rp ${rt['price']}", style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: col)),
-                      Text("${rt['vol']} Lot", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold, color: col)),
+                      Text(_tr('market.lot_unit', "${rt['vol']} Lot", "${rt['vol']} Lots", params: {'count': "${rt['vol']}"}), style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold, color: col)),
                     ],
                   ),
                 );
@@ -1051,8 +1183,16 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   Widget _buildProOrderBookRow(int price, int vol, double pct, bool isBid) {
-    final barColor = isBid ? const Color(0xff059669).withOpacity(0.25) : const Color(0xffdc2626).withOpacity(0.25);
-    final textColor = isBid ? const Color(0xff34d399) : const Color(0xfff87171);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final barColor = isBid
+        ? const Color(0xff059669).withOpacity(isDark ? 0.25 : 0.15)
+        : const Color(0xffdc2626).withOpacity(isDark ? 0.25 : 0.15);
+    final textColor = isBid
+        ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+        : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626));
 
     return Container(
       height: 32,
@@ -1073,7 +1213,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("${(vol / 1000).toStringAsFixed(1)}K", style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xffcbd5e1))),
+                Text("${(vol / 1000).toStringAsFixed(1)}K", style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: colorScheme.onSurfaceVariant)),
                 Text("$price", style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w900, color: textColor)),
               ],
             ),
@@ -1085,18 +1225,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // TAB 3: FINANCIALS & VALUATION
   Widget _buildFinancialsTab(Map<String, dynamic> stock) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "KEY FINANCIAL RATIOS & VALUATION",
+          Text(
+            _tr('market.financial_ratios_title', 'KEY FINANCIAL RATIOS & VALUATION', 'KEY FINANCIAL RATIOS & VALUATION'),
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 13,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: colorScheme.onSurface,
               letterSpacing: 0.5,
             ),
           ),
@@ -1108,35 +1251,42 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   Widget _buildValuationCard(Map<String, dynamic> stock) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xff111827),
+        color: isDark ? const Color(0xff111827) : colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : colorScheme.outline.withOpacity(0.15)),
       ),
       child: Column(
         children: [
-          _buildRatioRow("Market Capitalization", stock['marketCap']),
-          const Divider(color: Color(0xff1e293b)),
-          _buildRatioRow("Price to Earnings Ratio (PER)", "${stock['per']}x"),
-          const Divider(color: Color(0xff1e293b)),
-          _buildRatioRow("Price to Book Value (PBV)", "${stock['pbv']}x"),
-          const Divider(color: Color(0xff1e293b)),
-          _buildRatioRow("Foreign Net Buy / Sell", stock['foreignNet']),
+          _buildRatioRow(_tr('market.market_cap', 'Kapitalisasi Pasar', 'Market Capitalization'), stock['marketCap']),
+          Divider(color: isDark ? const Color(0xff1e293b) : colorScheme.outline.withOpacity(0.15)),
+          _buildRatioRow(_tr('market.per_ratio', 'Price to Earnings Ratio (PER)', 'Price to Earnings Ratio (PER)'), "${stock['per']}x"),
+          Divider(color: isDark ? const Color(0xff1e293b) : colorScheme.outline.withOpacity(0.15)),
+          _buildRatioRow(_tr('market.pbv_ratio', 'Price to Book Value (PBV)', 'Price to Book Value (PBV)'), "${stock['pbv']}x"),
+          Divider(color: isDark ? const Color(0xff1e293b) : colorScheme.outline.withOpacity(0.15)),
+          _buildRatioRow(_tr('market.foreign_flow', 'Arus Bersih Asing (Net Foreign)', 'Foreign Net Buy / Sell'), stock['foreignNet']),
         ],
       ),
     );
   }
 
   Widget _buildRatioRow(String label, String val) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8))),
-          Text(val, style: const TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
+          Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colorScheme.onSurfaceVariant)),
+          Text(val, style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w900, color: colorScheme.onSurface)),
         ],
       ),
     );
@@ -1144,23 +1294,37 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // TAB 4: MARKET NEWS WITH VECTOR MATERIAL ICONS
   Widget _buildNewsTab(Map<String, dynamic> stock) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final isEn = Provider.of<AppState>(context, listen: false).language.toLowerCase().startsWith('en');
+
     final newsList = [
       {
-        'title': "${stock['ticker']} Catat Pertumbuhan Laba Bersih Kuartal II Naik 14.5% YoY",
-        'source': "Market Insider • 25 menit lalu",
+        'title': isEn
+            ? "${stock['ticker']} Reports Q2 Net Profit Growth Up 14.5% YoY"
+            : "${stock['ticker']} Catat Pertumbuhan Laba Bersih Kuartal II Naik 14.5% YoY",
+        'source': isEn ? "Market Insider • 25 mins ago" : "Market Insider • 25 menit lalu",
         'sentiment': "BULLISH",
+        'sentimentLabel': _tr('market.sentiment_bullish', 'BULLISH', 'BULLISH'),
         'isBullish': true,
       },
       {
-        'title': "Investor Asing Kembali Net Buy Saham ${stock['ticker']} Sebesar Rp 142 Miliar",
-        'source': "Financial Times • 2 jam lalu",
+        'title': isEn
+            ? "Foreign Investors Record Net Buy of IDR 142 Billion in ${stock['ticker']}"
+            : "Investor Asing Kembali Net Buy Saham ${stock['ticker']} Sebesar Rp 142 Miliar",
+        'source': isEn ? "Financial Times • 2 hours ago" : "Financial Times • 2 jam lalu",
         'sentiment': "BULLISH",
+        'sentimentLabel': _tr('market.sentiment_bullish', 'BULLISH', 'BULLISH'),
         'isBullish': true,
       },
       {
-        'title': "Analisis Teknikal: ${stock['ticker']} Menguji Level Resistance Psikologis Utama",
-        'source': "Trade Heroes Research • 4 jam lalu",
+        'title': isEn
+            ? "Technical Analysis: ${stock['ticker']} Tests Key Psychological Resistance Level"
+            : "Analisis Teknikal: ${stock['ticker']} Menguji Level Resistance Psikologis Utama",
+        'source': isEn ? "Trade Heroes Research • 4 hours ago" : "Trade Heroes Research • 4 jam lalu",
         'sentiment': "NETRAL",
+        'sentimentLabel': _tr('market.sentiment_neutral', 'NETRAL', 'NEUTRAL'),
         'isBullish': false,
       },
     ];
@@ -1171,15 +1335,17 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       itemBuilder: (context, idx) {
         final n = newsList[idx];
         final bool isB = n['isBullish'] as bool;
-        final Color sentColor = isB ? const Color(0xff34d399) : const Color(0xff94a3b8);
+        final Color sentColor = isB
+            ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+            : colorScheme.onSurfaceVariant;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xff111827),
+            color: isDark ? const Color(0xff111827) : colorScheme.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : colorScheme.outline.withOpacity(0.15)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1187,11 +1353,13 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(n['source'] as String, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff64748b))),
+                  Text(n['source'] as String, style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: colorScheme.onSurfaceVariant)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isB ? const Color(0xff064e3b) : const Color(0xff1e293b),
+                      color: isB
+                          ? (isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5))
+                          : (isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9)),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: sentColor.withOpacity(0.4)),
                     ),
@@ -1204,7 +1372,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          n['sentiment'] as String,
+                          (n['sentimentLabel'] ?? n['sentiment']) as String,
                           style: TextStyle(fontFamily: 'Outfit', fontSize: 9.5, fontWeight: FontWeight.w900, color: sentColor),
                         ),
                       ],
@@ -1213,7 +1381,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 ],
               ),
               const SizedBox(height: 8),
-              Text(n['title'] as String, style: const TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.w900, color: Colors.white, height: 1.3)),
+              Text(n['title'] as String, style: TextStyle(fontFamily: 'Outfit', fontSize: 13.5, fontWeight: FontWeight.w900, color: colorScheme.onSurface, height: 1.3)),
             ],
           ),
         );
@@ -1223,13 +1391,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 6. Sticky Bottom Trading Bar
   Widget _buildBottomTradingBar(Map<String, dynamic> stock, AppState appState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final holdingLots = appState.getHoldingLots(stock['ticker']);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xff0f172a),
-        border: Border(top: BorderSide(color: Color(0xff1e293b), width: 1.2)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xff0f172a) : colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xff1e293b) : colorScheme.outline.withOpacity(0.15),
+            width: 1.2,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -1241,28 +1417,32 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               children: [
                 Row(
                   children: [
-                    const Text(
-                      "Kas: ",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff94a3b8)),
+                    Text(
+                      _tr('market.cash_label', 'Kas: ', 'Cash: '),
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: colorScheme.onSurfaceVariant),
                     ),
                     Text(
                       formatRupiah(appState.virtualBalance),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 12.5,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xff10b981),
+                        color: isDark ? const Color(0xff10b981) : const Color(0xff059669),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  holdingLots > 0 ? "Memiliki: $holdingLots Lot ${stock['ticker']}" : "Belum punya saham ini",
+                  holdingLots > 0
+                      ? _tr('market.holding_status', "Memiliki: $holdingLots Lot ${stock['ticker']}", "Holding: $holdingLots Lots of ${stock['ticker']}", params: {'lots': '$holdingLots', 'ticker': '${stock['ticker']}'})
+                      : _tr('market.no_holding_status', 'Belum punya saham ini', 'No holdings in this stock'),
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 10.5,
-                    color: holdingLots > 0 ? const Color(0xff60a5fa) : const Color(0xff64748b),
+                    color: holdingLots > 0
+                        ? (isDark ? const Color(0xff60a5fa) : const Color(0xff2563eb))
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -1279,9 +1459,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               elevation: 0,
             ),
             onPressed: () => _showOrderSheet(context, appState, stock, isBuy: false),
-            child: const Text(
-              "JUAL",
-              style: TextStyle(fontFamily: 'Outfit', fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+            child: Text(
+              _tr('market.btn_sell', 'JUAL', 'SELL'),
+              style: const TextStyle(fontFamily: 'Outfit', fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
             ),
           ),
           const SizedBox(width: 8),
@@ -1296,9 +1476,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               elevation: 0,
             ),
             onPressed: () => _showOrderSheet(context, appState, stock, isBuy: true),
-            child: const Text(
-              "BELI",
-              style: TextStyle(fontFamily: 'Outfit', fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+            child: Text(
+              _tr('market.btn_buy', 'BELI', 'BUY'),
+              style: const TextStyle(fontFamily: 'Outfit', fontSize: 12.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
             ),
           ),
         ],
@@ -1313,13 +1493,19 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     final holdingLots = appState.getHoldingLots(stock['ticker']);
     int lotCount = 1;
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    String tr(String key, String fallbackId, String fallbackEn, {Map<String, String> params = const {}}) =>
+        _t(appState, key, fallbackId, fallbackEn, params: params);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xff0f172a),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        side: BorderSide(color: Color(0xff1e293b)),
+      backgroundColor: isDark ? const Color(0xff0f172a) : colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: isDark ? const Color(0xff1e293b) : colorScheme.outline.withOpacity(0.15)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -1347,7 +1533,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xff475569),
+                        color: isDark ? const Color(0xff475569) : const Color(0xffcbd5e1),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1363,45 +1549,49 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: isBuy ? const Color(0xff065f46) : const Color(0xff7f1d1d),
+                              color: isBuy
+                                  ? (isDark ? const Color(0xff065f46) : const Color(0xffd1fae5))
+                                  : (isDark ? const Color(0xff7f1d1d) : const Color(0xfffee2e2)),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isBuy ? "ORDER BELI" : "ORDER JUAL",
+                              isBuy ? tr('market.order_buy_badge', 'ORDER BELI', 'BUY ORDER') : tr('market.order_sell_badge', 'ORDER JUAL', 'SELL ORDER'),
                               style: TextStyle(
                                 fontFamily: 'Outfit',
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
-                                color: isBuy ? const Color(0xff34d399) : const Color(0xfff87171),
+                                color: isBuy
+                                    ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                                    : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626)),
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             stock['ticker'],
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                         ],
                       ),
                       Text(
                         formatRupiah(currentPrice),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ],
                   ),
                   Text(
                     stock['name'] ?? '',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8)),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 16),
 
@@ -1409,22 +1599,26 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1e293b),
+                      color: isDark ? const Color(0xff1e293b) : const Color(0xfff8fafc),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : colorScheme.outline.withOpacity(0.15)),
                     ),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              "Jumlah Lot",
-                              style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                            Text(
+                              tr('market.lot_amount_label', 'Jumlah Lot', 'Lot Quantity'),
+                              style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                             ),
                             Text(
-                              "$totalShares Lembar",
-                              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff60a5fa)),
+                              tr('market.shares_count', '$totalShares Lembar', '$totalShares Shares', params: {'shares': '$totalShares'}),
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: isDark ? const Color(0xff60a5fa) : const Color(0xff2563eb),
+                              ),
                             ),
                           ],
                         ),
@@ -1433,8 +1627,8 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           children: [
                             IconButton.filled(
                               style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xff334155),
-                                foregroundColor: Colors.white,
+                                backgroundColor: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0),
+                                foregroundColor: isDark ? Colors.white : colorScheme.onSurface,
                               ),
                               onPressed: lotCount > 1
                                   ? () => setSheetState(() => lotCount--)
@@ -1444,20 +1638,20 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                             Expanded(
                               child: Center(
                                 child: Text(
-                                  "$lotCount Lot",
-                                  style: const TextStyle(
+                                  tr('market.lots_count', '$lotCount Lot', '$lotCount Lots', params: {'lots': '$lotCount'}),
+                                  style: TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 22,
                                     fontWeight: FontWeight.w900,
-                                    color: Colors.white,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                               ),
                             ),
                             IconButton.filled(
                               style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xff334155),
-                                foregroundColor: Colors.white,
+                                backgroundColor: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0),
+                                foregroundColor: isDark ? Colors.white : colorScheme.onSurface,
                               ),
                               onPressed: () => setSheetState(() => lotCount++),
                               icon: const Icon(Icons.add_rounded, size: 18),
@@ -1493,26 +1687,31 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1e293b).withOpacity(0.5),
+                      color: isDark ? const Color(0xff1e293b).withOpacity(0.5) : const Color(0xfff1f5f9),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
                       children: [
-                        _buildCalcRow("Subtotal", formatRupiah(subtotal)),
+                        _buildCalcRow(tr('market.calc_subtotal', 'Subtotal', 'Subtotal'), formatRupiah(subtotal)),
                         const SizedBox(height: 6),
-                        _buildCalcRow("Fee Sekuritas BEI (${isBuy ? '0.15%' : '0.25%'})", formatRupiah(fee)),
-                        const Divider(color: Color(0xff334155), height: 14),
                         _buildCalcRow(
-                          isBuy ? "Total Pembayaran" : "Total Penerimaan Bersih",
+                          tr('market.calc_fee_broker', "Fee Sekuritas BEI (${isBuy ? '0.15%' : '0.25%'})", "IDX Broker Fee (${isBuy ? '0.15%' : '0.25%'})", params: {'pct': isBuy ? '0.15%' : '0.25%'}),
+                          formatRupiah(fee),
+                        ),
+                        Divider(color: isDark ? const Color(0xff334155) : colorScheme.outline.withOpacity(0.15), height: 14),
+                        _buildCalcRow(
+                          isBuy ? tr('market.calc_total_payment', 'Total Pembayaran', 'Total Payment') : tr('market.calc_net_proceeds', 'Total Penerimaan Bersih', 'Net Proceeds'),
                           formatRupiah(total),
                           isBold: true,
-                          valueColor: isBuy ? const Color(0xff34d399) : const Color(0xfff87171),
+                          valueColor: isBuy
+                              ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                              : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626)),
                         ),
                         const SizedBox(height: 6),
                         _buildCalcRow(
-                          isBuy ? "Saldo Kas Tersedia" : "Lot Dimiliki Saat Ini",
-                          isBuy ? formatRupiah(appState.virtualBalance) : "$holdingLots Lot",
-                          valueColor: const Color(0xff94a3b8),
+                          isBuy ? tr('market.calc_available_balance', 'Saldo Kas Tersedia', 'Available Cash Balance') : tr('market.calc_current_lots', 'Lot Dimiliki Saat Ini', 'Current Lots Held'),
+                          isBuy ? formatRupiah(appState.virtualBalance) : tr('market.lots_count', '$holdingLots Lot', '$holdingLots Lots', params: {'lots': '$holdingLots'}),
+                          valueColor: colorScheme.onSurfaceVariant,
                         ),
                       ],
                     ),
@@ -1523,7 +1722,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isBuy ? const Color(0xff059669) : const Color(0xffdc2626),
-                      disabledBackgroundColor: const Color(0xff334155),
+                      disabledBackgroundColor: isDark ? const Color(0xff334155) : const Color(0xffcbd5e1),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1540,10 +1739,28 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                                 lots: lotCount,
                               );
                               if (appState.soundHaptic) HapticFeedback.mediumImpact();
+                              final String msg = res['success']
+                                  ? tr('market.buy_success_msg',
+                                      'Berhasil beli $lotCount Lot ${stock['ticker']} @ ${formatRupiah(currentPrice)}',
+                                      'Successfully bought $lotCount Lots of ${stock['ticker']} @ ${formatRupiah(currentPrice)}',
+                                      params: {
+                                        'lots': '$lotCount',
+                                        'ticker': '${stock['ticker']}',
+                                        'price': formatRupiah(currentPrice),
+                                      })
+                                  : (res['message'] == 'Jumlah lot harus lebih dari 0'
+                                      ? tr('market.error_zero_lots', 'Jumlah lot harus lebih dari 0', 'Lot quantity must be greater than 0')
+                                      : tr('market.error_insufficient_cash',
+                                          'Saldo kas virtual tidak cukup untuk beli $lotCount Lot ${stock['ticker']}',
+                                          'Insufficient virtual cash to buy $lotCount Lots of ${stock['ticker']}',
+                                          params: {
+                                            'lots': '$lotCount',
+                                            'ticker': '${stock['ticker']}',
+                                          }));
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: res['success'] ? const Color(0xff059669) : const Color(0xffdc2626),
-                                  content: Text(res['message']),
+                                  content: Text(msg),
                                 ),
                               );
                             } else {
@@ -1555,18 +1772,40 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                               if (appState.soundHaptic) HapticFeedback.mediumImpact();
                               final pnl = res['pnl'] as double?;
                               final pnlStr = pnl != null ? " (PnL: ${formatRupiah(pnl)})" : "";
+                              final String msg = res['success']
+                                  ? tr('market.sell_success_msg',
+                                      'Berhasil jual $lotCount Lot ${stock['ticker']} @ ${formatRupiah(currentPrice)}$pnlStr',
+                                      'Successfully sold $lotCount Lots of ${stock['ticker']} @ ${formatRupiah(currentPrice)}$pnlStr',
+                                      params: {
+                                        'lots': '$lotCount',
+                                        'ticker': '${stock['ticker']}',
+                                        'price': formatRupiah(currentPrice),
+                                      })
+                                  : (res['message'] == 'Jumlah lot harus lebih dari 0'
+                                      ? tr('market.error_zero_lots', 'Jumlah lot harus lebih dari 0', 'Lot quantity must be greater than 0')
+                                      : (res['message'] != null && res['message'].toString().contains('belum memiliki portofolio')
+                                          ? tr('market.error_no_portfolio',
+                                              'Anda belum memiliki portofolio saham ${stock['ticker']}',
+                                              'You do not own any shares of ${stock['ticker']}',
+                                              params: {'ticker': '${stock['ticker']}'})
+                                          : tr('market.error_insufficient_lots',
+                                              'Lot tidak cukup (Anda hanya memiliki $holdingLots Lot ${stock['ticker']})',
+                                              'Insufficient lots (You only have $holdingLots Lots of ${stock['ticker']})',
+                                              params: {'currentLots': '$holdingLots', 'ticker': '${stock['ticker']}'})));
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: res['success'] ? const Color(0xff059669) : const Color(0xffdc2626),
-                                  content: Text("${res['message']}$pnlStr"),
+                                  content: Text(msg),
                                 ),
                               );
                             }
                           },
                     child: Text(
                       !canAfford
-                          ? (isBuy ? "SALDO TIDAK CUKUP" : "LOT TIDAK MENCUKUPI")
-                          : (isBuy ? "KONFIRMASI BELI $lotCount LOT" : "KONFIRMASI JUAL $lotCount LOT"),
+                          ? (isBuy ? tr('market.btn_insufficient_balance', 'SALDO TIDAK CUKUP', 'INSUFFICIENT BALANCE') : tr('market.btn_insufficient_lots', 'LOT TIDAK MENCUKUPI', 'INSUFFICIENT LOTS'))
+                          : (isBuy
+                              ? tr('market.btn_confirm_buy', 'KONFIRMASI BELI $lotCount LOT', 'CONFIRM BUY $lotCount LOTS', params: {'lots': '$lotCount'})
+                              : tr('market.btn_confirm_sell', 'KONFIRMASI JUAL $lotCount LOT', 'CONFIRM SELL $lotCount LOTS', params: {'lots': '$lotCount'})),
                       style: const TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 14,
@@ -1587,6 +1826,12 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
 
   // 8. Pro Portfolio Tab View
   Widget _buildPortfolioTab(AppState appState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    String tr(String key, String fallbackId, String fallbackEn, {Map<String, String> params = const {}}) =>
+        _t(appState, key, fallbackId, fallbackEn, params: params);
+
     double totalStockValue = 0.0;
     double totalCostBasis = 0.0;
 
@@ -1617,16 +1862,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xff1e293b), Color(0xff0f172a)],
+            gradient: LinearGradient(
+              colors: isDark
+                  ? const [Color(0xff1e293b), Color(0xff0f172a)]
+                  : [colorScheme.surface, colorScheme.surface],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xff334155), width: 1.2),
+            border: Border.all(
+              color: isDark ? const Color(0xff334155) : colorScheme.outline.withOpacity(0.2),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.35),
+                color: Colors.black.withOpacity(isDark ? 0.35 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1638,13 +1888,13 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "TOTAL NILAI PORTOFOLIO",
+                  Text(
+                    tr('market.portfolio_total_value', 'TOTAL NILAI PORTOFOLIO', 'TOTAL PORTFOLIO VALUE'),
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xff94a3b8),
+                      color: colorScheme.onSurfaceVariant,
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -1653,16 +1903,24 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xff334155).withOpacity(0.6),
+                        color: isDark ? const Color(0xff334155).withOpacity(0.6) : const Color(0xffe2e8f0),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
-                        children: const [
-                          Icon(Icons.refresh_rounded, size: 12, color: Color(0xffcbd5e1)),
-                          SizedBox(width: 4),
+                        children: [
+                          Icon(
+                            Icons.refresh_rounded,
+                            size: 12,
+                            color: isDark ? const Color(0xffcbd5e1) : colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
-                            "Reset Saldo",
-                            style: TextStyle(fontFamily: 'Outfit', fontSize: 10, color: Color(0xffcbd5e1)),
+                            tr('market.reset_balance_btn', 'Reset Saldo', 'Reset Balance'),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 10,
+                              color: isDark ? const Color(0xffcbd5e1) : colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -1673,11 +1931,11 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               const SizedBox(height: 6),
               Text(
                 formatRupiah(totalEquity),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1686,7 +1944,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isOverallProfit ? const Color(0xff064e3b) : const Color(0xff450a0a),
+                      color: isOverallProfit
+                          ? (isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5))
+                          : (isDark ? const Color(0xff450a0a) : const Color(0xfffee2e2)),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: isOverallProfit ? const Color(0xff10b981) : const Color(0xffef4444),
@@ -1698,7 +1958,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         Icon(
                           isOverallProfit ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
                           size: 13,
-                          color: isOverallProfit ? const Color(0xff34d399) : const Color(0xfff87171),
+                          color: isOverallProfit
+                              ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                              : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626)),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -1707,35 +1969,44 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                             fontFamily: 'Outfit',
                             fontSize: 11.5,
                             fontWeight: FontWeight.w900,
-                            color: isOverallProfit ? const Color(0xff34d399) : const Color(0xfff87171),
+                            color: isOverallProfit
+                                ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                                : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626)),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    "Floating PnL",
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b)),
+                  Text(
+                    tr('market.floating_pnl', 'Floating PnL', 'Floating PnL'),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
-              const Divider(color: Color(0xff334155), height: 24),
+              Divider(
+                color: isDark ? const Color(0xff334155) : colorScheme.outline.withOpacity(0.15),
+                height: 24,
+              ),
               Row(
                 children: [
                   Expanded(
                     child: _buildPortfolioStatTile(
-                      "Saldo Kas Virtual",
+                      tr('market.virtual_cash_balance', 'Saldo Kas Virtual', 'Virtual Cash Balance'),
                       formatRupiah(appState.virtualBalance),
-                      const Color(0xff10b981),
+                      isDark ? const Color(0xff10b981) : const Color(0xff059669),
                     ),
                   ),
-                  Container(width: 1, height: 32, color: const Color(0xff334155)),
+                  Container(
+                    width: 1,
+                    height: 32,
+                    color: isDark ? const Color(0xff334155) : colorScheme.outline.withOpacity(0.15),
+                  ),
                   Expanded(
                     child: _buildPortfolioStatTile(
-                      "Nilai Pasar Saham",
+                      tr('market.stock_market_value', 'Nilai Pasar Saham', 'Stock Market Value'),
                       formatRupiah(totalStockValue),
-                      const Color(0xff60a5fa),
+                      isDark ? const Color(0xff60a5fa) : const Color(0xff2563eb),
                     ),
                   ),
                 ],
@@ -1754,19 +2025,19 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 const Icon(Icons.pie_chart_rounded, color: Color(0xff10b981), size: 18),
                 const SizedBox(width: 6),
                 Text(
-                  "Saham yang Dimiliki (${appState.portfolio.length})",
-                  style: const TextStyle(
+                  tr('market.owned_stocks_header', 'Saham yang Dimiliki (${appState.portfolio.length})', 'Owned Stocks (${appState.portfolio.length})', params: {'count': '${appState.portfolio.length}'}),
+                  style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
-            const Text(
-              "BEI Regular Market",
-              style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xff64748b)),
+            Text(
+              tr('market.regular_market', 'Pasar Reguler BEI', 'IDX Regular Market'),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -1776,23 +2047,27 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           Container(
             padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
             decoration: BoxDecoration(
-              color: const Color(0xff111827),
+              color: isDark ? const Color(0xff111827) : colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
+              border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : colorScheme.outline.withOpacity(0.15)),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.account_balance_wallet_outlined, size: 40, color: Color(0xff475569)),
-                SizedBox(height: 10),
-                Text(
-                  "Belum Ada Saham di Portofolio",
-                  style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 40,
+                  color: isDark ? const Color(0xff475569) : const Color(0xff94a3b8),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 10),
                 Text(
-                  "Gunakan saldo kas virtual Rp 100 Juta Anda untuk membeli saham pilihan di tab Grafik atau Order Book.",
+                  tr('market.portfolio_empty_title', 'Belum Ada Saham di Portofolio', 'No Stocks in Portfolio Yet'),
+                  style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tr('market.portfolio_empty_desc', 'Gunakan saldo kas virtual Rp 100 Juta Anda untuk membeli saham pilihan di tab Grafik atau Order Book.', 'Use your virtual cash balance of IDR 100 Million to buy selected stocks in the Chart or Order Book tab.'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8), height: 1.4),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colorScheme.onSurfaceVariant, height: 1.4),
                 ),
               ],
             ),
@@ -1815,13 +2090,17 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             final pnlPct = cost > 0 ? (pnl / cost) * 100 : 0.0;
             final isGreen = pnl >= 0;
 
+            final pnlColor = isGreen
+                ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626));
+
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xff111827),
+                color: isDark ? const Color(0xff111827) : colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : colorScheme.outline.withOpacity(0.15)),
               ),
               child: Column(
                 children: [
@@ -1832,27 +2111,27 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         children: [
                           Text(
                             ticker,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xff1e293b),
+                              color: isDark ? const Color(0xff1e293b) : const Color(0xffeff6ff),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              "$lots Lot",
-                              style: const TextStyle(
+                              tr('market.lots_count', '$lots Lot', '$lots Lots', params: {'lots': '$lots'}),
+                              style: TextStyle(
                                 fontFamily: 'Outfit',
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xff60a5fa),
+                                color: isDark ? const Color(0xff60a5fa) : const Color(0xff2563eb),
                               ),
                             ),
                           ),
@@ -1864,7 +2143,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           fontFamily: 'Outfit',
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
-                          color: isGreen ? const Color(0xff34d399) : const Color(0xfff87171),
+                          color: pnlColor,
                         ),
                       ),
                     ],
@@ -1874,8 +2153,8 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Avg: ${formatRupiah(avgPrice)} • Saat ini: ${formatRupiah(currentPrice)}",
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xff94a3b8)),
+                        tr('market.portfolio_avg_current', "Avg: ${formatRupiah(avgPrice)} • Saat ini: ${formatRupiah(currentPrice)}", "Avg: ${formatRupiah(avgPrice)} • Current: ${formatRupiah(currentPrice)}", params: {'avg': formatRupiah(avgPrice), 'current': formatRupiah(currentPrice)}),
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: colorScheme.onSurfaceVariant),
                       ),
                       Text(
                         "${isGreen ? '+' : ''}${pnlPct.toStringAsFixed(2)}%",
@@ -1883,7 +2162,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           fontFamily: 'Outfit',
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
-                          color: isGreen ? const Color(0xff34d399) : const Color(0xfff87171),
+                          color: pnlColor,
                         ),
                       ),
                     ],
@@ -1893,8 +2172,8 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
-                        "Total: ${formatRupiah(totalVal)}",
-                        style: const TextStyle(fontFamily: 'Outfit', fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xffcbd5e1)),
+                        tr('market.portfolio_total_val', "Total: ${formatRupiah(totalVal)}", "Total: ${formatRupiah(totalVal)}", params: {'val': formatRupiah(totalVal)}),
+                        style: TextStyle(fontFamily: 'Outfit', fontSize: 11.5, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                       ),
                       const Spacer(),
                       OutlinedButton(
@@ -1906,7 +2185,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         onPressed: () => _showOrderSheet(context, appState, stockMatch, isBuy: false),
-                        child: const Text("JUAL", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: Text(tr('market.btn_sell', 'JUAL', 'SELL'), style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
@@ -1919,7 +2198,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                           elevation: 0,
                         ),
                         onPressed: () => _showOrderSheet(context, appState, stockMatch, isBuy: true),
-                        child: const Text("BELI LAGI", style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold)),
+                        child: Text(tr('market.btn_buy_more', 'BELI LAGI', 'BUY MORE'), style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -1936,12 +2215,12 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             const Icon(Icons.history_rounded, color: Color(0xfff59e0b), size: 18),
             const SizedBox(width: 6),
             Text(
-              "Riwayat Transaksi (${appState.tradeHistory.length})",
-              style: const TextStyle(
+              tr('market.history_header', 'Riwayat Transaksi (${appState.tradeHistory.length})', 'Trade History (${appState.tradeHistory.length})', params: {'count': '${appState.tradeHistory.length}'}),
+              style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
+                color: colorScheme.onSurface,
               ),
             ),
           ],
@@ -1952,39 +2231,48 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
           Container(
             padding: const EdgeInsets.symmetric(vertical: 20),
             alignment: Alignment.center,
-            child: const Text(
-              "Belum ada riwayat transaksi",
-              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff64748b)),
+            child: Text(
+              tr('market.history_empty', 'Belum ada riwayat transaksi', 'No transaction history yet'),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colorScheme.onSurfaceVariant),
             ),
           )
         else
           ...appState.tradeHistory.map((th) {
             final isBuy = th['type'] == 'BUY';
             final pnl = th['realizedPnl'] as double?;
+            final pnlCol = pnl != null
+                ? (pnl >= 0
+                    ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                    : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626)))
+                : null;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xff111827),
+                color: isDark ? const Color(0xff111827) : colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : colorScheme.outline.withOpacity(0.15)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isBuy ? const Color(0xff064e3b) : const Color(0xff450a0a),
+                      color: isBuy
+                          ? (isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5))
+                          : (isDark ? const Color(0xff450a0a) : const Color(0xfffee2e2)),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      isBuy ? "BELI" : "JUAL",
+                      isBuy ? tr('market.badge_buy', 'BELI', 'BUY') : tr('market.badge_sell', 'JUAL', 'SELL'),
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: isBuy ? const Color(0xff34d399) : const Color(0xfff87171),
+                        color: isBuy
+                            ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
+                            : (isDark ? const Color(0xfff87171) : const Color(0xffdc2626)),
                       ),
                     ),
                   ),
@@ -1994,17 +2282,17 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${th['ticker']} • ${th['lots']} Lot @ ${formatRupiah(th['price'] as num)}",
-                          style: const TextStyle(
+                          tr('market.history_item', "${th['ticker']} • ${th['lots']} Lot @ ${formatRupiah(th['price'] as num)}", "${th['ticker']} • ${th['lots']} Lots @ ${formatRupiah(th['price'] as num)}", params: {'ticker': "${th['ticker']}", 'lots': "${th['lots']}", 'price': formatRupiah(th['price'] as num)}),
+                          style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 12.5,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           th['timestamp'] as String? ?? '',
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff64748b)),
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -2014,21 +2302,21 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                     children: [
                       Text(
                         formatRupiah(th['total'] as num),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 12.5,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       if (pnl != null)
                         Text(
-                          "PnL: ${pnl >= 0 ? '+' : ''}${formatRupiah(pnl)}",
+                          tr('market.pnl_prefix', "PnL: ${pnl >= 0 ? '+' : ''}${formatRupiah(pnl)}", "PnL: ${pnl >= 0 ? '+' : ''}${formatRupiah(pnl)}", params: {'val': "${pnl >= 0 ? '+' : ''}${formatRupiah(pnl)}"}),
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 10.5,
                             fontWeight: FontWeight.bold,
-                            color: pnl >= 0 ? const Color(0xff34d399) : const Color(0xfff87171),
+                            color: pnlCol,
                           ),
                         ),
                     ],
@@ -2044,37 +2332,58 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   void _showResetTradingConfirmation(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    String tr(String key, String fallbackId, String fallbackEn, {Map<String, String> params = const {}}) =>
+        _t(appState, key, fallbackId, fallbackEn, params: params);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff1e293b),
+        backgroundColor: isDark ? const Color(0xff1e293b) : colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          "Reset Portofolio Simulator?",
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          tr('market.dialog_reset_title', 'Reset Portofolio Simulator?', 'Reset Simulator Portfolio?'),
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: colorScheme.onSurface),
         ),
-        content: const Text(
-          "Seluruh posisi saham dan riwayat transaksi akan dihapus, dan saldo kas virtual akan dikembalikan ke Rp 100.000.000.",
-          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xffcbd5e1), height: 1.4),
+        content: Text(
+          tr('market.dialog_reset_content',
+              'Seluruh posisi saham dan riwayat transaksi akan dihapus, dan saldo kas virtual akan dikembalikan ke Rp 100.000.000.',
+              'All stock positions and transaction history will be cleared, and virtual cash balance will be reset to IDR 100,000,000.'),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: colorScheme.onSurfaceVariant, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("Batal", style: TextStyle(color: Color(0xff94a3b8))),
+            child: Text(
+              tr('market.btn_cancel', 'Batal', 'Cancel'),
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffdc2626)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xffdc2626),
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               Navigator.of(ctx).pop();
               appState.resetVirtualTrading();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: Color(0xff059669),
-                  content: Text("Portofolio simulator berhasil di-reset ke Rp 100 Juta!"),
+                SnackBar(
+                  backgroundColor: const Color(0xff059669),
+                  content: Text(
+                    tr('market.snackbar_reset_success',
+                        'Portofolio simulator berhasil di-reset ke Rp 100 Juta!',
+                        'Simulator portfolio successfully reset to IDR 100 Million!'),
+                  ),
                 ),
               );
             },
-            child: const Text("Reset", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text(
+              tr('market.btn_reset', 'Reset', 'Reset'),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -2082,12 +2391,15 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   Widget _buildPortfolioStatTile(String label, String value, Color color) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 3),
         Text(
@@ -2104,6 +2416,9 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   Widget _buildCalcRow(String label, String val, {bool isBold = false, Color? valueColor}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -2113,7 +2428,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             fontFamily: 'Inter',
             fontSize: 12,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? Colors.white : const Color(0xff94a3b8),
+            color: isBold ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
           ),
         ),
         Text(
@@ -2122,7 +2437,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
             fontFamily: 'Outfit',
             fontSize: isBold ? 14 : 12.5,
             fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
-            color: valueColor ?? Colors.white,
+            color: valueColor ?? colorScheme.onSurface,
           ),
         ),
       ],
@@ -2130,6 +2445,10 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   }
 
   Widget _buildQuickLotBtn(String label, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return InkWell(
       onTap: () {
         AudioService.playClick();
@@ -2139,12 +2458,17 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xff334155),
+          color: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            color: isDark ? Colors.white : colorScheme.onSurface,
+          ),
         ),
       ),
     );
@@ -2172,6 +2496,14 @@ class TradingViewUltraPainter extends CustomPainter {
   final double lowPrice;
   final bool showMA;
   final Offset? touchOffset;
+  final Color gridColor;
+  final Color textColor;
+  final Color bullishColor;
+  final Color bearishColor;
+  final Color maColor;
+  final Color crosshairColor;
+  final Color lastPriceBadgeColor;
+  final Color lastPriceTextColor;
   final Function(int) onHoverIndex;
 
   TradingViewUltraPainter({
@@ -2181,6 +2513,14 @@ class TradingViewUltraPainter extends CustomPainter {
     required this.lowPrice,
     required this.showMA,
     required this.touchOffset,
+    required this.gridColor,
+    required this.textColor,
+    required this.bullishColor,
+    required this.bearishColor,
+    required this.maColor,
+    required this.crosshairColor,
+    required this.lastPriceBadgeColor,
+    required this.lastPriceTextColor,
     required this.onHoverIndex,
   });
 
@@ -2197,14 +2537,14 @@ class TradingViewUltraPainter extends CustomPainter {
 
     // 1. Draw Grid Lines
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.04)
+      ..color = gridColor
       ..strokeWidth = 1;
 
     final textStyle = TextStyle(
       fontFamily: 'Outfit',
       fontSize: 9,
       fontWeight: FontWeight.bold,
-      color: Colors.white.withOpacity(0.45),
+      color: textColor,
     );
 
     // Draw Horizontal Y-Axis Price Grid Lines & Labels
@@ -2247,7 +2587,7 @@ class TradingViewUltraPainter extends CustomPainter {
       final lowY = candlePaneHeight * (1.0 - ((lowP - minP) / (maxP - minP)));
 
       final isGreen = closeP >= openP;
-      final candleColor = isGreen ? const Color(0xff10b981) : const Color(0xffef4444);
+      final candleColor = isGreen ? bullishColor : bearishColor;
 
       // Draw High/Low Wick Line
       final wickPaint = Paint()
@@ -2298,7 +2638,7 @@ class TradingViewUltraPainter extends CustomPainter {
     // 3. Draw Moving Average (EMA20) Smooth Curve
     if (showMA && maPoints.length > 1) {
       final maPaint = Paint()
-        ..color = const Color(0xfff59e0b) // Amber MA Line
+        ..color = maColor // Amber MA Line
         ..strokeWidth = 2.2
         ..style = PaintingStyle.stroke;
 
@@ -2314,7 +2654,7 @@ class TradingViewUltraPainter extends CustomPainter {
     final lastCandle = candles.last;
     final lastPriceY = candlePaneHeight * (1.0 - (((lastCandle['c'] as num) - minP) / (maxP - minP)));
     final dashPaint = Paint()
-      ..color = const Color(0xff10b981).withOpacity(0.7)
+      ..color = bullishColor.withOpacity(0.7)
       ..strokeWidth = 1.0;
 
     for (double dx = 0; dx < chartWidth; dx += 8) {
@@ -2322,7 +2662,7 @@ class TradingViewUltraPainter extends CustomPainter {
     }
 
     // Latest Price Pill on Y-Axis
-    final priceBadgePaint = Paint()..color = const Color(0xff10b981);
+    final priceBadgePaint = Paint()..color = lastPriceBadgeColor;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(chartWidth + 2, lastPriceY - 8, 44, 16),
@@ -2334,7 +2674,12 @@ class TradingViewUltraPainter extends CustomPainter {
     final lastPriceText = TextPainter(
       text: TextSpan(
         text: "${(lastCandle['c'] as num).toInt()}",
-        style: const TextStyle(fontFamily: 'Outfit', fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white),
+        style: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: lastPriceTextColor,
+        ),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -2347,7 +2692,7 @@ class TradingViewUltraPainter extends CustomPainter {
       final crosshairY = touchOffset!.dy.clamp(0.0, candlePaneHeight);
 
       final crossPaint = Paint()
-        ..color = const Color(0xfff59e0b).withOpacity(0.85)
+        ..color = crosshairColor.withOpacity(0.85)
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke;
 
@@ -2361,7 +2706,7 @@ class TradingViewUltraPainter extends CustomPainter {
 
       // Y-Axis Touch Price Tooltip Badge
       final touchPrice = maxP - ((crosshairY / candlePaneHeight) * (maxP - minP));
-      final touchPillPaint = Paint()..color = const Color(0xfff59e0b);
+      final touchPillPaint = Paint()..color = crosshairColor;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(chartWidth + 2, crosshairY - 9, 44, 18),
@@ -2384,6 +2729,13 @@ class TradingViewUltraPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant TradingViewUltraPainter oldDelegate) {
-    return oldDelegate.touchOffset != touchOffset || oldDelegate.stockPrice != stockPrice;
+    return oldDelegate.touchOffset != touchOffset ||
+        oldDelegate.stockPrice != stockPrice ||
+        oldDelegate.showMA != showMA ||
+        oldDelegate.gridColor != gridColor ||
+        oldDelegate.textColor != textColor ||
+        oldDelegate.bullishColor != bullishColor ||
+        oldDelegate.bearishColor != bearishColor ||
+        oldDelegate.candles != candles;
   }
 }

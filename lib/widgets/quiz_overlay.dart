@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import 'ad_overlay.dart';
@@ -134,11 +135,15 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
   }
 
   void _showResultDialog(AppState appState, int xpReward) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(appState.language, key, params: params);
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
+        backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: const BorderSide(color: Color(0xfff59e0b), width: 1.5),
@@ -148,9 +153,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
           children: [
             const Icon(Icons.emoji_events_rounded, color: Color(0xfff59e0b), size: 64),
             const SizedBox(height: 12),
-            const Text(
-              "KUIS SELESAI!",
-              style: TextStyle(
+            Text(
+              tr('quiz.completed_title'),
+              style: const TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
@@ -160,15 +165,26 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
             ),
             const SizedBox(height: 8),
             Text(
-              "Anda berhasil menyelesaikan kuis level '${widget.title}' dengan menjawab benar $_scoreCorrect dari ${widget.questions.length} soal!",
+              tr(
+                'quiz.completed_desc',
+                params: {
+                  'title': widget.title,
+                  'correct': '$_scoreCorrect',
+                  'total': '${widget.questions.length}',
+                },
+              ),
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.5),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xff022c22),
+                color: isDark ? const Color(0xff022c22) : const Color(0xfff0fdf4),
                 border: Border.all(color: const Color(0xff059669).withOpacity(0.5)),
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -177,18 +193,45 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 children: [
                   Column(
                     children: [
-                      const Text("XP Diperoleh", style: TextStyle(fontSize: 11, color: Color(0xff94a3b8))),
+                      Text(
+                        tr('quiz.xp_earned'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text("+$xpReward XP", style: const TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xfff59e0b))),
+                      Text(
+                        "+$xpReward XP",
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xfff59e0b),
+                        ),
+                      ),
                     ],
                   ),
                   Column(
                     children: [
-                      const Text("Nyawa Tersisa", style: TextStyle(fontSize: 11, color: Color(0xff94a3b8))),
+                      Text(
+                        tr('quiz.lives_remaining'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
-                        appState.isPremium ? "∞ Petir" : "${appState.petir} Petir",
-                        style: const TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xffef4444)),
+                        appState.isPremium
+                            ? tr('quiz.lives_unlimited')
+                            : tr('quiz.lives_count', params: {'count': '${appState.petir}'}),
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xffef4444),
+                        ),
                       ),
                     ],
                   ),
@@ -204,9 +247,15 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 elevation: 4,
               ),
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text(
-                "HEBAT! LANJUTKAN",
-                style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.8),
+              child: Text(
+                tr('quiz.continue_great'),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ],
@@ -216,11 +265,15 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
   }
 
   void _showRefillLivesModal(AppState appState) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(appState.language, key, params: params);
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
+        backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: const BorderSide(color: Color(0xffef4444), width: 1.5),
@@ -230,9 +283,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
           children: [
             const Icon(Icons.bolt_rounded, color: Color(0xffef4444), size: 64),
             const SizedBox(height: 12),
-            const Text(
-              "PETIR ANDA HABIS!",
-              style: TextStyle(
+            Text(
+              tr('quiz.lives_empty_title'),
+              style: const TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
@@ -241,10 +294,14 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Nyawa petir Anda telah kosong. Tunggu pemulihan otomatis atau tonton iklan instan untuk melanjutkan!",
+            Text(
+              tr('quiz.lives_empty_desc'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.5),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 20),
             OutlinedButton(
@@ -258,13 +315,17 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 AdOverlay.show(context, () {
                   appState.refillOnePetir();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("1 Nyawa petir telah berhasil dipulihkan.")),
+                    SnackBar(content: Text(tr('quiz.refill_success'))),
                   );
                 });
               },
-              child: const Text(
-                "🎬 TONTON IKLAN (+1 NYAWA)",
-                style: TextStyle(fontFamily: 'Outfit', color: Color(0xff10b981), fontWeight: FontWeight.w900),
+              child: Text(
+                tr('quiz.watch_ad_refill'),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Color(0xff10b981),
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -278,9 +339,14 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 Navigator.of(ctx).pop();
                 appState.upgradeToPremium(context);
               },
-              child: const Text(
-                "👑 UPGRADE PREMIUM (NYAWA UNLIMITED)",
-                style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
+              child: Text(
+                tr('quiz.upgrade_premium_unlimited'),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -292,6 +358,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final language = appState.language;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(language, key, params: params);
+
     final qData = widget.questions[_currentIndex];
     final double progress = (_currentIndex + 1) / widget.questions.length;
 
@@ -312,7 +384,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xff022c22), // Matching Main Page Emerald Backdrop
+      backgroundColor: isDark ? const Color(0xff022c22) : const Color(0xfff8fafc),
       body: Stack(
         children: [
           // 1. Background Image Matching Main Page
@@ -320,18 +392,25 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
             child: Image.asset(
               'assets/images/background.png',
               fit: BoxFit.cover,
+              opacity: AlwaysStoppedAnimation(isDark ? 0.35 : 0.12),
             ),
           ),
-          // Dark Nature Glass Overlay
+          // Dark / Light Nature Glass Overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    const Color(0xff064e3b).withOpacity(0.88), // Main Page Emerald
-                    const Color(0xff022c22).withOpacity(0.92), // Dark Nature
-                    const Color(0xff0f172a).withOpacity(0.95), // Slate Base
-                  ],
+                  colors: isDark
+                      ? [
+                          const Color(0xff064e3b).withOpacity(0.88),
+                          const Color(0xff022c22).withOpacity(0.92),
+                          const Color(0xff0f172a).withOpacity(0.95),
+                        ]
+                      : [
+                          const Color(0xffecfdf5).withOpacity(0.90),
+                          const Color(0xfff1f5f9).withOpacity(0.94),
+                          const Color(0xfff8fafc).withOpacity(0.98),
+                        ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -351,21 +430,29 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
               },
               child: Column(
                 children: [
-                  // 3D Emerald Header Card (Matching Main Page Pinned Banner)
+                  // 3D Header Card (Adapts to Light / Dark Mode)
                   Container(
                     margin: const EdgeInsets.fromLTRB(14, 10, 14, 8),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xff059669), Color(0xff0f766e)], // Emerald to Teal
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: isDark ? null : Colors.white,
+                      gradient: isDark
+                          ? const LinearGradient(
+                              colors: [Color(0xff059669), Color(0xff0f766e)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.2),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withOpacity(0.25) : const Color(0xffe2e8f0),
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xff047857).withOpacity(0.4),
+                          color: isDark
+                              ? const Color(0xff047857).withOpacity(0.4)
+                              : Colors.black.withOpacity(0.06),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -378,49 +465,82 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                           onTap: () {
                             showDialog(
                               context: context,
-                              builder: (ctx) => AlertDialog(
-                                backgroundColor: const Color(0xff0f172a),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  side: const BorderSide(color: Color(0xff059669), width: 1.2),
-                                ),
-                                title: const Text("Keluar Kuis", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
-                                content: const Text(
-                                  "Apakah Anda yakin ingin keluar? Progress kuis saat ini tidak akan disimpan.",
-                                  style: TextStyle(color: Color(0xffcbd5e1)),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop(),
-                                    child: const Text("BATAL", style: TextStyle(color: Color(0xff94a3b8), fontWeight: FontWeight.bold)),
+                              builder: (ctx) {
+                                final dialogIsDark = Theme.of(ctx).brightness == Brightness.dark;
+                                return AlertDialog(
+                                  backgroundColor: dialogIsDark ? const Color(0xff0f172a) : Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: const BorderSide(color: Color(0xff059669), width: 1.2),
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(ctx).pop();
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: const Text("YA, KELUAR", style: TextStyle(color: Color(0xffef4444), fontWeight: FontWeight.bold)),
+                                  title: Text(
+                                    tr('quiz.exit_title'),
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      color: dialogIsDark ? Colors.white : const Color(0xff0f172a),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ],
-                              ),
+                                  content: Text(
+                                    tr('quiz.exit_desc'),
+                                    style: TextStyle(
+                                      color: dialogIsDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: Text(
+                                        tr('quiz.cancel'),
+                                        style: const TextStyle(
+                                          color: Color(0xff94a3b8),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop();
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text(
+                                        tr('quiz.exit_confirm'),
+                                        style: const TextStyle(
+                                          color: Color(0xffef4444),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
                           },
                           child: Container(
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: const Color(0xff022c22),
+                              color: isDark ? const Color(0xff022c22) : const Color(0xfff1f5f9),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.6), width: 1.2),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xfff59e0b).withOpacity(0.6)
+                                    : const Color(0xffcbd5e1),
+                                width: 1.2,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                            child: Icon(
+                              Icons.close_rounded,
+                              color: isDark ? Colors.white : const Color(0xff334155),
+                              size: 20,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -435,21 +555,21 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                 children: [
                                   Text(
                                     widget.title.toUpperCase(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 10,
                                       fontWeight: FontWeight.w900,
-                                      color: Color(0xfff59e0b),
+                                      color: isDark ? const Color(0xfff59e0b) : const Color(0xff059669),
                                       letterSpacing: 0.8,
                                     ),
                                   ),
                                   Text(
                                     "${_currentIndex + 1} / ${widget.questions.length}",
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 11,
                                       fontWeight: FontWeight.w900,
-                                      color: Colors.white,
+                                      color: isDark ? Colors.white : const Color(0xff0f172a),
                                     ),
                                   ),
                                 ],
@@ -460,7 +580,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                   Container(
                                     height: 14,
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.35),
+                                      color: isDark ? Colors.black.withOpacity(0.35) : const Color(0xffe2e8f0),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
@@ -494,9 +614,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                           decoration: BoxDecoration(
-                            color: const Color(0xff022c22),
+                            color: isDark ? const Color(0xff022c22) : const Color(0xfffef2f2),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xffef4444).withOpacity(0.7), width: 1.2),
+                            border: Border.all(
+                              color: const Color(0xffef4444).withOpacity(isDark ? 0.7 : 0.4),
+                              width: 1.2,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -533,12 +656,17 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xff0f172a).withOpacity(0.88),
+                              color: isDark ? const Color(0xff0f172a).withOpacity(0.88) : Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xff059669).withOpacity(0.5), width: 1.4),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xff059669).withOpacity(0.5)
+                                    : const Color(0xff10b981).withOpacity(0.35),
+                                width: 1.4,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.35),
+                                  color: Colors.black.withOpacity(isDark ? 0.35 : 0.06),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -551,22 +679,33 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xfff59e0b).withOpacity(0.2),
+                                    color: isDark
+                                        ? const Color(0xfff59e0b).withOpacity(0.2)
+                                        : const Color(0xfffef3c7),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xfff59e0b), width: 1.0),
+                                    border: Border.all(
+                                      color: isDark ? const Color(0xfff59e0b) : const Color(0xffd97706),
+                                      width: 1.0,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.psychology_rounded, color: Color(0xfff59e0b), size: 14),
+                                      Icon(
+                                        Icons.psychology_rounded,
+                                        color: isDark ? const Color(0xfff59e0b) : const Color(0xffb45309),
+                                        size: 14,
+                                      ),
                                       const SizedBox(width: 5),
                                       Text(
-                                        qData['type'] == 'pilgan' ? "PILIHAN GANDA" : "SOAL ESAI",
-                                        style: const TextStyle(
+                                        qData['type'] == 'pilgan'
+                                            ? tr('quiz.multiple_choice')
+                                            : tr('quiz.essay'),
+                                        style: TextStyle(
                                           fontFamily: 'Outfit',
                                           fontSize: 10,
                                           fontWeight: FontWeight.w900,
-                                          color: Color(0xfff59e0b),
+                                          color: isDark ? const Color(0xfff59e0b) : const Color(0xffb45309),
                                           letterSpacing: 0.8,
                                         ),
                                       ),
@@ -577,11 +716,11 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                 // Question Text
                                 Text(
                                   qData['q'],
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 19,
                                     fontWeight: FontWeight.w900,
-                                    color: Colors.white,
+                                    color: isDark ? Colors.white : const Color(0xff0f172a),
                                     height: 1.35,
                                   ),
                                 ),
@@ -591,7 +730,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
 
                           const SizedBox(height: 18),
 
-                          // 3D Options List (Matching Main Page Emerald Accent)
+                          // 3D Options List (Matching Light / Dark Theme)
                           if (qData['type'] == 'pilgan')
                             Column(
                               children: List.generate(
@@ -601,11 +740,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                   final isSelected = _selectedOptionIdx == idx;
                                   final isCorrectAnswer = (qData['a'] == idx);
 
-                                  Color cardBg = const Color(0xff0f172a).withOpacity(0.9);
-                                  Color cardShadow = const Color(0xff022c22);
-                                  Color cardBorder = Colors.white.withOpacity(0.15);
-                                  Color letterBg = const Color(0xff1e293b);
-                                  Color letterText = const Color(0xfff59e0b);
+                                  Color cardBg;
+                                  Color cardShadow;
+                                  Color cardBorder;
+                                  Color letterBg;
+                                  Color letterText;
+                                  Color optionTextColor;
 
                                   if (_checked) {
                                     if (isCorrectAnswer) {
@@ -614,19 +754,36 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                       cardBorder = const Color(0xff34d399);
                                       letterBg = const Color(0xff047857);
                                       letterText = Colors.white;
+                                      optionTextColor = Colors.white;
                                     } else if (isSelected && !isCorrectAnswer) {
                                       cardBg = const Color(0xffdc2626);
                                       cardShadow = const Color(0xff991b1b);
                                       cardBorder = const Color(0xfff87171);
                                       letterBg = const Color(0xff991b1b);
                                       letterText = Colors.white;
+                                      optionTextColor = Colors.white;
+                                    } else {
+                                      cardBg = isDark ? const Color(0xff0f172a).withOpacity(0.9) : Colors.white;
+                                      cardShadow = isDark ? const Color(0xff022c22) : const Color(0xffe2e8f0);
+                                      cardBorder = isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0);
+                                      letterBg = isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9);
+                                      letterText = const Color(0xff94a3b8);
+                                      optionTextColor = isDark ? Colors.white.withOpacity(0.4) : const Color(0xff94a3b8);
                                     }
                                   } else if (isSelected) {
                                     cardBg = const Color(0xff059669);
                                     cardShadow = const Color(0xff047857);
                                     cardBorder = const Color(0xfff59e0b);
                                     letterBg = const Color(0xff047857);
-                                    letterText = const Color(0xfff59e0b);
+                                    letterText = const Color(0xfffbbf24);
+                                    optionTextColor = Colors.white;
+                                  } else {
+                                    cardBg = isDark ? const Color(0xff0f172a).withOpacity(0.9) : Colors.white;
+                                    cardShadow = isDark ? const Color(0xff022c22) : const Color(0xffe2e8f0);
+                                    cardBorder = isDark ? Colors.white.withOpacity(0.15) : const Color(0xffe2e8f0);
+                                    letterBg = isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9);
+                                    letterText = isDark ? const Color(0xfff59e0b) : const Color(0xffd97706);
+                                    optionTextColor = isDark ? Colors.white : const Color(0xff0f172a);
                                   }
 
                                   return Container(
@@ -667,6 +824,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                                     color: const Color(0xff059669).withOpacity(0.5),
                                                     blurRadius: 8,
                                                   ),
+                                                if (!isSelected && !_checked && !isDark)
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.04),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
                                               ],
                                             ),
                                             child: Row(
@@ -678,7 +841,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                                   decoration: BoxDecoration(
                                                     color: letterBg,
                                                     borderRadius: BorderRadius.circular(10),
-                                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                                    border: Border.all(
+                                                      color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffcbd5e1),
+                                                    ),
                                                   ),
                                                   alignment: Alignment.center,
                                                   child: Text(
@@ -696,11 +861,11 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                                 Expanded(
                                                   child: Text(
                                                     qData['options'][idx],
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontFamily: 'Inter',
                                                       fontSize: 14,
                                                       fontWeight: FontWeight.w700,
-                                                      color: Colors.white,
+                                                      color: optionTextColor,
                                                     ),
                                                   ),
                                                 ),
@@ -722,15 +887,27 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                             TextField(
                               controller: _essayController,
                               enabled: !_checked,
-                              style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 16),
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xff0f172a),
+                                fontFamily: 'Outfit',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
-                                hintText: "Tulis jawaban Anda di sini...",
-                                hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
+                                hintText: tr('quiz.essay_hint'),
+                                hintStyle: TextStyle(
+                                  color: isDark ? Colors.white.withOpacity(0.35) : const Color(0xff94a3b8),
+                                ),
                                 filled: true,
-                                fillColor: const Color(0xff0f172a),
+                                fillColor: isDark ? const Color(0xff0f172a) : Colors.white,
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(color: const Color(0xff059669).withOpacity(0.5), width: 1.5),
+                                  borderSide: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xff059669).withOpacity(0.5)
+                                        : const Color(0xff10b981).withOpacity(0.4),
+                                    width: 1.5,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
@@ -754,9 +931,19 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xff0f172a),
+                                  color: isDark ? const Color(0xff0f172a) : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.white.withOpacity(0.12)),
+                                  border: Border.all(
+                                    color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xffcbd5e1),
+                                  ),
+                                  boxShadow: [
+                                    if (!isDark)
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                  ],
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -769,9 +956,14 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                     const SizedBox(width: 4),
                                     Text(
                                       appState.isFavorited(widget.levelId, _currentIndex)
-                                          ? "Tersimpan di Favorit"
-                                          : "Simpan Favorit",
-                                      style: const TextStyle(fontFamily: 'Outfit', color: Color(0xffcbd5e1), fontSize: 11, fontWeight: FontWeight.bold),
+                                          ? tr('quiz.favorited')
+                                          : tr('quiz.save_favorite'),
+                                      style: TextStyle(
+                                        fontFamily: 'Outfit',
+                                        color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -789,17 +981,21 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                       decoration: BoxDecoration(
-                        color: _isAnswerCorrect ? const Color(0xff064e3b) : const Color(0xff7f1d1d),
+                        color: _isAnswerCorrect
+                            ? (isDark ? const Color(0xff064e3b) : const Color(0xffecfdf5))
+                            : (isDark ? const Color(0xff7f1d1d) : const Color(0xfffef2f2)),
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
                         border: Border(
                           top: BorderSide(
-                            color: _isAnswerCorrect ? const Color(0xfff59e0b) : const Color(0xffef4444),
+                            color: _isAnswerCorrect
+                                ? (isDark ? const Color(0xfff59e0b) : const Color(0xff10b981))
+                                : (isDark ? const Color(0xffef4444) : const Color(0xffdc2626)),
                             width: 2,
                           ),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withOpacity(isDark ? 0.5 : 0.1),
                             blurRadius: 16,
                             offset: const Offset(0, -4),
                           ),
@@ -813,17 +1009,23 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                             children: [
                               Icon(
                                 _isAnswerCorrect ? Icons.stars_rounded : Icons.cancel_rounded,
-                                color: _isAnswerCorrect ? const Color(0xfff59e0b) : const Color(0xfffca5a5),
+                                color: _isAnswerCorrect
+                                    ? (isDark ? const Color(0xfff59e0b) : const Color(0xff059669))
+                                    : (isDark ? const Color(0xfffca5a5) : const Color(0xffdc2626)),
                                 size: 26,
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                _isAnswerCorrect ? "Luar Biasa! (+10 XP) 🎉" : "Kurang Tepat! 😅",
+                                _isAnswerCorrect
+                                    ? tr('quiz.correct_feedback')
+                                    : tr('quiz.wrong_feedback'),
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
-                                  color: _isAnswerCorrect ? const Color(0xfff59e0b) : const Color(0xfffca5a5),
+                                  color: _isAnswerCorrect
+                                      ? (isDark ? const Color(0xfff59e0b) : const Color(0xff065f46))
+                                      : (isDark ? const Color(0xfffca5a5) : const Color(0xff991b1b)),
                                 ),
                               ),
                             ],
@@ -832,11 +1034,11 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                           Text(
                             _isAnswerCorrect
                                 ? qData['explanation']
-                                : "Jawaban Benar: ${qData['type'] == 'pilgan' ? qData['options'][qData['a']] : qData['a']}\n${qData['explanation']}",
-                            style: const TextStyle(
+                                : "${tr('quiz.correct_answer')}: ${qData['type'] == 'pilgan' ? qData['options'][qData['a']] : qData['a']}\n${qData['explanation']}",
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 13,
-                              color: Colors.white,
+                              color: isDark ? Colors.white : const Color(0xff1e293b),
                               height: 1.4,
                             ),
                           ),
@@ -863,9 +1065,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   alignment: Alignment.center,
-                                  child: const Text(
-                                    "LANJUTKAN 🚀",
-                                    style: TextStyle(
+                                  child: Text(
+                                    tr('quiz.continue_button'),
+                                    style: const TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
@@ -884,7 +1086,23 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                     // Bottom 3D Check Button
                     Container(
                       padding: const EdgeInsets.all(16),
-                      color: const Color(0xff0f172a).withOpacity(0.95),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xff0f172a).withOpacity(0.95) : Colors.white,
+                        border: Border(
+                          top: BorderSide(
+                            color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0),
+                            width: 1,
+                          ),
+                        ),
+                        boxShadow: [
+                          if (!isDark)
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, -2),
+                            ),
+                        ],
+                      ),
                       child: GestureDetector(
                         onTap: (_selectedOptionIdx == null && qData['type'] == 'pilgan') ||
                                 (qData['type'] == 'esai' && _essayController.text.trim().isEmpty)
@@ -898,7 +1116,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                 decoration: BoxDecoration(
                                   color: (_selectedOptionIdx == null && qData['type'] == 'pilgan') ||
                                           (qData['type'] == 'esai' && _essayController.text.trim().isEmpty)
-                                      ? const Color(0xff1e293b)
+                                      ? (isDark ? const Color(0xff1e293b) : const Color(0xffcbd5e1))
                                       : const Color(0xff047857),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -910,11 +1128,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                               decoration: BoxDecoration(
                                 color: (_selectedOptionIdx == null && qData['type'] == 'pilgan') ||
                                         (qData['type'] == 'esai' && _essayController.text.trim().isEmpty)
-                                    ? const Color(0xff334155).withOpacity(0.5)
+                                    ? (isDark ? const Color(0xff334155).withOpacity(0.5) : const Color(0xffe2e8f0))
                                     : const Color(0xff059669),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: (_selectedOptionIdx == null && qData['type'] == 'pilgan')
+                                  color: (_selectedOptionIdx == null && qData['type'] == 'pilgan') ||
+                                          (qData['type'] == 'esai' && _essayController.text.trim().isEmpty)
                                       ? Colors.transparent
                                       : const Color(0xfff59e0b),
                                   width: 1.2,
@@ -928,20 +1147,20 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                     Icons.bolt_rounded,
                                     color: (_selectedOptionIdx == null && qData['type'] == 'pilgan') ||
                                             (qData['type'] == 'esai' && _essayController.text.trim().isEmpty)
-                                        ? const Color(0xff64748b)
+                                        ? (isDark ? const Color(0xff64748b) : const Color(0xff94a3b8))
                                         : Colors.white,
                                     size: 18,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    "PERIKSA JAWABAN",
+                                    tr('quiz.check_answer'),
                                     style: TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
                                       color: (_selectedOptionIdx == null && qData['type'] == 'pilgan') ||
                                               (qData['type'] == 'esai' && _essayController.text.trim().isEmpty)
-                                          ? const Color(0xff64748b)
+                                          ? (isDark ? const Color(0xff64748b) : const Color(0xff94a3b8))
                                           : Colors.white,
                                       letterSpacing: 1.0,
                                     ),

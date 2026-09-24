@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/quiz_overlay.dart';
@@ -12,12 +13,177 @@ class KuisView extends StatefulWidget {
   State<KuisView> createState() => _KuisViewState();
 }
 
+const Map<String, String> _kuisIdTranslations = {
+  // Header card
+  'kuis.header_level': 'BAGIAN 1 • LEVEL {level} / 10',
+  'kuis.daily_checkin': 'Absen Harian 🎁',
+  'kuis.daily_reward': 'Hadiah Harian 🎁',
+  'kuis.continue_learning': 'LANJUTKAN BELAJAR',
+  'kuis.progress_pct': '{pct}%',
+
+  // Zone banners
+  'kuis.zone_1_tag': 'Zona 1',
+  'kuis.zone_2_tag': 'Zona 2',
+  'kuis.zone_3_tag': 'Zona 3',
+  'kuis.zone_1_title': 'Pengenalan & Dasar Saham',
+  'kuis.zone_2_title': 'Analisis Teknikal & Grafik',
+  'kuis.zone_3_title': 'Master Pasar & Manajemen Risiko',
+  'kuis.zone_1_range': 'Level 1 - 3',
+  'kuis.zone_2_range': 'Level 4 - 7',
+  'kuis.zone_3_range': 'Level 8 - 10',
+  'kuis.zone_locked': 'Terkunci 🔒',
+
+  // Roadmap tooltips & badges
+  'kuis.start': 'MULAI',
+  'kuis.final_trophy': 'PIALA FINAL',
+  'kuis.level_locked_msg': 'Level ini masih terkunci! Selesaikan level sebelumnya.',
+  'kuis.trophy_locked_msg': 'Selesaikan semua 10 Level Kuis terlebih dahulu!',
+  'kuis.trophy_claimed_msg': 'Anda sudah mengklaim Piala Pakar Saham!',
+
+  // Level titles & descriptions
+  'kuis.level_1_title': 'Pengenalan Saham',
+  'kuis.level_1_desc': 'Pahami konsep dasar kepemilikan modal & inflasi.',
+  'kuis.level_2_title': 'Bursa Efek',
+  'kuis.level_2_desc': 'Kenali institusi tempat perdagangan efek berlangsung.',
+  'kuis.level_3_title': 'Dividen & Capital Gain',
+  'kuis.level_3_desc': 'Pelajari 2 sumber keuntungan utama investasi saham.',
+  'kuis.level_4_title': 'Candlestick Dasar',
+  'kuis.level_4_desc': 'Belajar memahami pergerakan harga melalui grafik lilin.',
+  'kuis.level_5_title': 'Support & Resistance',
+  'kuis.level_5_desc': 'Tentukan batas lantai dan atap pergerakan harga saham.',
+  'kuis.level_6_title': 'Trendlines',
+  'kuis.level_6_desc': 'Membaca arah tren pasar saham.',
+  'kuis.level_7_title': 'Indikator Dasar',
+  'kuis.level_7_desc': 'Menggunakan alat bantu visual matematis untuk trading.',
+  'kuis.level_8_title': 'Money Management',
+  'kuis.level_8_desc': 'Lindungi modal trading Anda dari kebangkrutan.',
+  'kuis.level_9_title': 'Psikologi Trading',
+  'kuis.level_9_desc': 'Kuasai emosi FOMO dan serakah saat trading.',
+  'kuis.level_10_title': 'Cut Loss vs TP',
+  'kuis.level_10_desc': 'Ketahui kapan harus mengunci profit dan memotong kerugian.',
+
+  // Modal level start
+  'kuis.modal_level_tag': 'LEVEL {level}',
+  'kuis.level_completed': 'SELESAI',
+  'kuis.xp_reward': '+{xp} XP',
+  'kuis.quiz_questions_count': '{count} Soal Kuis',
+  'kuis.start_quiz': 'MULAI KUIS',
+
+  // Chest badges & dialog
+  'kuis.bonus_zone_1': 'Bonus Zona 1',
+  'kuis.bonus_zone_2': 'Bonus Zona 2',
+  'kuis.chest_locked_badge': '{title} 🔒',
+  'kuis.chest_claimed': 'Diklaim ✓',
+  'kuis.chest_ready_badge': '+{xp} XP ✨',
+  'kuis.chest_claim_btn': 'Klaim Peti',
+  'kuis.chest_open_reward': 'Buka Hadiah',
+  'kuis.chest_claim_xp': 'KLAIM +{xp} XP 🎁',
+  'kuis.chest_dialog_claimed': 'Hadiah +{xp} XP telah diklaim ✓',
+  'kuis.chest_dialog_ready': 'Bonus +{xp} XP siap diklaim! 🎁',
+  'kuis.chest_dialog_locked': 'Selesaikan Level {level} untuk membuka 🔒',
+  'kuis.chest_snackbar_success': 'Selamat! Bonus +{xp} XP telah diklaim! 🎁',
+  'kuis.chest_dialog_close': 'TUTUP',
+};
+
+const Map<String, String> _kuisEnTranslations = {
+  // Header card
+  'kuis.header_level': 'SECTION 1 • LEVEL {level} / 10',
+  'kuis.daily_checkin': 'Daily Check-in 🎁',
+  'kuis.daily_reward': 'Daily Reward 🎁',
+  'kuis.continue_learning': 'CONTINUE LEARNING',
+  'kuis.progress_pct': '{pct}%',
+
+  // Zone banners
+  'kuis.zone_1_tag': 'Zone 1',
+  'kuis.zone_2_tag': 'Zone 2',
+  'kuis.zone_3_tag': 'Zone 3',
+  'kuis.zone_1_title': 'Introduction & Stock Basics',
+  'kuis.zone_2_title': 'Technical Analysis & Charts',
+  'kuis.zone_3_title': 'Market Mastery & Risk Management',
+  'kuis.zone_1_range': 'Level 1 - 3',
+  'kuis.zone_2_range': 'Level 4 - 7',
+  'kuis.zone_3_range': 'Level 8 - 10',
+  'kuis.zone_locked': 'Locked 🔒',
+
+  // Roadmap tooltips & badges
+  'kuis.start': 'START',
+  'kuis.final_trophy': 'FINAL TROPHY',
+  'kuis.level_locked_msg': 'This level is still locked! Complete the previous level.',
+  'kuis.trophy_locked_msg': 'Complete all 10 Quiz Levels first!',
+  'kuis.trophy_claimed_msg': 'You have already claimed the Stock Expert Trophy!',
+
+  // Level titles & descriptions
+  'kuis.level_1_title': 'Intro to Stocks',
+  'kuis.level_1_desc': 'Understand basic concepts of equity ownership & inflation.',
+  'kuis.level_2_title': 'Stock Exchange',
+  'kuis.level_2_desc': 'Get to know the institution where securities trading takes place.',
+  'kuis.level_3_title': 'Dividends & Capital Gain',
+  'kuis.level_3_desc': 'Learn the 2 main sources of stock investment returns.',
+  'kuis.level_4_title': 'Basic Candlesticks',
+  'kuis.level_4_desc': 'Learn to understand price movements through candlestick charts.',
+  'kuis.level_5_title': 'Support & Resistance',
+  'kuis.level_5_desc': 'Determine the floor and ceiling boundaries of stock price movement.',
+  'kuis.level_6_title': 'Trendlines',
+  'kuis.level_6_desc': 'Reading the trend direction of the stock market.',
+  'kuis.level_7_title': 'Basic Indicators',
+  'kuis.level_7_desc': 'Using visual mathematical tools for trading.',
+  'kuis.level_8_title': 'Money Management',
+  'kuis.level_8_desc': 'Protect your trading capital from bankruptcy.',
+  'kuis.level_9_title': 'Trading Psychology',
+  'kuis.level_9_desc': 'Master FOMO and greed emotions during trading.',
+  'kuis.level_10_title': 'Cut Loss vs Take Profit',
+  'kuis.level_10_desc': 'Know when to lock in profits and cut losses.',
+
+  // Modal level start
+  'kuis.modal_level_tag': 'LEVEL {level}',
+  'kuis.level_completed': 'COMPLETED',
+  'kuis.xp_reward': '+{xp} XP',
+  'kuis.quiz_questions_count': '{count} Quiz Questions',
+  'kuis.start_quiz': 'START QUIZ',
+
+  // Chest badges & dialog
+  'kuis.bonus_zone_1': 'Zone 1 Bonus',
+  'kuis.bonus_zone_2': 'Zone 2 Bonus',
+  'kuis.chest_locked_badge': '{title} 🔒',
+  'kuis.chest_claimed': 'Claimed ✓',
+  'kuis.chest_ready_badge': '+{xp} XP ✨',
+  'kuis.chest_claim_btn': 'Claim Chest',
+  'kuis.chest_open_reward': 'Open Reward',
+  'kuis.chest_claim_xp': 'CLAIM +{xp} XP 🎁',
+  'kuis.chest_dialog_claimed': 'Reward +{xp} XP has been claimed ✓',
+  'kuis.chest_dialog_ready': 'Bonus +{xp} XP ready to claim! 🎁',
+  'kuis.chest_dialog_locked': 'Complete Level {level} to unlock 🔒',
+  'kuis.chest_snackbar_success': 'Congratulations! +{xp} XP bonus has been claimed! 🎁',
+  'kuis.chest_dialog_close': 'CLOSE',
+};
+
 class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
   int? _selectedLevelId;
   int? _pressedLevelId;
   late ScrollController _scrollController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+static bool _translationsRegistered = false;
+  static void _ensureTranslations() {
+    if (!_translationsRegistered) {
+      AppTranslations.addDynamicTranslations('id', _kuisIdTranslations);
+      AppTranslations.addDynamicTranslations('en', _kuisEnTranslations);
+      _translationsRegistered = true;
+    }
+  }
+
+  String _getLevelTitle(String language, int id, String fallback) {
+    final key = 'kuis.level_${id}_title';
+    final val = AppTranslations.text(language, key);
+    return (val == key) ? fallback : val;
+  }
+
+  String _getLevelDesc(String language, int id, String fallback) {
+    final key = 'kuis.level_${id}_desc';
+    final val = AppTranslations.text(language, key);
+    return (val == key) ? fallback : val;
+  }
+
 
   // Question database for reference
   final List<Map<String, dynamic>> _levelData = [
@@ -429,6 +595,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _ensureTranslations();
     _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -501,6 +668,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     final screenWidth = MediaQuery.of(context).size.width;
     final double mapWidth = screenWidth.clamp(280.0, 480.0);
 
+    _ensureTranslations();
+    final language = appState.language;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(language, key, params: params);
+
     int activeLevelId = appState.completedLevels.length + 1;
     if (activeLevelId > 10) activeLevelId = 10;
     final activeLevel = _levelData.firstWhere((l) => l['id'] == activeLevelId);
@@ -564,7 +736,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                               const Icon(Icons.bookmark_rounded, color: Color(0xff6ee7b7), size: 13),
                               const SizedBox(width: 5),
                               Text(
-                                "BAGIAN 1 • LEVEL $activeLevelId / 10",
+                                tr('kuis.header_level', params: {'level': '$activeLevelId'}),
                                 style: const TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 10.5,
@@ -604,7 +776,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 13),
                                 const SizedBox(width: 5),
                                 Text(
-                                  appState.canClaimDailyToday ? "Absen Harian 🎁" : "Hadiah Harian 🎁",
+                                  appState.canClaimDailyToday ? tr('kuis.daily_checkin') : tr('kuis.daily_reward'),
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 10.5,
@@ -632,7 +804,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                     const SizedBox(height: 10),
                     // Active Level Title & Desc
                     Text(
-                      activeLevel['title'],
+                      _getLevelTitle(language, activeLevelId, activeLevel['title']),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -643,7 +815,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      activeLevel['desc'],
+                      _getLevelDesc(language, activeLevelId, activeLevel['desc']),
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Colors.white.withOpacity(0.85),
@@ -693,7 +865,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            "${(appState.completedLevels.length * 10).clamp(0, 100)}%",
+                            tr('kuis.progress_pct', params: {
+                              'pct': '${(appState.completedLevels.length * 10).clamp(0, 100)}'
+                            }),
                             style: const TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 10,
@@ -724,11 +898,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.play_arrow_rounded, size: 20, color: Color(0xff047857)),
-                            SizedBox(width: 4),
+                          children: [
+                            const Icon(Icons.play_arrow_rounded, size: 20, color: Color(0xff047857)),
+                            const SizedBox(width: 4),
                             Text(
-                              "LANJUTKAN BELAJAR",
+                              tr('kuis.continue_learning'),
                               style: TextStyle(
                                 fontFamily: 'Outfit',
                                 fontSize: 13,
@@ -773,33 +947,39 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
 
                             // 2. Full-Width 3D Rectangular Zone Banners
                             _buildZoneHeader(
-                              zoneTag: "Zona 1",
-                              title: "Pengenalan & Dasar Saham",
-                              levelRange: "Level 1 - 3",
+                              zoneTag: tr('kuis.zone_1_tag'),
+                              title: tr('kuis.zone_1_title'),
+                              levelRange: tr('kuis.zone_1_range'),
                               activeColor: const Color(0xff059669), // Duolingo Emerald Green
                               activeShadowColor: const Color(0xff047857),
                               isUnlocked: true, // Zone 1 is always unlocked
                               top: 1735,
+                              zoneNumber: 1,
+                              language: language,
                             ),
 
                             _buildZoneHeader(
-                              zoneTag: "Zona 2",
-                              title: "Analisis Teknikal & Grafik",
-                              levelRange: "Level 4 - 7",
+                              zoneTag: tr('kuis.zone_2_tag'),
+                              title: tr('kuis.zone_2_title'),
+                              levelRange: tr('kuis.zone_2_range'),
                               activeColor: const Color(0xff2563eb), // Sapphire Blue
                               activeShadowColor: const Color(0xff1d4ed8),
                               isUnlocked: appState.completedLevels.contains(3), // Unlocked after level 3
                               top: 1210,
+                              zoneNumber: 2,
+                              language: language,
                             ),
 
                             _buildZoneHeader(
-                              zoneTag: "Zona 3",
-                              title: "Master Pasar & Manajemen Risiko",
-                              levelRange: "Level 8 - 10",
+                              zoneTag: tr('kuis.zone_3_tag'),
+                              title: tr('kuis.zone_3_title'),
+                              levelRange: tr('kuis.zone_3_range'),
                               activeColor: const Color(0xffd97706), // Golden Amber
                               activeShadowColor: const Color(0xffb45309),
                               isUnlocked: appState.completedLevels.contains(7), // Unlocked after level 7
                               top: 550,
+                              zoneNumber: 3,
+                              language: language,
                             ),
 
                             // 3. Node Circles (Duolingo 3D Button style)
@@ -987,9 +1167,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                       });
                                     } else {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Level ini masih terkunci! Selesaikan level sebelumnya."),
-                                          duration: Duration(seconds: 1),
+                                        SnackBar(
+                                          content: Text(tr('kuis.level_locked_msg')),
+                                          duration: const Duration(seconds: 1),
                                         ),
                                       );
                                     }
@@ -1011,6 +1191,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                         isActive: isActive,
                                         isCompleted: isCompleted,
                                         isUnlocked: isUnlocked,
+                                        language: language,
                                       ),
                                       // 3 Golden Stars for completed levels
                                       if (isCompleted)
@@ -1058,7 +1239,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                         child: child,
                                       );
                                     },
-                                    child: _buildMulaiBubble(),
+                                    child: _buildMulaiBubble(language),
                                   ),
                                 );
                               },
@@ -1071,8 +1252,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                               levelId: 3,
                               x: mapWidth * 0.76,
                               y: 1460,
-                              title: "Bonus Zona 1",
+                              title: tr('kuis.bonus_zone_1'),
                               xpReward: 50,
+                              language: language,
                             ),
 
                             _buildTreasureChestNode(
@@ -1081,8 +1263,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                               levelId: 7,
                               x: mapWidth * 0.78,
                               y: 800,
-                              title: "Bonus Zona 2",
+                              title: tr('kuis.bonus_zone_2'),
                               xpReward: 100,
+                              language: language,
                             ),
 
                             // 5. Bonus Trophy/Chest Node at the very top (above Level 10)
@@ -1102,13 +1285,13 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   final allDone = appState.completedLevels.length == 10;
                                   if (!allDone) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Selesaikan semua 10 Level Kuis terlebih dahulu!")),
+                                      SnackBar(content: Text(tr('kuis.trophy_locked_msg'))),
                                     );
                                     return;
                                   }
                                   if (appState.unlockedBadges.contains("pakar_saham")) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Anda sudah mengklaim Piala Pakar Saham!")),
+                                      SnackBar(content: Text(tr('kuis.trophy_claimed_msg'))),
                                     );
                                     return;
                                   }
@@ -1189,8 +1372,8 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(color: Colors.white.withOpacity(0.1), width: 0.8),
                                       ),
-                                      child: const Text(
-                                        "PIALA FINAL",
+                                      child: Text(
+                                        tr('kuis.final_trophy'),
                                         style: TextStyle(
                                           fontFamily: 'Outfit',
                                           fontSize: 10,
@@ -1211,7 +1394,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 ),
               ],
             ),
-          if (_selectedLevelId != null) _buildInFrameModalSheet(appState),
+          if (_selectedLevelId != null) _buildInFrameModalSheet(appState, language),
         ],
       ),
     );
@@ -1244,10 +1427,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     }
   }
 
-  IconData _getZoneIcon(String zoneTag) {
-    if (zoneTag.contains("ZONA 1")) {
+IconData _getZoneIcon(dynamic zone) {
+    final s = zone.toString().toUpperCase();
+    if (s.contains("1")) {
       return Icons.eco_rounded; // Emerald Grassland
-    } else if (zoneTag.contains("ZONA 2")) {
+    } else if (s.contains("2")) {
       return Icons.show_chart_rounded; // Sapphire Chart Tech
     } else {
       return Icons.military_tech_rounded; // Golden Wall Street Trophy
@@ -1260,9 +1444,10 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     required bool isActive,
     required bool isCompleted,
     required bool isUnlocked,
+    required String language,
   }) {
     final id = level['id'] as int;
-    final title = level['title'] as String;
+    final title = _getLevelTitle(language, id, level['title'] as String);
 
     Color badgeBorderColor;
     Color numBgColor;
@@ -1364,11 +1549,15 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     required Color activeShadowColor,
     required bool isUnlocked,
     required double top,
+    required int zoneNumber,
+    required String language,
   }) {
     final bgColor = isUnlocked ? activeColor : const Color(0xff334155);
     final shadowColor = isUnlocked ? activeShadowColor : const Color(0xff1e293b);
-    final iconData = isUnlocked ? _getZoneIcon(zoneTag) : Icons.lock_rounded;
-    final badgeText = isUnlocked ? levelRange : "Terkunci 🔒";
+    final iconData = isUnlocked ? _getZoneIcon(zoneNumber) : Icons.lock_rounded;
+    final badgeText = isUnlocked
+        ? levelRange
+        : AppTranslations.text(language, 'kuis.zone_locked');
 
     return Positioned(
       left: 0,
@@ -1463,31 +1652,10 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     required double y,
     required String title,
     required int xpReward,
+    required String language,
   }) {
     final bool isCompleted = appState.completedLevels.contains(levelId);
     final bool isClaimed = appState.isChestClaimed(levelId);
-
-    Color chestBg = const Color(0xff1e293b);
-    Color chestBorder = const Color(0xff475569);
-    IconData chestIcon = Icons.lock_rounded;
-    Color iconColor = const Color(0xff94a3b8);
-    String labelText = "$title 🔒";
-
-    if (isCompleted) {
-      if (isClaimed) {
-        chestBg = const Color(0xff064e3b);
-        chestBorder = const Color(0xff10b981);
-        chestIcon = Icons.card_giftcard_rounded;
-        iconColor = const Color(0xff34d399);
-        labelText = "Diklaim ✓";
-      } else {
-        chestBg = const Color(0xff78350f);
-        chestBorder = const Color(0xfff59e0b);
-        chestIcon = Icons.card_giftcard_rounded;
-        iconColor = const Color(0xfffbbf24);
-        labelText = "KLAIM +$xpReward XP 🎁";
-      }
-    }
 
     final bool isReadyToClaim = isCompleted && !isClaimed;
 
@@ -1504,6 +1672,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
             xpReward: xpReward,
             isCompleted: isCompleted,
             isClaimed: isClaimed,
+            language: language,
           );
         },
         child: Column(
@@ -1533,7 +1702,19 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 ],
               ),
               child: Text(
-                isClaimed ? "Diklaim ✓" : (isCompleted ? "+$xpReward XP ✨" : "$title 🔒"),
+                isClaimed
+                    ? AppTranslations.text(language, 'kuis.chest_claimed')
+                    : (isCompleted
+                        ? AppTranslations.text(
+                            language,
+                            'kuis.chest_ready_badge',
+                            params: {'xp': '$xpReward'},
+                          )
+                        : AppTranslations.text(
+                            language,
+                            'kuis.chest_locked_badge',
+                            params: {'title': title},
+                          )),
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 10.5,
@@ -1584,6 +1765,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     required int xpReward,
     required bool isCompleted,
     required bool isClaimed,
+    required String language,
   }) {
     showDialog(
       context: context,
@@ -1635,10 +1817,22 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
             const SizedBox(height: 6),
             Text(
               isClaimed
-                  ? "Hadiah +$xpReward XP telah diklaim ✓"
+                  ? AppTranslations.text(
+                      language,
+                      'kuis.chest_dialog_claimed',
+                      params: {'xp': '$xpReward'},
+                    )
                   : isCompleted
-                      ? "Bonus +$xpReward XP siap diklaim! 🎁"
-                      : "Selesaikan Level $levelId untuk membuka 🔒",
+                      ? AppTranslations.text(
+                          language,
+                          'kuis.chest_dialog_ready',
+                          params: {'xp': '$xpReward'},
+                        )
+                      : AppTranslations.text(
+                          language,
+                          'kuis.chest_dialog_locked',
+                          params: {'level': '$levelId'},
+                        ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Outfit',
@@ -1657,7 +1851,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                   appState.claimChest(levelId, xpReward, context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text("Selamat! Bonus +$xpReward XP telah diklaim! 🎁"),
+                      content: Text(AppTranslations.text(
+                        language,
+                        'kuis.chest_snackbar_success',
+                        params: {'xp': '$xpReward'},
+                      )),
                       backgroundColor: const Color(0xff059669),
                     ),
                   );
@@ -1677,7 +1875,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    "KLAIM +$xpReward XP 🎁",
+                    AppTranslations.text(
+                      language,
+                      'kuis.chest_claim_xp',
+                      params: {'xp': '$xpReward'},
+                    ),
                     style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 14,
@@ -1699,9 +1901,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: const Text(
-                    "TUTUP",
-                    style: TextStyle(
+                  child: Text(
+                    AppTranslations.text(language, 'kuis.chest_dialog_close'),
+                    style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -1720,7 +1922,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     return const Text("🐂", style: TextStyle(fontSize: 42));
   }
 
-  Widget _buildMulaiBubble() {
+  Widget _buildMulaiBubble(String language) {
     return SizedBox(
       width: 92,
       child: Column(
@@ -1743,9 +1945,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            child: const Text(
-              "MULAI",
-              style: TextStyle(
+            child: Text(
+              AppTranslations.text(language, 'kuis.start'),
+              style: const TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
@@ -1776,14 +1978,15 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     );
   }
 
-
-
-  Widget _buildInFrameModalSheet(AppState appState) {
+  Widget _buildInFrameModalSheet(AppState appState, String language) {
     final level = _levelData.firstWhere((l) => l['id'] == _selectedLevelId);
     final id = level['id'] as int;
     final isCompleted = appState.completedLevels.contains(id);
     final qCount = (level['questions'] as List).length;
     final xpReward = qCount * 10;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Positioned.fill(
       child: Stack(
@@ -1797,7 +2000,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 });
               },
               child: Container(
-                color: Colors.black.withOpacity(0.55),
+                color: Colors.black.withOpacity(isDark ? 0.55 : 0.45),
               ),
             ),
           ),
@@ -1810,12 +2013,15 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 child: Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: const Color(0xff182232),
-                    border: Border.all(color: const Color(0xff334155), width: 1.5),
+                    color: isDark ? const Color(0xff182232) : Colors.white,
+                    border: Border.all(
+                      color: isDark ? const Color(0xff334155) : colors.outlineVariant.withOpacity(0.4),
+                      width: 1.5,
+                    ),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withOpacity(isDark ? 0.7 : 0.12),
                         blurRadius: 35,
                         offset: const Offset(0, 12),
                       ),
@@ -1838,7 +2044,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   border: Border.all(color: const Color(0xff58cc02).withOpacity(0.4)),
                                 ),
                                 child: Text(
-                                  "LEVEL $id",
+                                  AppTranslations.text(
+                                    language,
+                                    'kuis.modal_level_tag',
+                                    params: {'level': '$id'},
+                                  ),
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 11,
@@ -1858,12 +2068,12 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                     border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
                                   ),
                                   child: Row(
-                                    children: const [
-                                      Icon(Icons.check_circle_rounded, color: Color(0xfff59e0b), size: 12),
-                                      SizedBox(width: 4),
+                                    children: [
+                                      const Icon(Icons.check_circle_rounded, color: Color(0xfff59e0b), size: 12),
+                                      const SizedBox(width: 4),
                                       Text(
-                                        "SELESAI",
-                                        style: TextStyle(
+                                        AppTranslations.text(language, 'kuis.level_completed'),
+                                        style: const TextStyle(
                                           fontFamily: 'Outfit',
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
@@ -1884,28 +2094,38 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                             child: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.08)
+                                    : colors.surfaceContainerHighest.withOpacity(0.8),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.close, color: Color(0xff94a3b8), size: 16),
+                              child: Icon(
+                                Icons.close,
+                                color: isDark ? const Color(0xff94a3b8) : colors.onSurfaceVariant,
+                                size: 16,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        level['title'],
-                        style: const TextStyle(
+                        _getLevelTitle(language, id, level['title']),
+                        style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : const Color(0xff0f172a),
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        level['desc'],
-                        style: const TextStyle(fontSize: 13, color: Color(0xff94a3b8), height: 1.4),
+                        _getLevelDesc(language, id, level['desc']),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? const Color(0xff94a3b8) : const Color(0xff475569),
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       // Info Row (Reward XP & Question count)
@@ -1914,16 +2134,22 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xff0f172a),
+                              color: isDark ? const Color(0xff0f172a) : const Color(0xfff1f5f9),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xff334155)),
+                              border: Border.all(
+                                color: isDark ? const Color(0xff334155) : colors.outlineVariant.withOpacity(0.3),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 const Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 16),
                                 const SizedBox(width: 5),
                                 Text(
-                                  "+$xpReward XP",
+                                  AppTranslations.text(
+                                    language,
+                                    'kuis.xp_reward',
+                                    params: {'xp': '$xpReward'},
+                                  ),
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 12,
@@ -1938,21 +2164,27 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xff0f172a),
+                              color: isDark ? const Color(0xff0f172a) : const Color(0xfff1f5f9),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xff334155)),
+                              border: Border.all(
+                                color: isDark ? const Color(0xff334155) : colors.outlineVariant.withOpacity(0.3),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 const Icon(Icons.quiz_rounded, color: Color(0xff38bdf8), size: 16),
                                 const SizedBox(width: 5),
                                 Text(
-                                  "$qCount Soal Kuis",
-                                  style: const TextStyle(
+                                  AppTranslations.text(
+                                    language,
+                                    'kuis.quiz_questions_count',
+                                    params: {'count': '$qCount'},
+                                  ),
+                                  style: TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xff38bdf8),
+                                    color: isDark ? const Color(0xff38bdf8) : const Color(0xff0284c7),
                                   ),
                                 ),
                               ],
@@ -1993,14 +2225,15 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 onPressed: () {
                                   AudioService.playConfirm();
                                   final qList = List<Map<String, dynamic>>.from(level['questions']);
+                                  final quizTitle = _getLevelTitle(language, id, level['title']);
                                   setState(() {
                                     _selectedLevelId = null;
                                   });
-                                  QuizOverlay.start(context, id, level['title'], qList);
+                                  QuizOverlay.start(context, id, quizTitle, qList);
                                 },
-                                child: const Text(
-                                  "MULAI KUIS",
-                                  style: TextStyle(
+                                child: Text(
+                                  AppTranslations.text(language, 'kuis.start_quiz'),
+                                  style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 15,
                                     fontWeight: FontWeight.w900,

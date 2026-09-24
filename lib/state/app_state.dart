@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../l10n/locale_resolver.dart';
 import '../services/audio_service.dart';
 import '../services/supabase_service.dart';
 
@@ -142,37 +144,66 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
 
       // 1. Check Supabase Current Session
-      final currentSupabaseUser = SupabaseService.currentUser;
-      if (currentSupabaseUser != null) {
-        _isLoggedIn = true;
-        _userId = currentSupabaseUser.id;
-        _userEmail = currentSupabaseUser.email ?? _userEmail;
-        final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
-        if (metaName != null && metaName.isNotEmpty) {
-          _userName = metaName;
-        }
+      if (SupabaseService.isInitialized) {
+        final currentSupabaseUser = SupabaseService.currentUser;
+        if (currentSupabaseUser != null) {
+          _isLoggedIn = true;
+          _userId = currentSupabaseUser.id;
+          _userEmail = currentSupabaseUser.email ?? _userEmail;
+          final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
+          if (metaName != null && metaName.isNotEmpty) {
+            _userName = metaName;
+          }
 
-        // Try load from Supabase Cloud Profile
-        final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id);
-        if (cloudProfile != null) {
-          _applyProfileData(cloudProfile);
-          await _saveToLocalCache(prefs);
-          _checkDailyReset();
-          _checkPetirRegenOnLoad();
-          notifyListeners();
-          return;
+          // Try load from Supabase Cloud Profile
+          final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id);
+          if (cloudProfile != null) {
+            _applyProfileData(cloudProfile);
+            final dedicatedLanguage = prefs.getString('app_language');
+            String? cloudLanguage;
+            if (cloudProfile['language'] is String) {
+              cloudLanguage = cloudProfile['language'] as String;
+            }
+            _language = resolveLanguageCode(
+              savedLanguage: dedicatedLanguage,
+              fallbackSavedLanguage: cloudLanguage,
+              deviceLocales: PlatformDispatcher.instance.locales,
+            );
+            await _saveToLocalCache(prefs);
+            _checkDailyReset();
+            _checkPetirRegenOnLoad();
+            notifyListeners();
+            return;
+          }
         }
       }
 
       // 2. Fallback to Local Cache (SharedPreferences)
+      String? legacyLanguage;
       final cachedJsonStr = prefs.getString('trade_heroes_state');
       if (cachedJsonStr != null && cachedJsonStr.isNotEmpty) {
-        final json = jsonDecode(cachedJsonStr);
-        _applyLocalData(json);
+        try {
+          final json = jsonDecode(cachedJsonStr);
+          if (json is Map<String, dynamic>) {
+            _applyLocalData(json);
+            if (json['language'] is String) {
+              legacyLanguage = json['language'] as String;
+            }
+          }
+        } catch (e) {
+          debugPrint("Error parsing cached state: $e");
+        }
       } else {
         // If guest session was saved
         _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
       }
+
+      final dedicatedLanguage = prefs.getString('app_language');
+      _language = resolveLanguageCode(
+        savedLanguage: dedicatedLanguage,
+        fallbackSavedLanguage: legacyLanguage,
+        deviceLocales: PlatformDispatcher.instance.locales,
+      );
 
       _checkDailyReset();
       _checkPetirRegenOnLoad();
@@ -213,7 +244,13 @@ class AppState extends ChangeNotifier {
     AudioService.setAudioEnabled(_soundHaptic);
     AudioService.setBgmTrack(_bgmTrack);
     if (_bgmEnabled) AudioService.startBgm();
-    _language = json['language'] ?? "id";
+    final localLang = json['language'];
+    if (localLang is String) {
+      final clean = cleanSupportedLanguage(localLang);
+      if (clean != null) {
+        _language = clean;
+      }
+    }
     _role = json['role'] ?? (_userEmail == 'luthfirg2502@gmail.com' ? 'admin' : 'user');
     _virtualBalance = (json['virtualBalance'] as num?)?.toDouble() ?? 100000000.0;
     if (json['portfolio'] != null && json['portfolio'] is List) {
@@ -236,6 +273,13 @@ class AppState extends ChangeNotifier {
     if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
     if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
     if (data['role'] != null) _role = data['role'];
+    final cloudLang = data['language'];
+    if (cloudLang is String) {
+      final clean = cleanSupportedLanguage(cloudLang);
+      if (clean != null) {
+        _language = clean;
+      }
+    }
     if (data['virtual_balance'] != null) {
       _virtualBalance = (data['virtual_balance'] as num).toDouble();
     }
@@ -313,6 +357,7 @@ class AppState extends ChangeNotifier {
       'tradeHistory': _tradeHistory,
     };
     await prefs.setString('trade_heroes_state', jsonEncode(data));
+    await prefs.setString('app_language', _language);
     await prefs.setBool('is_logged_in', _isLoggedIn);
   }
 
@@ -325,6 +370,7 @@ class AppState extends ChangeNotifier {
       'name': _userName,
       'email': _userEmail,
       'avatar': _userAvatar,
+      'language': _language,
       'petir': _petir,
       'xp': _xp,
       'daily_xp': _dailyXp,
@@ -528,9 +574,12 @@ class AppState extends ChangeNotifier {
   }
 
   void setLanguage(String lang) {
-    _language = lang;
-    _saveState();
+    final clean = lang.toLowerCase().split(RegExp(r'[-_]')).first;
+    if (clean != 'id' && clean != 'en') return;
+    if (_language == clean) return;
+    _language = clean;
     notifyListeners();
+    _saveState();
   }
 
   void setBgmTrack(String track) {

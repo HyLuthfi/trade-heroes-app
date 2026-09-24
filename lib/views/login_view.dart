@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../state/app_state.dart';
 
 class LoginView extends StatefulWidget {
@@ -47,24 +48,28 @@ class _LoginViewState extends State<LoginView> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
+    final language = appState.language;
 
     if (email.isEmpty || !email.contains('@')) {
       setState(() {
-        _errorMessage = "Silakan masukkan alamat email yang valid.";
+        _errorMessage =
+            AppTranslations.text(language, 'auth.email_invalid');
       });
       return;
     }
 
     if (password.length < 6) {
       setState(() {
-        _errorMessage = "Kata sandi minimal harus 6 karakter.";
+        _errorMessage =
+            AppTranslations.text(language, 'auth.password_short');
       });
       return;
     }
 
     if (_isSignUpMode && name.isEmpty) {
       setState(() {
-        _errorMessage = "Silakan masukkan nama lengkap atau panggilan Anda.";
+        _errorMessage =
+            AppTranslations.text(language, 'auth.name_required');
       });
       return;
     }
@@ -88,9 +93,11 @@ class _LoginViewState extends State<LoginView> {
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Color(0xff059669),
-              content: Text("Akun berhasil didaftarkan! Selamat datang di Trade Heroes."),
+            SnackBar(
+              backgroundColor: const Color(0xff059669),
+              content: Text(
+                AppTranslations.text(language, 'auth.signup_success'),
+              ),
             ),
           );
         }
@@ -118,16 +125,26 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final language = appState.language;
+    String tr(String key) => AppTranslations.text(language, key);
 
     return Scaffold(
-      backgroundColor: const Color(0xff0b0f19),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
-        decoration: const BoxDecoration(
+        key: const ValueKey('login-root-surface'),
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xff064e3b),
-              Color(0xff0b0f19),
-            ],
+            colors: isDark
+                ? const [
+                    Color(0xff064e3b),
+                    Color(0xff0b0f19),
+                  ]
+                : const [
+                    Color(0xffecfdf5),
+                    Color(0xfff1f5f9),
+                  ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -151,24 +168,24 @@ class _LoginViewState extends State<LoginView> {
                   const SizedBox(height: 10),
 
                   // App Title & Subtitle
-                  const Text(
+                  Text(
                     "TRADE HEROES",
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : const Color(0xff0f172a),
                       letterSpacing: 2.0,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  const Text(
+                  Text(
                     "Akademi Belajar Pasar Modal & Simulator Saham BEI",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
-                      color: Color(0xff94a3b8),
+                      color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -184,7 +201,7 @@ class _LoginViewState extends State<LoginView> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
+                            color: Colors.black.withOpacity(isDark ? 0.25 : 0.08),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -200,13 +217,17 @@ class _LoginViewState extends State<LoginView> {
                             fit: BoxFit.contain,
                           ),
                           const SizedBox(width: 10),
-                          const Text(
-                            "Lanjutkan dengan Google",
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xff111827),
+                          Flexible(
+                            child: Text(
+                              tr('auth.google_action'),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xff111827),
+                              ),
                             ),
                           ),
                         ],
@@ -218,27 +239,44 @@ class _LoginViewState extends State<LoginView> {
                   // Divider
                   Row(
                     children: [
-                      Expanded(child: Divider(color: Colors.white.withOpacity(0.12), thickness: 1)),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          "atau akun email",
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xff64748b)),
+                      Expanded(
+                        child: Divider(
+                          color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xffcbd5e1),
+                          thickness: 1,
                         ),
                       ),
-                      Expanded(child: Divider(color: Colors.white.withOpacity(0.12), thickness: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          "atau akun email",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11.5,
+                            color: isDark ? const Color(0xff64748b) : const Color(0xff94a3b8),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xffcbd5e1),
+                          thickness: 1,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
 
                   // Tab Switcher (Masuk vs Daftar)
                   Container(
+                    key: const ValueKey('login-mode-switcher'),
                     height: 42,
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1e293b),
+                      color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffcbd5e1),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -257,12 +295,14 @@ class _LoginViewState extends State<LoginView> {
                                 borderRadius: BorderRadius.circular(9),
                               ),
                               child: Text(
-                                "Masuk",
+                                tr('auth.login_tab'),
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: !_isSignUpMode ? Colors.white : const Color(0xff94a3b8),
+                                  color: !_isSignUpMode
+                                      ? Colors.white
+                                      : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
                                 ),
                               ),
                             ),
@@ -283,12 +323,14 @@ class _LoginViewState extends State<LoginView> {
                                 borderRadius: BorderRadius.circular(9),
                               ),
                               child: Text(
-                                "Daftar Baru",
+                                tr('auth.signup_tab'),
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: _isSignUpMode ? Colors.white : const Color(0xff94a3b8),
+                                  color: _isSignUpMode
+                                      ? Colors.white
+                                      : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
                                 ),
                               ),
                             ),
@@ -305,21 +347,27 @@ class _LoginViewState extends State<LoginView> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xff450a0a),
+                        color: isDark ? const Color(0xff450a0a) : const Color(0xfffef2f2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xffef4444)),
+                        border: Border.all(
+                          color: isDark ? const Color(0xffef4444) : const Color(0xfff87171),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: Color(0xfff87171), size: 18),
+                          Icon(
+                            Icons.error_outline_rounded,
+                            color: isDark ? const Color(0xfff87171) : const Color(0xffdc2626),
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 11.5,
-                                color: Color(0xfffca5a5),
+                                color: isDark ? const Color(0xfffca5a5) : const Color(0xffb91c1c),
                               ),
                             ),
                           ),
@@ -331,28 +379,51 @@ class _LoginViewState extends State<LoginView> {
 
                   // Form Container
                   Container(
+                    key: const ValueKey('login-form-surface'),
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1e293b).withOpacity(0.65),
+                      color: isDark ? const Color(0xff1e293b).withOpacity(0.65) : Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0),
+                      ),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                     ),
                     child: Column(
                       children: [
                         if (_isSignUpMode) ...[
                           TextField(
                             controller: _nameController,
-                            style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              color: isDark ? Colors.white : const Color(0xff0f172a),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
                             decoration: InputDecoration(
-                              labelText: "Nama Lengkap / Panggilan",
-                              labelStyle: const TextStyle(fontFamily: 'Inter', color: Color(0xff94a3b8), fontSize: 12),
+                              labelText: tr('auth.name_label'),
+                              labelStyle: TextStyle(
+                                fontFamily: 'Inter',
+                                color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                                fontSize: 12,
+                              ),
                               prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xff10b981), size: 19),
                               filled: true,
-                              fillColor: const Color(0xff0f172a),
+                              fillColor: isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc),
                               contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffcbd5e1),
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -367,17 +438,28 @@ class _LoginViewState extends State<LoginView> {
                         TextField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                           decoration: InputDecoration(
-                            labelText: "Alamat Email",
-                            labelStyle: const TextStyle(fontFamily: 'Inter', color: Color(0xff94a3b8), fontSize: 12),
+                            labelText: tr('auth.email_label'),
+                            labelStyle: TextStyle(
+                              fontFamily: 'Inter',
+                              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                              fontSize: 12,
+                            ),
                             prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xff10b981), size: 19),
                             filled: true,
-                            fillColor: const Color(0xff0f172a),
+                            fillColor: isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc),
                             contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffcbd5e1),
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -391,15 +473,24 @@ class _LoginViewState extends State<LoginView> {
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            color: isDark ? Colors.white : const Color(0xff0f172a),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                           decoration: InputDecoration(
-                            labelText: "Kata Sandi",
-                            labelStyle: const TextStyle(fontFamily: 'Inter', color: Color(0xff94a3b8), fontSize: 12),
+                            labelText: tr('auth.password_label'),
+                            labelStyle: TextStyle(
+                              fontFamily: 'Inter',
+                              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                              fontSize: 12,
+                            ),
                             prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xff10b981), size: 19),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                color: const Color(0xff64748b),
+                                color: isDark ? const Color(0xff64748b) : const Color(0xff94a3b8),
                                 size: 19,
                               ),
                               onPressed: () {
@@ -409,11 +500,13 @@ class _LoginViewState extends State<LoginView> {
                               },
                             ),
                             filled: true,
-                            fillColor: const Color(0xff0f172a),
+                            fillColor: isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc),
                             contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffcbd5e1),
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -448,7 +541,9 @@ class _LoginViewState extends State<LoginView> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      _isSignUpMode ? "DAFTAR SEKARANG" : "MASUK KE AKUN",
+                                      _isSignUpMode
+                                          ? tr('auth.signup_action').toUpperCase()
+                                          : tr('auth.login_action').toUpperCase(),
                                       style: const TextStyle(
                                         fontFamily: 'Outfit',
                                         fontSize: 14,
@@ -469,13 +564,13 @@ class _LoginViewState extends State<LoginView> {
                   TextButton.icon(
                     onPressed: () => _handleGuestLogin(appState),
                     icon: const Icon(Icons.flash_on_rounded, color: Color(0xfff59e0b), size: 16),
-                    label: const Text(
-                      "Coba dulu tanpa akun (Mode Tamu)",
+                    label: Text(
+                      tr('auth.guest_action'),
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xffcbd5e1),
+                        color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
                       ),
                     ),
                   ),
@@ -485,21 +580,26 @@ class _LoginViewState extends State<LoginView> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1e293b),
+                      color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffcbd5e1),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.cloud_done_rounded, color: Color(0xff10b981), size: 13),
-                        SizedBox(width: 5),
-                        Text(
-                          "Didukung oleh Supabase Cloud Sync",
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.5,
-                            color: Color(0xff94a3b8),
+                      children: [
+                        const Icon(Icons.cloud_done_rounded, color: Color(0xff10b981), size: 13),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            "Didukung oleh Supabase Cloud Sync",
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.5,
+                              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                            ),
                           ),
                         ),
                       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_translations.dart';
 import '../state/app_state.dart';
 
 class VipPassModal {
@@ -24,9 +25,14 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final language = appState.language;
+    String tr(String key, {Map<String, String> params = const {}}) =>
+        AppTranslations.text(language, key, params: params);
 
     return AlertDialog(
-      backgroundColor: const Color(0xff0f172a),
+      backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(28),
         side: const BorderSide(color: Color(0xfff59e0b), width: 1.8),
@@ -43,21 +49,21 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xff78350f).withOpacity(0.5),
+                  color: isDark ? const Color(0xff78350f).withOpacity(0.5) : const Color(0xfffef3c7),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.6)),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(Icons.workspace_premium_rounded, color: Color(0xfff59e0b), size: 14),
-                    SizedBox(width: 5),
+                  children: [
+                    const Icon(Icons.workspace_premium_rounded, color: Color(0xfff59e0b), size: 14),
+                    const SizedBox(width: 5),
                     Text(
-                      "VIP GOLD PASS",
+                      tr('vip.badge'),
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 10.5,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xfffbbf24),
+                        color: isDark ? const Color(0xfffbbf24) : const Color(0xffb45309),
                         letterSpacing: 1.0,
                       ),
                     ),
@@ -69,10 +75,14 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close_rounded, color: Color(0xff94a3b8), size: 18),
+                  child: Icon(
+                    Icons.close_rounded,
+                    color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                    size: 18,
+                  ),
                 ),
               ),
             ],
@@ -86,58 +96,76 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
               height: 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xff78350f).withOpacity(0.35),
+                color: isDark ? const Color(0xff78350f).withOpacity(0.35) : const Color(0xfffef3c7),
                 border: Border.all(color: const Color(0xfff59e0b), width: 2.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xfff59e0b).withOpacity(0.55),
+                    color: const Color(0xfff59e0b).withOpacity(isDark ? 0.55 : 0.25),
                     blurRadius: 24,
                     spreadRadius: 2,
                   ),
                 ],
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.workspace_premium_rounded, color: Color(0xfffbbf24), size: 44),
+              child: const Icon(Icons.workspace_premium_rounded, color: Color(0xfff59e0b), size: 44),
             ),
           ),
           const SizedBox(height: 14),
 
           // Title & Subtitle
-          const Center(
+          Center(
             child: Text(
-              "AKSES VIP TANPA BATAS",
+              tr('vip.title'),
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xff0f172a),
                 letterSpacing: 0.5,
               ),
             ),
           ),
           const SizedBox(height: 4),
-          const Center(
+          Center(
             child: Text(
-              "Kuasai ilmu trading saham profesional tanpa batas nyawa dan bebas iklan selamanya.",
+              tr('vip.subtitle'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12.5,
-                color: Color(0xffcbd5e1),
+                color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
                 height: 1.45,
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Divider(color: Colors.white.withOpacity(0.12), height: 1),
+          Divider(color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xffe2e8f0), height: 1),
           const SizedBox(height: 14),
 
           // Feature Checklist
-          _buildFeatureRow(Icons.bolt_rounded, const Color(0xffef4444), "Nyawa Petir Tak Terbatas", "Bebas latihan kuis sepuasnya tanpa pernah kehabisan nyawa"),
+          _buildFeatureRow(
+            Icons.bolt_rounded,
+            const Color(0xffef4444),
+            tr('vip.feat_lives_title'),
+            tr('vip.feat_lives_desc'),
+            isDark: isDark,
+          ),
           const SizedBox(height: 10),
-          _buildFeatureRow(Icons.block_rounded, const Color(0xff10b981), "100% Bebas Iklan Sponsor", "Belajar fokus tanpa gangguan iklan pop-up sama sekali"),
+          _buildFeatureRow(
+            Icons.block_rounded,
+            const Color(0xff10b981),
+            tr('vip.feat_ads_title'),
+            tr('vip.feat_ads_desc'),
+            isDark: isDark,
+          ),
           const SizedBox(height: 10),
-          _buildFeatureRow(Icons.menu_book_rounded, const Color(0xff3b82f6), "Seluruh Modul Rahasia Unlocked", "Akses penuh strategi Day Trading, Swing, & Analisis Bandarmologi"),
+          _buildFeatureRow(
+            Icons.menu_book_rounded,
+            const Color(0xff3b82f6),
+            tr('vip.feat_modules_title'),
+            tr('vip.feat_modules_desc'),
+            isDark: isDark,
+          ),
           const SizedBox(height: 16),
 
           // Pricing Selector Cards
@@ -146,20 +174,22 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
               Expanded(
                 child: _buildPlanCard(
                   idx: 0,
-                  title: "Bulanan",
-                  price: "Rp 49.000",
-                  period: "/ bulan",
+                  title: tr('vip.plan_monthly'),
+                  price: tr('vip.plan_monthly_price'),
+                  period: tr('vip.plan_monthly_period'),
                   tag: null,
+                  isDark: isDark,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _buildPlanCard(
                   idx: 1,
-                  title: "Tahunan",
-                  price: "Rp 299.000",
-                  period: "/ tahun",
-                  tag: "HEMAT 50% 🔥",
+                  title: tr('vip.plan_yearly'),
+                  price: tr('vip.plan_yearly_price'),
+                  period: tr('vip.plan_yearly_period'),
+                  tag: tr('vip.plan_yearly_tag'),
+                  isDark: isDark,
                 ),
               ),
             ],
@@ -173,22 +203,22 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
               height: 48,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xff064e3b),
+                color: isDark ? const Color(0xff064e3b) : const Color(0xffecfdf5),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xff10b981)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.check_circle_rounded, color: Color(0xff34d399), size: 18),
-                  SizedBox(width: 6),
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xff059669), size: 18),
+                  const SizedBox(width: 6),
                   Text(
-                    "AKUN ANDA SUDAH VIP GOLD 👑",
-                    style: TextStyle(
+                    tr('vip.already_active'),
+                    style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xff34d399),
+                      color: Color(0xff059669),
                     ),
                   ),
                 ],
@@ -206,16 +236,16 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
                 Navigator.of(context).pop();
                 appState.upgradeToPremium(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Selamat! Akun Anda telah berhasil di-upgrade ke VIP GOLD PASS 👑!"),
-                    backgroundColor: Color(0xff059669),
+                  SnackBar(
+                    content: Text(tr('vip.upgrade_success')),
+                    backgroundColor: const Color(0xff059669),
                   ),
                 );
               },
               icon: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 20),
-              label: const Text(
-                "GABUNG VIP GOLD PASS SEKARANG 👑",
-                style: TextStyle(
+              label: Text(
+                tr('vip.cta_upgrade'),
+                style: const TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 13.5,
                   fontWeight: FontWeight.w900,
@@ -229,7 +259,13 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
     );
   }
 
-  Widget _buildFeatureRow(IconData icon, Color iconColor, String title, String desc) {
+  Widget _buildFeatureRow(
+    IconData icon,
+    Color iconColor,
+    String title,
+    String desc, {
+    required bool isDark,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -248,19 +284,19 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: Colors.white,
+                  color: isDark ? Colors.white : const Color(0xff0f172a),
                 ),
               ),
               Text(
                 desc,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 11,
-                  color: Color(0xff94a3b8),
+                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
                   height: 1.3,
                 ),
               ),
@@ -277,6 +313,7 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
     required String price,
     required String period,
     required String? tag,
+    required bool isDark,
   }) {
     final isSelected = _selectedPlanIdx == idx;
 
@@ -289,16 +326,20 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xff78350f).withOpacity(0.4) : const Color(0xff1e293b),
+          color: isSelected
+              ? (isDark ? const Color(0xff78350f).withOpacity(0.4) : const Color(0xfffef3c7))
+              : (isDark ? const Color(0xff1e293b) : const Color(0xfff8fafc)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? const Color(0xfff59e0b) : Colors.white.withOpacity(0.12),
+            color: isSelected
+                ? const Color(0xfff59e0b)
+                : (isDark ? Colors.white.withOpacity(0.12) : const Color(0xffe2e8f0)),
             width: isSelected ? 2.0 : 1.0,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xfff59e0b).withOpacity(0.3),
+                color: const Color(0xfff59e0b).withOpacity(isDark ? 0.3 : 0.2),
                 blurRadius: 8,
               ),
           ],
@@ -330,25 +371,27 @@ class _VipPassDialogContentState extends State<_VipPassDialogContent> {
                 fontFamily: 'Outfit',
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? const Color(0xfffbbf24) : const Color(0xff94a3b8),
+                color: isSelected
+                    ? (isDark ? const Color(0xfffbbf24) : const Color(0xffb45309))
+                    : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
               ),
             ),
             const SizedBox(height: 2),
             Text(
               price,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xff0f172a),
               ),
             ),
             Text(
               period,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 10,
-                color: Color(0xff64748b),
+                color: isDark ? const Color(0xff64748b) : const Color(0xff94a3b8),
               ),
             ),
           ],

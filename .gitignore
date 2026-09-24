@@ -49,3 +49,13 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Backup and temp files
+*.bak*
+*.after-*
+test_server_local.py
+.cortexkit/
+.hermes/
+.claude/
+
+
