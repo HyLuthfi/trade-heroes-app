@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   String _lastDailyClaimDate = ""; // YYYY-MM-DD
   bool _isPremium = false;
   bool _isLoggedIn = false;
+  bool _isAuthLoading = true;
   String _lastActiveDate = ""; // YYYY-MM-DD
   int? _petirLastUsedTime; // timestamp in ms
 
@@ -68,6 +69,7 @@ class AppState extends ChangeNotifier {
   String get lastDailyClaimDate => _lastDailyClaimDate;
   bool get isPremium => _isPremium;
   bool get isLoggedIn => _isLoggedIn;
+  bool get isAuthLoading => _isAuthLoading;
   String get userName => _userName;
   String get userEmail => _userEmail;
   String get userAvatar => _userAvatar;
@@ -454,10 +456,57 @@ class AppState extends ChangeNotifier {
   Timer? _regenTimer;
   StreamSubscription<AuthState>? _authSubscription;
 
-  AppState() {
-    _initAndLoadState();
+  AppState({SharedPreferences? initialPrefs}) {
+    if (initialPrefs != null) {
+      _applyInitialSyncData(initialPrefs);
+    } else {
+      final currentSupabaseUser = SupabaseService.currentUser;
+      if (currentSupabaseUser != null) {
+        _isLoggedIn = true;
+        _userId = currentSupabaseUser.id;
+        _userEmail = currentSupabaseUser.email ?? _userEmail;
+        final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
+        if (metaName != null && metaName.isNotEmpty) {
+          _userName = metaName;
+        }
+        _isAuthLoading = false;
+      }
+    }
+    _initAndLoadState(initialPrefs: initialPrefs);
     _startRegenTimer();
     _listenAuthChanges();
+  }
+
+  void _applyInitialSyncData(SharedPreferences prefs) {
+    // 1. Check Supabase Current Session synchronously
+    final currentSupabaseUser = SupabaseService.currentUser;
+    if (currentSupabaseUser != null) {
+      _isLoggedIn = true;
+      _userId = currentSupabaseUser.id;
+      _userEmail = currentSupabaseUser.email ?? _userEmail;
+      final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
+      if (metaName != null && metaName.isNotEmpty) {
+        _userName = metaName;
+      }
+    }
+
+    // 2. Load cached local state synchronously
+    final cachedJsonStr = prefs.getString('trade_heroes_state');
+    if (cachedJsonStr != null && cachedJsonStr.isNotEmpty) {
+      try {
+        final json = jsonDecode(cachedJsonStr);
+        _applyLocalData(json);
+      } catch (e) {
+        debugPrint("Error parsing initial sync data: $e");
+      }
+    } else {
+      final guestLogged = prefs.getBool('is_logged_in') ?? false;
+      if (guestLogged) {
+        _isLoggedIn = true;
+      }
+    }
+
+    _isAuthLoading = false;
   }
 
   void _listenAuthChanges() {
@@ -511,9 +560,9 @@ class AppState extends ChangeNotifier {
   }
 
   // Initialize state with SharedPreferences (Web + Native Safe) and Supabase Cloud Sync
-  Future<void> _initAndLoadState() async {
+  Future<void> _initAndLoadState({SharedPreferences? initialPrefs}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = initialPrefs ?? await SharedPreferences.getInstance();
 
       // 1. Check Supabase Current Session
       final currentSupabaseUser = SupabaseService.currentUser;
@@ -533,6 +582,7 @@ class AppState extends ChangeNotifier {
           await _saveToLocalCache(prefs);
           _checkDailyReset();
           _checkPetirRegenOnLoad();
+          _isAuthLoading = false;
           notifyListeners();
           return;
         }
@@ -548,11 +598,14 @@ class AppState extends ChangeNotifier {
         _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
       }
 
+      _isAuthLoading = false;
       _checkDailyReset();
       _checkPetirRegenOnLoad();
       notifyListeners();
     } catch (e) {
       debugPrint("Error initializing AppState: $e");
+      _isAuthLoading = false;
+      notifyListeners();
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/supabase_service.dart';
 import 'state/app_state.dart';
 import 'views/home_view.dart';
@@ -14,9 +15,11 @@ void main() async {
     usePathUrlStrategy();
   }
   await SupabaseService.initialize();
+  final prefs = await SharedPreferences.getInstance();
+  final appState = AppState(initialPrefs: prefs);
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
+    ChangeNotifierProvider<AppState>.value(
+      value: appState,
       child: const KursusSahamApp(),
     ),
   );
@@ -73,6 +76,12 @@ class KursusSahamApp extends StatelessWidget {
       home: VideoSplashView(
         child: Consumer<AppState>(
           builder: (context, appState, child) {
+            if (appState.isAuthLoading) {
+              return const Scaffold(
+                backgroundColor: Color(0xff060a12),
+                body: SizedBox(),
+              );
+            }
             return appState.isLoggedIn ? const HomeView() : const LoginView();
           },
         ),
