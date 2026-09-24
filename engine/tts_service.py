@@ -148,9 +148,8 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
 
     # If Gemini requested or Auto mode, attempt Gemini TTS with healthy keys
     if num_keys > 0:
-        prompt_text = f"Please read the following text aloud naturally and expressively in Indonesian without adding or replying anything:\n\n{clean_text}"
         payload = {
-            "contents": [{"parts": [{"text": prompt_text}]}],
+            "contents": [{"parts": [{"text": clean_text}]}],
             "generationConfig": {
                 "responseModalities": ["AUDIO"],
                 "speechConfig": {
@@ -194,8 +193,12 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
                             if audio_part:
                                 b64 = (audio_part.get("inlineData") or audio_part.get("inline_data") or {}).get("data", "")
                                 if b64:
-                                    pcm = base64.b64decode(b64)
-                                    wav = wrap_pcm_wav(pcm)
+                                    raw_audio = base64.b64decode(b64)
+                                    # If already standard RIFF WAV (Gemini 3.8/2.5 default), use directly
+                                    if raw_audio.startswith(b'RIFF'):
+                                        wav = raw_audio
+                                    else:
+                                        wav = wrap_pcm_wav(raw_audio)
                                     _gemini_key_index = (idx + 1) % len(preferred_indices)
                                     return {
                                         "audio": f"data:audio/wav;base64,{base64.b64encode(wav).decode('utf-8')}",
