@@ -9,8 +9,10 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../services/market_data_service.dart';
+import '../services/live_voice_service.dart';
 import '../state/app_state.dart';
 import '../widgets/tradingview_chart.dart';
+import '../widgets/live_voice_modal.dart';
 
 class MarketView extends StatefulWidget {
   const MarketView({Key? key}) : super(key: key);
@@ -37,6 +39,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   final ScrollController _chatScrollController = ScrollController();
   bool _isAiResponding = false;
   String? _lastChatTicker;
+  String? _currentlySpeakingText;
 
   // Live Market News State
   List<Map<String, dynamic>> _liveNews = [];
@@ -1086,6 +1089,45 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     });
   }
 
+  Future<void> _playVoiceForMessage(String text) async {
+    if (_currentlySpeakingText == text) {
+      LiveVoiceService.stopAudio();
+      setState(() => _currentlySpeakingText = null);
+      return;
+    }
+
+    AudioService.playClick();
+    LiveVoiceService.stopAudio();
+    setState(() => _currentlySpeakingText = text);
+
+    try {
+      final res = await http.post(
+        Uri.parse('/api/ai/tts'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text, 'voice': 'Puck'}),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final audioUri = (data['audio'] ?? '').toString();
+        if (audioUri.isNotEmpty && audioUri.startsWith('data:audio/wav;base64,')) {
+          LiveVoiceService.playAudio(
+            audioUri,
+            onEnded: () {
+              if (mounted && _currentlySpeakingText == text) {
+                setState(() => _currentlySpeakingText = null);
+              }
+            },
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint("TTS play error: $e");
+    }
+
+    if (mounted) setState(() => _currentlySpeakingText = null);
+  }
+
   String _generateAiAnswer(String question, Map<String, dynamic> stock) {
     final qLower = question.toLowerCase();
     final ticker = stock['ticker']?.toString() ?? 'BBCA';
@@ -1313,14 +1355,54 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 9.5,
-                      color: isUser ? const Color(0xff6ee7b7) : const Color(0xff64748b),
-                    ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        time,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.5,
+                          color: isUser ? const Color(0xff6ee7b7) : const Color(0xff64748b),
+                        ),
+                      ),
+                      if (!isUser) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _playVoiceForMessage(text),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _currentlySpeakingText == text
+                                  ? const Color(0xff10b981).withOpacity(0.2)
+                                  : Colors.white.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _currentlySpeakingText == text ? Icons.stop_rounded : Icons.volume_up_rounded,
+                                  color: _currentlySpeakingText == text ? const Color(0xff34d399) : const Color(0xff94a3b8),
+                                  size: 11,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  _currentlySpeakingText == text ? "Hentikan" : "Dengarkan",
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: _currentlySpeakingText == text ? const Color(0xff34d399) : const Color(0xff94a3b8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -1366,16 +1448,68 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               color: Color(0xff0f172a),
               border: Border(bottom: BorderSide(color: Color(0xff1e293b))),
             ),
-            alignment: Alignment.centerLeft,
-            child: const Text(
-              "SAI Tech AI Chatbot",
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: 0.3,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "SAI Tech AI Chatbot",
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    AudioService.playClick();
+                    LiveVoiceModal.show(
+                      context,
+                      stock: stock,
+                      onConversationEnd: (q, a) {
+                        setState(() {
+                          _chatMessages.add({
+                            'isUser': true,
+                            'time': _formatCurrentTime(),
+                            'text': q,
+                          });
+                          _chatMessages.add({
+                            'isUser': false,
+                            'time': _formatCurrentTime(),
+                            'text': a,
+                          });
+                        });
+                        _scrollToChatBottom();
+                      },
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff10b981).withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xff10b981).withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.graphic_eq_rounded, color: Color(0xff34d399), size: 14),
+                        SizedBox(width: 5),
+                        Text(
+                          "Live Voice",
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xff34d399),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -1459,6 +1593,41 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    AudioService.playClick();
+                    LiveVoiceModal.show(
+                      context,
+                      stock: stock,
+                      onConversationEnd: (q, a) {
+                        setState(() {
+                          _chatMessages.add({
+                            'isUser': true,
+                            'time': _formatCurrentTime(),
+                            'text': q,
+                          });
+                          _chatMessages.add({
+                            'isUser': false,
+                            'time': _formatCurrentTime(),
+                            'text': a,
+                          });
+                        });
+                        _scrollToChatBottom();
+                      },
+                    );
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xff1e293b),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xff334155)),
+                    ),
+                    child: const Icon(Icons.mic_rounded, color: Color(0xff38bdf8), size: 20),
                   ),
                 ),
                 const SizedBox(width: 8),

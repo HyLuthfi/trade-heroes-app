@@ -91,8 +91,40 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
         if self.path.startswith('/api/ai/chat'):
             self._handle_ai_chat()
             return
+        if self.path.startswith('/api/ai/tts'):
+            self._handle_ai_tts()
+            return
         self.send_response(404)
         self.end_headers()
+
+    def _handle_ai_tts(self):
+        """Synthesize text to speech using Google Gemini Generative Audio API"""
+        import json
+        try:
+            content_len = int(self.headers.get('Content-Length', 0))
+            post_body = self.rfile.read(content_len)
+            req_data = json.loads(post_body.decode('utf-8'))
+        except Exception:
+            self.send_response(400)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"error":"invalid json"}')
+            return
+
+        text = req_data.get('text', '')
+        voice = req_data.get('voice', 'Puck')
+        try:
+            from engine.tts_service import synthesize_gemini_tts
+            audio_uri = synthesize_gemini_tts(text, voice=voice)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(json.dumps({'audio': audio_uri, 'voice': voice}).encode('utf-8'))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
 
     def do_GET(self):
         # --- Real-Time Financial News API ---
@@ -236,6 +268,16 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
                 print(f"Quant analysis error for {ticker}: {q_err}")
 
         # 3. Build contextual real-time prompt with full quant insights
+        is_live_voice = bool(req_data.get('liveVoice') or req_data.get('voice'))
+        voice_style_instruction = ""
+        if is_live_voice:
+            voice_style_instruction = (
+                "\nUser saat ini berinteraksi melalui Mode Percakapan Suara Langsung (Live Voice).\n"
+                "- Buat jawabanmu lisan, santai, ringkas (maksimal 2–3 kalimat langsung ke inti analisa).\n"
+                "- JANGAN gunakan format markdown seperti bintang **, pagar #, bullet point •, atau simbol tabel.\n"
+                "- Gunakan kata-kata yang mengalir alami saat diucapkan seperti analis profesional yang sedang berbicara langsung."
+            )
+
         system_prompt = (
             f"Kamu adalah SAI Tech AI Chatbot, asisten cerdas analis pasar modal Indonesia (BEI) di platform edukasi Trade Heroes.\n"
             f"Karakter: Analis kuantitatif & edukator saham profesional, ramah, to-the-point, dan zero basa-basi.\n"
@@ -248,10 +290,9 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             f"- PER: {stock.get('per', '15.0')}x | PBV: {stock.get('pbv', '2.0')}x | Market Cap: {stock.get('mcap', '-')}\n\n"
             f"{quant_context}\n\n"
             f"Petunjuk Format Output & Edukasi:\n"
-            f"- Gunakan Markdown Prettier yang rapi (bold **...** untuk angka/harga/level kunci, bullet points, dan judul ringkas).\n"
-            f"- Jika pertanyaan relevan dengan Support & Resistance, Smart Money (SMC / FVG), atau Momentum Volatilitas, jelaskan konsep edukatifnya menggunakan data kuantitatif nyata di atas.\n"
             f"- Berikan edukasi yang taktis (Level Support & Resistance aktual, Imbalance harga, dan Strategi Trading/Investasi yang jelas).\n"
             f"- Jangan gunakan kalimat klise pembuka seperti 'Tentu, saya bisa bantu'. Langsung sajikan analisa tajam, edukatif, dan bernilai tinggi."
+            f"{voice_style_instruction}"
         )
 
         key = get_router_key()
@@ -290,10 +331,18 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
                 data = json.loads(resp.read().decode('utf-8'))
                 ai_text = data['choices'][0]['message']['content']
 
+            audio_uri = ""
+            if is_live_voice:
+                try:
+                    from engine.tts_service import synthesize_gemini_tts
+                    audio_uri = synthesize_gemini_tts(ai_text, voice=req_data.get('voiceName', 'Puck'))
+                except Exception as tts_err:
+                    print(f"Warning: Live voice synthesis failed: {tts_err}")
+
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.end_headers()
-            self.wfile.write(json.dumps({'reply': ai_text}).encode('utf-8'))
+            self.wfile.write(json.dumps({'reply': ai_text, 'audio': audio_uri}).encode('utf-8'))
         except Exception as e:
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')

@@ -277,6 +277,89 @@
       window.setTradeAudioMuted = globalThis.setTradeAudioMuted = window['window.setTradeAudioMuted'] = setAudioMutedImpl;
       window.setTradeAudioTheme = globalThis.setTradeAudioTheme = window['window.setTradeAudioTheme'] = setAudioThemeImpl;
       window.setTradeBgmTrack = globalThis.setTradeBgmTrack = window['window.setTradeBgmTrack'] = setBgmTrackImpl;
+
+      // === LIVE VOICE & GEMINI AUDIO ENGINE ===
+      let activeVoiceAudio = null;
+      let voiceRecognition = null;
+
+      window.playVoiceAudioUri = globalThis.playVoiceAudioUri = function(dataUri, onEnded) {
+        if (activeVoiceAudio) {
+          try { activeVoiceAudio.pause(); } catch(e) {}
+        }
+        activeVoiceAudio = new Audio(dataUri);
+        activeVoiceAudio.onended = function() {
+          if (typeof onEnded === 'function') onEnded();
+        };
+        activeVoiceAudio.onerror = function(err) {
+          console.warn('Voice audio error:', err);
+          if (typeof onEnded === 'function') onEnded();
+        };
+        return activeVoiceAudio.play().catch(function(e) {
+          console.warn('Voice play blocked/rejected:', e);
+          if (typeof onEnded === 'function') onEnded();
+        });
+      };
+
+      window.stopVoiceAudio = globalThis.stopVoiceAudio = function() {
+        if (activeVoiceAudio) {
+          try {
+            activeVoiceAudio.pause();
+            activeVoiceAudio.currentTime = 0;
+          } catch(e) {}
+          activeVoiceAudio = null;
+        }
+      };
+
+      window.startLiveSpeechRecognition = globalThis.startLiveSpeechRecognition = function(lang, onTranscript, onStateChange, onError) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          if (typeof onError === 'function') onError('Browser tidak mendukung Speech Recognition.');
+          return false;
+        }
+        if (voiceRecognition) {
+          try { voiceRecognition.abort(); } catch(e) {}
+        }
+
+        voiceRecognition = new SpeechRecognition();
+        voiceRecognition.lang = lang || 'id-ID';
+        voiceRecognition.continuous = false;
+        voiceRecognition.interimResults = false;
+        voiceRecognition.maxAlternatives = 1;
+
+        voiceRecognition.onstart = function() {
+          if (typeof onStateChange === 'function') onStateChange('listening');
+        };
+
+        voiceRecognition.onresult = function(event) {
+          if (event.results && event.results.length > 0) {
+            const text = event.results[0][0].transcript;
+            if (typeof onTranscript === 'function') onTranscript(text);
+          }
+        };
+
+        voiceRecognition.onerror = function(event) {
+          if (typeof onError === 'function') onError(event.error || 'Speech error');
+        };
+
+        voiceRecognition.onend = function() {
+          if (typeof onStateChange === 'function') onStateChange('idle');
+        };
+
+        try {
+          voiceRecognition.start();
+          return true;
+        } catch(e) {
+          if (typeof onError === 'function') onError(e.toString());
+          return false;
+        }
+      };
+
+      window.stopLiveSpeechRecognition = globalThis.stopLiveSpeechRecognition = function() {
+        if (voiceRecognition) {
+          try { voiceRecognition.stop(); } catch(e) {}
+          voiceRecognition = null;
+        }
+      };
     })();
   </script>
   <!--
