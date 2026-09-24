@@ -6,6 +6,8 @@ import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/quiz_overlay.dart';
 import '../widgets/daily_reward_modal.dart';
+import '../widgets/leaderboard_modal.dart';
+import '../widgets/ad_overlay.dart';
 
 class KuisView extends StatefulWidget {
   const KuisView({Key? key}) : super(key: key);
@@ -798,28 +800,45 @@ static bool _translationsRegistered = false;
                                         isUnlocked: isUnlocked,
                                         language: language,
                                       ),
-                                      // 3 Golden Stars for completed levels
+                                      // Candy Crush Style Dynamic Stars for completed levels
                                       if (isCompleted)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 3),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xff182232).withOpacity(0.8),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.5), width: 0.8),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: const [
-                                                Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 12),
-                                                SizedBox(width: 1),
-                                                Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 12),
-                                                SizedBox(width: 1),
-                                                Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 12),
-                                              ],
-                                            ),
-                                          ),
+                                        Builder(
+                                          builder: (context) {
+                                            final stars = appState.getStarsForLevel(id);
+                                            return Padding(
+                                              padding: const EdgeInsets.only(top: 3),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xff182232).withOpacity(0.9),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.5), width: 0.8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      stars >= 1 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                      color: stars >= 1 ? const Color(0xfff59e0b) : const Color(0xff475569),
+                                                      size: 12,
+                                                    ),
+                                                    const SizedBox(width: 1),
+                                                    Icon(
+                                                      stars >= 2 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                      color: stars >= 2 ? const Color(0xfff59e0b) : const Color(0xff475569),
+                                                      size: 13,
+                                                    ),
+                                                    const SizedBox(width: 1),
+                                                    Icon(
+                                                      stars >= 3 ? Icons.star_rounded : Icons.star_outline_rounded,
+                                                      color: stars >= 3 ? const Color(0xfff59e0b) : const Color(0xff475569),
+                                                      size: 12,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
                                         ),
                                     ],
                                   ),
@@ -1261,6 +1280,7 @@ IconData _getZoneIcon(dynamic zone) {
   }) {
     final bool isCompleted = appState.completedLevels.contains(levelId);
     final bool isClaimed = appState.isChestClaimed(levelId);
+
 
     final bool isReadyToClaim = isCompleted && !isClaimed;
 
@@ -1751,11 +1771,13 @@ IconData _getZoneIcon(dynamic zone) {
                                 const Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 16),
                                 const SizedBox(width: 5),
                                 Text(
-                                  AppTranslations.text(
-                                    language,
-                                    'kuis.xp_reward',
-                                    params: {'xp': '$xpReward'},
-                                  ),
+                                  isCompleted
+                                      ? "+${qCount * 3} XP (${language == 'en' ? 'Review' : 'Review'})"
+                                      : AppTranslations.text(
+                                          language,
+                                          'kuis.xp_reward',
+                                          params: {'xp': '$xpReward'},
+                                        ),
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 12,
@@ -1829,6 +1851,11 @@ IconData _getZoneIcon(dynamic zone) {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 onPressed: () {
+                                  if (appState.petir <= 0 && !appState.isPremium) {
+                                    AudioService.playWrong();
+                                    _showRefillLivesModal(context, appState);
+                                    return;
+                                  }
                                   AudioService.playConfirm();
                                   final qList = List<Map<String, dynamic>>.from(level['questions']);
                                   final quizTitle = _getLevelTitle(language, id, level['title']);
@@ -1838,7 +1865,9 @@ IconData _getZoneIcon(dynamic zone) {
                                   QuizOverlay.start(context, id, quizTitle, qList);
                                 },
                                 child: Text(
-                                  AppTranslations.text(language, 'kuis.start_quiz'),
+                                  isCompleted
+                                      ? (language == 'en' ? "REVIEW QUIZ" : "ULANG LATIHAN")
+                                      : AppTranslations.text(language, 'kuis.start_quiz'),
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 15,
@@ -1859,6 +1888,69 @@ IconData _getZoneIcon(dynamic zone) {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRefillLivesModal(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff0f172a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0xffef4444), width: 1.5),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.bolt_rounded, color: Color(0xffef4444), size: 64),
+            const SizedBox(height: 12),
+            const Text(
+              "PETIR ANDA HABIS!",
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xffef4444),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Nyawa petir Anda kosong. Klaim hadiah milestone XP, tunggu pemulihan otomatis, atau tonton iklan instan untuk memulai kuis!",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xff10b981), width: 1.5),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                AdOverlay.show(context, () {
+                  appState.refillOnePetir();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("1 Nyawa petir telah berhasil dipulihkan.")),
+                  );
+                });
+              },
+              child: const Text(
+                "🎬 TONTON IKLAN (+1 NYAWA)",
+                style: TextStyle(fontFamily: 'Outfit', color: Color(0xff10b981), fontWeight: FontWeight.w900),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("TUTUP", style: TextStyle(color: Color(0xff94a3b8), fontFamily: 'Outfit')),
+            ),
+          ],
+        ),
       ),
     );
   }

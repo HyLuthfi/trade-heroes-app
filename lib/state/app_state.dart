@@ -12,10 +12,11 @@ import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
   int _petir = 5;
-  int _xp = 0;
+  int _xp = 0; // Total XP Seumur Hidup (Tunggal & Permanen)
   int _dailyXp = 0;
   int _streak = 0;
   List<int> _completedLevels = [1, 2, 3];
+  Map<int, int> _levelStars = {1: 3, 2: 3, 3: 3}; // levelId -> stars (1, 2, or 3) Candy Crush style
   List<int> _readModules = [];
   List<Map<String, dynamic>> _favorites = []; // { 'levelId': int, 'qIndex': int, 'questionText': String }
   List<String> _unlockedBadges = [];
@@ -26,6 +27,12 @@ class AppState extends ChangeNotifier {
   bool _isLoggedIn = false;
   String _lastActiveDate = ""; // YYYY-MM-DD
   int? _petirLastUsedTime; // timestamp in ms
+
+  // XP Milestones Reward Track
+  int _streakShields = 0; // Streak protections
+  List<String> _unlockedAvatars = ["bull", "chart", "wallet"];
+  List<int> _claimedXpMilestones = []; // List of claimed milestone target XPs: [50, 100, 200, ...]
+  String _lastDailyGoalClaimDate = ""; // YYYY-MM-DD when daily target bonus was claimed
 
   String _userName = "Calon Trader";
   String _userEmail = "user@kursussaham.com";
@@ -53,9 +60,13 @@ class AppState extends ChangeNotifier {
   // Getters
   int get petir => _isPremium ? 999999 : _petir;
   int get xp => _xp;
+  int get totalXp => _xp;
   int get dailyXp => _dailyXp;
   int get streak => _streak;
   List<int> get completedLevels => _completedLevels;
+  Map<int, int> get levelStars => _levelStars;
+
+  int getStarsForLevel(int levelId) => _levelStars[levelId] ?? 0;
   List<int> get readModules => _readModules;
   List<Map<String, dynamic>> get favorites => _favorites;
   List<String> get unlockedBadges => _unlockedBadges;
@@ -78,6 +89,354 @@ class AppState extends ChangeNotifier {
   bool get bgmEnabled => _bgmEnabled;
   String get language => _language;
   String get bgmTrack => _bgmTrack;
+
+  // XP Milestones Reward Track Getters
+  int get streakShields => _streakShields;
+  List<String> get unlockedAvatars => _unlockedAvatars;
+  List<int> get claimedXpMilestones => _claimedXpMilestones;
+  String get lastDailyGoalClaimDate => _lastDailyGoalClaimDate;
+
+  bool get isDailyGoalReached => _dailyXp >= 50;
+  bool get canClaimDailyGoalBonus {
+    final todayStr = DateTime.now().toString().split(' ')[0];
+    return isDailyGoalReached && _lastDailyGoalClaimDate != todayStr;
+  }
+  bool get isDailyGoalClaimedToday {
+    final todayStr = DateTime.now().toString().split(' ')[0];
+    return _lastDailyGoalClaimDate == todayStr;
+  }
+
+  bool claimDailyGoalBonus(BuildContext context) {
+    if (!canClaimDailyGoalBonus) return false;
+    final todayStr = DateTime.now().toString().split(' ')[0];
+    _lastDailyGoalClaimDate = todayStr;
+    // Hadiah bonus target harian: +15 Bonus XP & +1 Nyawa Petir
+    _xp += 15;
+    if (!_isPremium) {
+      _petir = (_petir + 1).clamp(0, 5);
+      if (_petir >= 5) _petirLastUsedTime = null;
+    }
+    AudioService.playReward();
+    _saveState();
+    notifyListeners();
+    _checkAndUnlockBadges(context);
+    return true;
+  }
+
+  // Definisi Jalur Hadiah Milestone XP (Tunggal & Gratis)
+  static const List<Map<String, dynamic>> xpMilestoneRewards = [
+    {
+      'targetXp': 50,
+      'title': '+2 Nyawa Petir',
+      'desc': 'Bantuan petir instan untuk terus belajar.',
+      'type': 'petir',
+      'value': 2,
+      'icon': Icons.bolt_rounded,
+      'color': Color(0xff10b981),
+    },
+    {
+      'targetXp': 100,
+      'title': 'Pelindung Streak',
+      'desc': 'Proteksi 1 hari agar streak belajarmu tidak hangus.',
+      'type': 'shield',
+      'value': 1,
+      'icon': Icons.security_rounded,
+      'color': Color(0xff3b82f6),
+    },
+    {
+      'targetXp': 200,
+      'title': 'Avatar Breakout Trader',
+      'desc': 'Buka avatar eksklusif momentum penembusan harga.',
+      'type': 'avatar',
+      'value': 'rocket',
+      'icon': Icons.rocket_launch_rounded,
+      'color': Color(0xff38bdf8),
+    },
+    {
+      'targetXp': 350,
+      'title': 'Full Refill 5 Petir',
+      'desc': 'Isi penuh seluruh energi petir seketika.',
+      'type': 'full_petir',
+      'value': 5,
+      'icon': Icons.flash_on_rounded,
+      'color': Color(0xfff59e0b),
+    },
+    {
+      'targetXp': 500,
+      'title': '+2 Pelindung Streak',
+      'desc': 'Simpanan proteksi ekstra untuk menjaga konsistensi.',
+      'type': 'shield',
+      'value': 2,
+      'icon': Icons.verified_user_rounded,
+      'color': Color(0xff14b8a6),
+    },
+    {
+      'targetXp': 750,
+      'title': 'Avatar Scalper Sejati',
+      'desc': 'Buka avatar eksklusif pembaca volatilitas cepat.',
+      'type': 'avatar',
+      'value': 'fire',
+      'icon': Icons.local_fire_department_rounded,
+      'color': Color(0xffef4444),
+    },
+    {
+      'targetXp': 1000,
+      'title': 'Avatar Market Legend',
+      'desc': 'Buka avatar legendaris bintang pasar modal.',
+      'type': 'avatar',
+      'value': 'star',
+      'icon': Icons.stars_rounded,
+      'color': Color(0xfffbbf24),
+    },
+    {
+      'targetXp': 1500,
+      'title': 'Avatar Grand Master',
+      'desc': 'Buka avatar kehormatan tertinggi akademi.',
+      'type': 'avatar',
+      'value': 'academy',
+      'icon': Icons.school_rounded,
+      'color': Color(0xffec4899),
+    },
+  ];
+
+  bool isMilestoneClaimed(int targetXp) => _claimedXpMilestones.contains(targetXp);
+  bool canClaimMilestone(int targetXp) => _xp >= targetXp && !isMilestoneClaimed(targetXp);
+
+  int get unclaimedMilestonesCount {
+    int count = 0;
+    for (final m in xpMilestoneRewards) {
+      if (canClaimMilestone(m['targetXp'] as int)) count++;
+    }
+    return count;
+  }
+
+  bool claimXpMilestone(int targetXp) {
+    if (!canClaimMilestone(targetXp)) return false;
+    final milestone = xpMilestoneRewards.firstWhere((m) => m['targetXp'] == targetXp);
+    final type = milestone['type'] as String;
+
+    if (type == 'petir') {
+      final add = milestone['value'] as int;
+      _petir = (_petir + add).clamp(0, 5);
+      if (_petir >= 5) _petirLastUsedTime = null;
+    } else if (type == 'full_petir') {
+      _petir = 5;
+      _petirLastUsedTime = null;
+    } else if (type == 'shield') {
+      final add = milestone['value'] as int;
+      _streakShields = (_streakShields + add).clamp(0, 5);
+    } else if (type == 'avatar') {
+      final avaId = milestone['value'] as String;
+      if (!_unlockedAvatars.contains(avaId)) {
+        _unlockedAvatars.add(avaId);
+      }
+    }
+
+    _claimedXpMilestones.add(targetXp);
+    AudioService.playReward();
+    _saveState();
+    notifyListeners();
+    return true;
+  }
+
+  bool isAvatarUnlocked(String id) {
+    if (id == 'vip') return _isPremium;
+    return _unlockedAvatars.contains(id);
+  }
+
+  // Leaderboard State (Stage 3)
+  List<Map<String, dynamic>> _leaderboard = [];
+  bool _isLoadingLeaderboard = false;
+
+  List<Map<String, dynamic>> get leaderboard => _leaderboard;
+  bool get isLoadingLeaderboard => _isLoadingLeaderboard;
+
+  int get userLeaderboardRank {
+    if (_leaderboard.isEmpty) return 1;
+    final myId = _userId;
+    for (int i = 0; i < _leaderboard.length; i++) {
+      final item = _leaderboard[i];
+      if ((myId != null && item['id'] == myId) || item['email'] == _userEmail || item['isCurrentUser'] == true) {
+        return i + 1;
+      }
+    }
+    // If not found in top list, estimate based on XP
+    for (int i = 0; i < _leaderboard.length; i++) {
+      final itemXp = (_leaderboard[i]['xp'] as num?)?.toInt() ?? 0;
+      if (_xp >= itemXp) return i + 1;
+    }
+    return _leaderboard.length + 1;
+  }
+
+  Future<void> loadLeaderboard({bool force = false}) async {
+    if (!force && _leaderboard.isNotEmpty) return;
+    _isLoadingLeaderboard = true;
+    notifyListeners();
+
+    try {
+      final cloudProfiles = await SupabaseService.fetchLeaderboard(limit: 20);
+      final List<Map<String, dynamic>> list = [];
+
+      final communityTraders = [
+        {'id': 'c1', 'name': 'Pratama Trader', 'email': 'pratama@bei.co', 'avatar': 'chart', 'xp': 1850, 'streak': 14, 'role': 'user'},
+        {'id': 'c2', 'name': 'Siti Khadijah', 'email': 'siti@invest.id', 'avatar': 'star', 'xp': 1420, 'streak': 9, 'role': 'user'},
+        {'id': 'c3', 'name': 'Budi Santoso', 'email': 'budi@trader.com', 'avatar': 'bull', 'xp': 960, 'streak': 7, 'role': 'user'},
+        {'id': 'c4', 'name': 'Rian Perkasa', 'email': 'rian@scalp.id', 'avatar': 'fire', 'xp': 680, 'streak': 5, 'role': 'user'},
+        {'id': 'c5', 'name': 'Dewi Lestari', 'email': 'dewi@cuan.com', 'avatar': 'shield', 'xp': 420, 'streak': 4, 'role': 'user'},
+        {'id': 'c6', 'name': 'Arif Wibowo', 'email': 'arif@sahambei.id', 'avatar': 'rocket', 'xp': 230, 'streak': 3, 'role': 'user'},
+        {'id': 'c7', 'name': 'Nadia Putri', 'email': 'nadia@investor.id', 'avatar': 'academy', 'xp': 110, 'streak': 2, 'role': 'user'},
+      ];
+
+      // Add real profiles
+      final Set<String> addedEmails = {};
+      for (final p in cloudProfiles) {
+        final email = p['email']?.toString() ?? '';
+        if (email.isNotEmpty) addedEmails.add(email);
+        final bool isMe = (p['id'] == _userId) || (email == _userEmail);
+        list.add({
+          'id': p['id'] ?? 'user',
+          'name': isMe ? _userName : (p['name'] ?? 'Trader'),
+          'email': email,
+          'avatar': isMe ? _userAvatar : (p['avatar'] ?? 'bull'),
+          'xp': isMe ? _xp : ((p['xp'] as num?)?.toInt() ?? 0),
+          'streak': isMe ? _streak : ((p['streak'] as num?)?.toInt() ?? 1),
+          'role': p['role'] ?? 'user',
+          'isCurrentUser': isMe,
+        });
+      }
+
+      // If current user is not in the list yet, insert current user
+      if (!list.any((item) => item['isCurrentUser'] == true)) {
+        list.add({
+          'id': _userId ?? 'me',
+          'name': _userName,
+          'email': _userEmail,
+          'avatar': _userAvatar,
+          'xp': _xp,
+          'streak': _streak,
+          'role': _role,
+          'isCurrentUser': true,
+        });
+      }
+
+      // Blend community mock traders if total real count < 8
+      for (final mock in communityTraders) {
+        if (!addedEmails.contains(mock['email']) && list.length < 15) {
+          list.add(Map<String, dynamic>.from(mock));
+        }
+      }
+
+      // Sort strictly by XP descending
+      list.sort((a, b) {
+        final xpA = (a['xp'] as num?)?.toInt() ?? 0;
+        final xpB = (b['xp'] as num?)?.toInt() ?? 0;
+        return xpB.compareTo(xpA);
+      });
+
+      _leaderboard = list;
+    } catch (e) {
+      debugPrint("Error loading leaderboard: $e");
+    } finally {
+      _isLoadingLeaderboard = false;
+      notifyListeners();
+    }
+  }
+
+  // Trader Rank Progression (Tier I - V based on Total XP)
+  static const List<Map<String, dynamic>> traderRanks = [
+    {
+      'tier': 1,
+      'title': 'Investor Pemula',
+      'roman': 'I',
+      'minXp': 0,
+      'maxXp': 150,
+      'color': Color(0xff94a3b8),
+      'icon': Icons.school_rounded,
+      'desc': 'Memulai langkah pertama memahami fondasi pasar modal & saham.',
+      'perk': 'Akses 10 level dasar & 5 Nyawa Petir',
+    },
+    {
+      'tier': 2,
+      'title': 'Trader Ritel Aktif',
+      'roman': 'II',
+      'minXp': 150,
+      'maxXp': 450,
+      'color': Color(0xfff59e0b),
+      'icon': Icons.trending_up_rounded,
+      'desc': 'Mulai aktif menganalisis pergerakan harga dan tren pasar.',
+      'perk': 'Simpan materi favorit tanpa batas & badge perunggu',
+    },
+    {
+      'tier': 3,
+      'title': 'Analis Saham Muda',
+      'roman': 'III',
+      'minXp': 450,
+      'maxXp': 900,
+      'color': Color(0xff38bdf8),
+      'icon': Icons.query_stats_rounded,
+      'desc': 'Mampu membaca chart candlestick dan level Support/Resistance.',
+      'perk': 'Akses analisis teknikal mendalam & badge perak',
+    },
+    {
+      'tier': 4,
+      'title': 'Swing Specialist',
+      'roman': 'IV',
+      'minXp': 900,
+      'maxXp': 1600,
+      'color': Color(0xff10b981),
+      'icon': Icons.psychology_rounded,
+      'desc': 'Menguasai Smart Money Concepts (SMC) & manajemen risiko.',
+      'perk': 'Penguasaan instrumen institusi & badge emas',
+    },
+    {
+      'tier': 5,
+      'title': 'Market Maestro',
+      'roman': 'V',
+      'minXp': 1600,
+      'maxXp': 2500,
+      'color': Color(0xffa855f7),
+      'icon': Icons.workspace_premium_rounded,
+      'desc': 'Trader berpengetahuan komprehensif, disiplin dan bermental baja.',
+      'perk': 'Gelar prestise tertinggi & frame profil ungu',
+    },
+  ];
+
+  Map<String, dynamic> get currentRank {
+    for (final r in traderRanks) {
+      if (_xp < (r['maxXp'] as int)) {
+        return r;
+      }
+    }
+    return traderRanks.last;
+  }
+
+  Map<String, dynamic>? get nextRank {
+    final cur = currentRank;
+    final curTier = cur['tier'] as int;
+    if (curTier < traderRanks.length) {
+      return traderRanks[curTier];
+    }
+    return null;
+  }
+
+  double get rankProgress {
+    final cur = currentRank;
+    final min = cur['minXp'] as int;
+    final max = cur['maxXp'] as int;
+    if (_xp >= max) {
+      if (cur['tier'] == traderRanks.length) return 1.0;
+    }
+    final range = max - min;
+    if (range <= 0) return 1.0;
+    final inRange = (_xp - min).clamp(0, range);
+    return inRange / range;
+  }
+
+  int get xpToNextRank {
+    final cur = currentRank;
+    final max = cur['maxXp'] as int;
+    return (max - _xp).clamp(0, max);
+  }
 
   // Paper Trading Getters
   double get virtualBalance => _virtualBalance;
@@ -111,34 +470,49 @@ class AppState extends ChangeNotifier {
 
   void _listenAuthChanges() {
     try {
-      _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen((data) async {
-        final session = data.session;
-        final event = data.event;
-        if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
-          if (session?.user != null) {
-            _isLoggedIn = true;
-            _userId = session!.user.id;
-            _userEmail = session.user.email ?? _userEmail;
-            final metaName = session.user.userMetadata?['name'] as String?;
-            if (metaName != null && metaName.isNotEmpty) {
-              _userName = metaName;
+      _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen(
+        (data) async {
+          final session = data.session;
+          final event = data.event;
+          if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+            if (session?.user != null) {
+              _isLoggedIn = true;
+              _userId = session!.user.id;
+              _userEmail = session.user.email ?? _userEmail;
+              final metaName = session.user.userMetadata?['name'] as String?;
+              if (metaName != null && metaName.isNotEmpty) {
+                _userName = metaName;
+              }
+              try {
+                final cloudProfile = await SupabaseService.fetchProfile(_userId!);
+                if (cloudProfile != null) {
+                  _applyProfileData(cloudProfile);
+                }
+              } catch (e) {
+                debugPrint("Profile fetch error in auth change: $e");
+              }
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                await _saveToLocalCache(prefs);
+              } catch (e) {
+                debugPrint("Cache save error in auth change: $e");
+              }
+              notifyListeners();
             }
-            final cloudProfile = await SupabaseService.fetchProfile(_userId!);
-            if (cloudProfile != null) {
-              _applyProfileData(cloudProfile);
-            }
-            final prefs = await SharedPreferences.getInstance();
-            await _saveToLocalCache(prefs);
+          } else if (event == AuthChangeEvent.signedOut) {
+            _isLoggedIn = false;
+            _userId = null;
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('is_logged_in', false);
+            } catch (_) {}
             notifyListeners();
           }
-        } else if (event == AuthChangeEvent.signedOut) {
-          _isLoggedIn = false;
-          _userId = null;
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('is_logged_in', false);
-          notifyListeners();
-        }
-      });
+        },
+        onError: (err, stack) {
+          debugPrint("Supabase onAuthStateChange stream error caught safely: $err");
+        },
+      );
     } catch (e) {
       debugPrint("Auth subscription error: $e");
     }
@@ -229,6 +603,13 @@ class AppState extends ChangeNotifier {
     if (_completedLevels.isEmpty) {
       _completedLevels = [1, 2, 3];
     }
+    if (json['levelStars'] != null && json['levelStars'] is Map) {
+      _levelStars = (json['levelStars'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    } else {
+      _levelStars = {1: 3, 2: 3, 3: 3};
+    }
     _readModules = List<int>.from(json['readModules'] ?? []);
     _favorites = List<Map<String, dynamic>>.from(json['favorites'] ?? []);
     _unlockedBadges = List<String>.from(json['unlockedBadges'] ?? []);
@@ -239,6 +620,10 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = json['isLoggedIn'] ?? false;
     _lastActiveDate = json['lastActiveDate'] ?? "";
     _petirLastUsedTime = json['petirLastUsedTime'];
+    _streakShields = json['streakShields'] ?? 0;
+    _unlockedAvatars = List<String>.from(json['unlockedAvatars'] ?? ['bull', 'chart', 'wallet']);
+    _claimedXpMilestones = List<int>.from(json['claimedXpMilestones'] ?? []);
+    _lastDailyGoalClaimDate = json['lastDailyGoalClaimDate'] ?? "";
     _userName = json['userName'] ?? "Calon Trader";
     _userEmail = json['userEmail'] ?? "user@kursussaham.com";
     _userAvatar = json['userAvatar'] ?? "bull";
@@ -281,6 +666,16 @@ class AppState extends ChangeNotifier {
     if (data['daily_xp'] != null) _dailyXp = data['daily_xp'];
     if (data['streak'] != null) _streak = data['streak'];
     if (data['is_premium'] != null) _isPremium = data['is_premium'];
+    if (data['streak_shields'] != null) _streakShields = data['streak_shields'];
+    if (data['unlocked_avatars'] != null && data['unlocked_avatars'] is List) {
+      _unlockedAvatars = (data['unlocked_avatars'] as List).map((x) => x.toString()).toList();
+    }
+    if (data['claimed_xp_milestones'] != null && data['claimed_xp_milestones'] is List) {
+      _claimedXpMilestones = (data['claimed_xp_milestones'] as List).map((x) => (x as num).toInt()).toList();
+    }
+    if (data['last_daily_goal_claim_date'] != null) {
+      _lastDailyGoalClaimDate = data['last_daily_goal_claim_date'];
+    }
     if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
     if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
     if (data['role'] != null) _role = data['role'];
@@ -302,20 +697,25 @@ class AppState extends ChangeNotifier {
     }
 
     if (data['completed_levels'] != null && data['completed_levels'] is List) {
-      _completedLevels = List<int>.from(data['completed_levels']);
+      _completedLevels = (data['completed_levels'] as List).map((x) => (x as num).toInt()).toList();
       if (_completedLevels.isEmpty) _completedLevels = [1, 2, 3];
     }
+    if (data['level_stars'] != null && data['level_stars'] is Map) {
+      _levelStars = (data['level_stars'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    }
     if (data['read_modules'] != null && data['read_modules'] is List) {
-      _readModules = List<int>.from(data['read_modules']);
+      _readModules = (data['read_modules'] as List).map((x) => (x as num).toInt()).toList();
     }
     if (data['unlocked_badges'] != null && data['unlocked_badges'] is List) {
-      _unlockedBadges = List<String>.from(data['unlocked_badges']);
+      _unlockedBadges = (data['unlocked_badges'] as List).map((x) => x.toString()).toList();
     }
     if (data['claimed_chests'] != null && data['claimed_chests'] is List) {
-      _claimedChests = List<int>.from(data['claimed_chests']);
+      _claimedChests = (data['claimed_chests'] as List).map((x) => (x as num).toInt()).toList();
     }
     if (data['claimed_daily_days'] != null && data['claimed_daily_days'] is List) {
-      _claimedDailyDays = List<int>.from(data['claimed_daily_days']);
+      _claimedDailyDays = (data['claimed_daily_days'] as List).map((x) => (x as num).toInt()).toList();
     }
     if (data['favorites'] != null) {
       if (data['favorites'] is List) {
@@ -342,12 +742,17 @@ class AppState extends ChangeNotifier {
       'dailyXp': _dailyXp,
       'streak': _streak,
       'completedLevels': _completedLevels,
+      'levelStars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
       'readModules': _readModules,
       'favorites': _favorites,
       'unlockedBadges': _unlockedBadges,
       'claimedChests': _claimedChests,
       'claimedDailyDays': _claimedDailyDays,
       'lastDailyClaimDate': _lastDailyClaimDate,
+      'streakShields': _streakShields,
+      'unlockedAvatars': _unlockedAvatars,
+      'claimedXpMilestones': _claimedXpMilestones,
+      'lastDailyGoalClaimDate': _lastDailyGoalClaimDate,
       'isPremium': _isPremium,
       'isLoggedIn': _isLoggedIn,
       'lastActiveDate': _lastActiveDate,
@@ -390,12 +795,17 @@ class AppState extends ChangeNotifier {
       'daily_xp': _dailyXp,
       'streak': _streak,
       'completed_levels': _completedLevels,
+      'level_stars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
       'read_modules': _readModules,
       'favorites': _favorites,
       'unlocked_badges': _unlockedBadges,
       'claimed_chests': _claimedChests,
       'claimed_daily_days': _claimedDailyDays,
       'last_daily_claim_date': _lastDailyClaimDate,
+      'streak_shields': _streakShields,
+      'unlocked_avatars': _unlockedAvatars,
+      'claimed_xp_milestones': _claimedXpMilestones,
+      'last_daily_goal_claim_date': _lastDailyGoalClaimDate,
       'is_premium': _isPremium,
       'petir_last_used_time': _petirLastUsedTime,
       'virtual_balance': _virtualBalance,
@@ -837,7 +1247,12 @@ class AppState extends ChangeNotifier {
         if (diffDays == 1) {
           _streak += 1;
         } else if (diffDays > 1) {
-          _streak = 1;
+          if (_streakShields > 0) {
+            _streakShields -= 1;
+            // Streak diselamatkan oleh Pelindung Streak!
+          } else {
+            _streak = 1;
+          }
         }
       } else {
         _streak = 1;
@@ -905,7 +1320,14 @@ class AppState extends ChangeNotifier {
   }
 
   void _startRegenTimer() {
+    int tickCount = 0;
     _regenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      tickCount++;
+      // Auto-check midnight rollover every 30 seconds
+      if (tickCount % 30 == 0) {
+        _checkDailyReset();
+      }
+
       if (_isPremium || _petir >= 5) {
         _petirLastUsedTime = null;
         if (DateTime.now().second % 30 == 0) {
@@ -988,10 +1410,18 @@ class AppState extends ChangeNotifier {
 
   // Add XP and notify listeners
   void addXp(int amount, BuildContext context) {
+    final oldTier = currentRank['tier'] as int;
     _xp += amount;
     _dailyXp += amount;
     _saveState();
     notifyListeners();
+
+    // Check Level Up / Tier Up celebration
+    final newTier = currentRank['tier'] as int;
+    if (newTier > oldTier) {
+      _triggerTierUpModal(currentRank, context);
+    }
+
     _checkAndUnlockBadges(context);
   }
 
@@ -1043,13 +1473,17 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Level completed
-  void completeLevel(int levelId) {
+  // Level completed with Candy Crush style Stars (1, 2, or 3)
+  void completeLevel(int levelId, {int stars = 3}) {
     if (!_completedLevels.contains(levelId)) {
       _completedLevels.add(levelId);
-      _saveState();
-      notifyListeners();
     }
+    final curStars = _levelStars[levelId] ?? 0;
+    if (stars > curStars) {
+      _levelStars[levelId] = stars;
+    }
+    _saveState();
+    notifyListeners();
   }
 
   // Award Anti Boncos if no mistakes
@@ -1081,6 +1515,19 @@ class AppState extends ChangeNotifier {
     if (_completedLevels.length == 10 && !_unlockedBadges.contains("pakar_saham")) {
       newlyUnlocked.add("pakar_saham");
     }
+    // XP Milestones
+    if (_xp >= 150 && !_unlockedBadges.contains("trader_tier_2")) {
+      newlyUnlocked.add("trader_tier_2");
+    }
+    if (_xp >= 450 && !_unlockedBadges.contains("trader_tier_3")) {
+      newlyUnlocked.add("trader_tier_3");
+    }
+    if (_xp >= 900 && !_unlockedBadges.contains("trader_tier_4")) {
+      newlyUnlocked.add("trader_tier_4");
+    }
+    if (_xp >= 1600 && !_unlockedBadges.contains("trader_tier_5")) {
+      newlyUnlocked.add("trader_tier_5");
+    }
 
     if (newlyUnlocked.isNotEmpty) {
       for (var badgeId in newlyUnlocked) {
@@ -1090,6 +1537,131 @@ class AppState extends ChangeNotifier {
       _saveState();
       notifyListeners();
     }
+  }
+
+  void _triggerTierUpModal(Map<String, dynamic> rankData, BuildContext context) {
+    AudioService.playReward();
+    final Color rColor = rankData['color'] as Color;
+    final IconData rIcon = rankData['icon'] as IconData;
+    final String rTitle = rankData['title'] as String;
+    final String rRoman = rankData['roman'] as String;
+    final String rDesc = rankData['desc'] as String;
+    final String rPerk = rankData['perk'] as String;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff0f172a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: rColor, width: 2),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: rColor, width: 3.5),
+                color: const Color(0xff1e293b),
+                boxShadow: [
+                  BoxShadow(
+                    color: rColor.withOpacity(0.55),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Icon(rIcon, color: rColor, size: 46),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: rColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: rColor.withOpacity(0.5)),
+              ),
+              child: Text(
+                "NAIK PANGKAT • TIER $rRoman",
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: rColor,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              rTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              rDesc,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xff161f30),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.08)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.stars_rounded, color: Color(0xfffbbf24), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Keistimewaan Baru Terbuka:",
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                        ),
+                        Text(
+                          rPerk,
+                          style: const TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: rColor,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 4,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                "AMBIL GELAR SAYA 👑",
+                style: TextStyle(fontFamily: 'Outfit', color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _triggerBadgeModal(String badgeId, BuildContext context) {
@@ -1163,6 +1735,10 @@ class AppState extends ChangeNotifier {
       case "kolektor_ilmu": return "Kolektor Ilmu";
       case "premium_member": return "Premium Member";
       case "pakar_saham": return "Pakar Saham";
+      case "trader_tier_2": return "Trader Ritel Aktif";
+      case "trader_tier_3": return "Analis Saham Muda";
+      case "trader_tier_4": return "Swing Specialist";
+      case "trader_tier_5": return "Market Maestro";
       default: return "";
     }
   }
@@ -1175,6 +1751,10 @@ class AppState extends ChangeNotifier {
       case "kolektor_ilmu": return "📚";
       case "premium_member": return "👑";
       case "pakar_saham": return "🎓";
+      case "trader_tier_2": return "📈";
+      case "trader_tier_3": return "📊";
+      case "trader_tier_4": return "🧠";
+      case "trader_tier_5": return "💎";
       default: return "🏆";
     }
   }
@@ -1187,6 +1767,10 @@ class AppState extends ChangeNotifier {
       case "kolektor_ilmu": return "Menyimpan minimal 3 soal ke daftar favorit.";
       case "premium_member": return "Upgrade akun Anda ke Premium Plan.";
       case "pakar_saham": return "Menyelesaikan seluruh 10 level Trade Heroes.";
+      case "trader_tier_2": return "Mencapai 150 XP dan naik pangkat ke Tier II.";
+      case "trader_tier_3": return "Mencapai 450 XP dan naik pangkat ke Tier III.";
+      case "trader_tier_4": return "Mencapai 900 XP dan naik pangkat ke Tier IV.";
+      case "trader_tier_5": return "Mencapai 1.600 XP dan meraih gelar tertinggi Tier V!";
       default: return "";
     }
   }

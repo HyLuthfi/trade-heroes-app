@@ -130,12 +130,12 @@ class MarketDataService {
     'ADRO', 'ANTM', 'INDF', 'KLBF', 'EMTK',
   ];
 
-  /// Interval/range mapping for timeframe selector
+  /// Interval/range mapping for timeframe selector (rich, dense candles)
   static Map<String, Map<String, String>> get timeframeMap => {
-    '1D': {'interval': '5m', 'range': '1d'},
+    '1D': {'interval': '2m', 'range': '1d'},
     '1W': {'interval': '15m', 'range': '5d'},
-    '1M': {'interval': '1d', 'range': '1mo'},
-    '3M': {'interval': '1d', 'range': '3mo'},
-    '1Y': {'interval': '1wk', 'range': '1y'},
+    '1M': {'interval': '30m', 'range': '1mo'},
+    '3M': {'interval': '1d', 'range': '6mo'},
+    '1Y': {'interval': '1d', 'range': '1y'},
   };
 }

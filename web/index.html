@@ -31,6 +31,7 @@
 
   <title>Trade Heroes — Belajar Investasi & Trading Saham</title>
   <link rel="manifest" href="manifest.json">
+  <script src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body style="background-color: #0b0f19; margin: 0; padding: 0;">
   <script>
@@ -39,6 +40,13 @@
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for (var i = 0; i < registrations.length; i++) {
           registrations[i].unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (var i = 0; i < names.length; i++) {
+          caches.delete(names[i]);
         }
       });
     }
@@ -269,6 +277,269 @@
       window.setTradeAudioMuted = globalThis.setTradeAudioMuted = window['window.setTradeAudioMuted'] = setAudioMutedImpl;
       window.setTradeAudioTheme = globalThis.setTradeAudioTheme = window['window.setTradeAudioTheme'] = setAudioThemeImpl;
       window.setTradeBgmTrack = globalThis.setTradeBgmTrack = window['window.setTradeBgmTrack'] = setBgmTrackImpl;
+
+      // === LIVE VOICE & GEMINI AUDIO STREAMING ENGINE ===
+      let activeVoiceAudio = null;
+      let voiceRecognition = null;
+      let liveVoiceAudioQueue = [];
+      let isPlayingVoiceQueue = false;
+      let activeVoiceStreamAbort = null;
+      let isVoiceStreamDone = false;
+      let onVoiceStreamAllEndedCb = null;
+
+      function dataUriToBlob(dataUri) {
+        try {
+          const parts = dataUri.split(',');
+          const mimeMatch = parts[0].match(/:(.*?);/);
+          const mime = mimeMatch ? mimeMatch[1] : 'audio/wav';
+          const binary = atob(parts[1]);
+          const len = binary.length;
+          const u8arr = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            u8arr[i] = binary.charCodeAt(i);
+          }
+          return new Blob([u8arr], { type: mime });
+        } catch(e) {
+          console.warn('[LiveVoice] dataUriToBlob failed:', e);
+          return null;
+        }
+      }
+
+      function playNextVoiceQueueChunk() {
+        if (liveVoiceAudioQueue.length === 0) {
+          isPlayingVoiceQueue = false;
+          activeVoiceAudio = null;
+          if (isVoiceStreamDone && typeof onVoiceStreamAllEndedCb === 'function') {
+            const cb = onVoiceStreamAllEndedCb;
+            onVoiceStreamAllEndedCb = null;
+            try { cb(); } catch(e) { console.warn("[LiveVoice] allEnded cb err:", e); }
+          }
+          return;
+        }
+
+        isPlayingVoiceQueue = true;
+        const nextUri = liveVoiceAudioQueue.shift();
+
+        let playUrl = nextUri;
+        const blob = dataUriToBlob(nextUri);
+        if (blob) {
+          playUrl = URL.createObjectURL(blob);
+        }
+
+        activeVoiceAudio = new Audio(playUrl);
+
+        activeVoiceAudio.onended = function() {
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+          playNextVoiceQueueChunk();
+        };
+
+        activeVoiceAudio.onerror = function(err) {
+          console.warn('[LiveVoice] chunk audio error:', err);
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+          playNextVoiceQueueChunk();
+        };
+
+        const playPromise = activeVoiceAudio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function(e) {
+            console.warn('[LiveVoice] chunk play error:', e);
+            if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+            playNextVoiceQueueChunk();
+          });
+        }
+      }
+
+      window.enqueueLiveVoiceAudio = globalThis.enqueueLiveVoiceAudio = function(dataUri, onStarted, onAllEnded) {
+        if (typeof onAllEnded === 'function') {
+          onVoiceStreamAllEndedCb = onAllEnded;
+        }
+        liveVoiceAudioQueue.push(dataUri);
+        if (!isPlayingVoiceQueue) {
+          if (typeof onStarted === 'function') {
+            try { onStarted(); } catch(e) { console.warn("[LiveVoice] onStarted err:", e); }
+          }
+          playNextVoiceQueueChunk();
+        }
+      };
+
+      window.playVoiceAudioUri = globalThis.playVoiceAudioUri = function(dataUri, onEnded) {
+        window.stopVoiceAudio();
+        let playUrl = dataUri;
+        const blob = dataUriToBlob(dataUri);
+        if (blob) playUrl = URL.createObjectURL(blob);
+
+        activeVoiceAudio = new Audio(playUrl);
+        activeVoiceAudio.onended = function() {
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+          if (typeof onEnded === 'function') onEnded();
+        };
+        activeVoiceAudio.onerror = function(err) {
+          console.warn('[LiveVoice] audio error:', err);
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+          if (typeof onEnded === 'function') onEnded();
+        };
+        return activeVoiceAudio.play().catch(function(e) {
+          console.warn('[LiveVoice] play blocked/rejected:', e);
+          if (playUrl.startsWith('blob:')) URL.revokeObjectURL(playUrl);
+          if (typeof onEnded === 'function') onEnded();
+        });
+      };
+
+      window.stopVoiceAudio = globalThis.stopVoiceAudio = function() {
+        if (activeVoiceStreamAbort) {
+          try { activeVoiceStreamAbort.abort(); } catch(e) {}
+          activeVoiceStreamAbort = null;
+        }
+        liveVoiceAudioQueue = [];
+        isPlayingVoiceQueue = false;
+        isVoiceStreamDone = false;
+        onVoiceStreamAllEndedCb = null;
+        if (activeVoiceAudio) {
+          try {
+            activeVoiceAudio.pause();
+            activeVoiceAudio.currentTime = 0;
+          } catch(e) {}
+          activeVoiceAudio = null;
+        }
+      };
+
+      window.startLiveVoiceStream = globalThis.startLiveVoiceStream = function(payloadJson, onTextDelta, onFirstAudio, onAllDone, onError) {
+        window.stopVoiceAudio();
+
+        activeVoiceStreamAbort = new AbortController();
+        isVoiceStreamDone = false;
+        onVoiceStreamAllEndedCb = onAllDone;
+
+        fetch('/api/ai/live-stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payloadJson,
+          signal: activeVoiceStreamAbort.signal
+        }).then(response => {
+          if (!response.ok) {
+            throw new Error('HTTP error ' + response.status);
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+
+          function pump() {
+            reader.read().then(({ done, value }) => {
+              if (done) {
+                isVoiceStreamDone = true;
+                if (!isPlayingVoiceQueue && liveVoiceAudioQueue.length === 0) {
+                  if (typeof onVoiceStreamAllEndedCb === 'function') {
+                    const cb = onVoiceStreamAllEndedCb;
+                    onVoiceStreamAllEndedCb = null;
+                    try { cb(); } catch(e) {}
+                  }
+                }
+                return;
+              }
+
+              buffer += decoder.decode(value, { stream: true });
+              const blocks = buffer.split('\n\n');
+              buffer = blocks.pop(); // incomplete remainder
+
+              for (const block of blocks) {
+                if (!block.trim()) continue;
+                let eventName = '';
+                let dataStr = '';
+                for (const line of block.split('\n')) {
+                  if (line.startsWith('event: ')) {
+                    eventName = line.substring(7).trim();
+                  } else if (line.startsWith('data: ')) {
+                    dataStr = line.substring(6).trim();
+                  }
+                }
+
+                if (dataStr) {
+                  try {
+                    const parsed = JSON.parse(dataStr);
+                    if (eventName === 'text' && typeof onTextDelta === 'function') {
+                      try { onTextDelta(parsed.delta || '', parsed.accumulated || ''); } catch(e) {}
+                    } else if (eventName === 'audio' && parsed.audio) {
+                      window.enqueueLiveVoiceAudio(parsed.audio, onFirstAudio, onAllDone);
+                    } else if (eventName === 'done') {
+                      isVoiceStreamDone = true;
+                      if (!isPlayingVoiceQueue && liveVoiceAudioQueue.length === 0) {
+                        if (typeof onVoiceStreamAllEndedCb === 'function') {
+                          const cb = onVoiceStreamAllEndedCb;
+                          onVoiceStreamAllEndedCb = null;
+                          try { cb(); } catch(e) {}
+                        }
+                      }
+                    } else if (eventName === 'error' && typeof onError === 'function') {
+                      try { onError(parsed.error || 'Stream error'); } catch(e) {}
+                    }
+                  } catch(e) {}
+                }
+              }
+
+              pump();
+            }).catch(err => {
+              if (err.name === 'AbortError') return;
+              if (typeof onError === 'function') onError(err.toString());
+            });
+          }
+
+          pump();
+        }).catch(err => {
+          if (err.name === 'AbortError') return;
+          if (typeof onError === 'function') onError(err.toString());
+        });
+      };
+
+      window.startLiveSpeechRecognition = globalThis.startLiveSpeechRecognition = function(lang, onTranscript, onStateChange, onError) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          if (typeof onError === 'function') onError('Browser tidak mendukung Speech Recognition.');
+          return false;
+        }
+        if (voiceRecognition) {
+          try { voiceRecognition.abort(); } catch(e) {}
+        }
+
+        voiceRecognition = new SpeechRecognition();
+        voiceRecognition.lang = lang || 'id-ID';
+        voiceRecognition.continuous = false;
+        voiceRecognition.interimResults = false;
+        voiceRecognition.maxAlternatives = 1;
+
+        voiceRecognition.onstart = function() {
+          if (typeof onStateChange === 'function') onStateChange('listening');
+        };
+
+        voiceRecognition.onresult = function(event) {
+          if (event.results && event.results.length > 0) {
+            const text = event.results[0][0].transcript;
+            if (typeof onTranscript === 'function') onTranscript(text);
+          }
+        };
+
+        voiceRecognition.onerror = function(event) {
+          if (typeof onError === 'function') onError(event.error || 'Speech error');
+        };
+
+        voiceRecognition.onend = function() {
+          if (typeof onStateChange === 'function') onStateChange('idle');
+        };
+
+        try {
+          voiceRecognition.start();
+          return true;
+        } catch(e) {
+          if (typeof onError === 'function') onError(e.toString());
+          return false;
+        }
+      };
+
+      window.stopLiveSpeechRecognition = globalThis.stopLiveSpeechRecognition = function() {
+        if (voiceRecognition) {
+          try { voiceRecognition.stop(); } catch(e) {}
+          voiceRecognition = null;
+        }
+      };
     })();
 
     // High-Performance Zero-Dependency Web Notification Engine
@@ -370,6 +641,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js?v=20260923_v4" async></script>
 </body>
 </html>

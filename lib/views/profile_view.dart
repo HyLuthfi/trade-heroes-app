@@ -9,6 +9,9 @@ import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/avatar_picker_modal.dart';
 import '../widgets/vip_pass_modal.dart';
+import '../widgets/rank_progression_modal.dart';
+import '../widgets/xp_reward_modal.dart';
+import '../widgets/leaderboard_modal.dart';
 import 'admin_console_view.dart';
 
 class ProfileView extends StatefulWidget {
@@ -20,6 +23,7 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   bool _isUploadingAvatar = false;
+  bool _showAllBadges = false;
 
   String _tr(AppState appState, String key, {Map<String, String> params = const {}}) {
     return AppTranslations.text(appState.language, key, params: params);
@@ -67,7 +71,35 @@ class _ProfileViewState extends State<ProfileView> {
       'desc': "Menyelesaikan seluruh 10 level Trade Heroes.",
       'iconData': Icons.school_rounded,
       'color': Color(0xffec4899),
-    }
+    },
+    {
+      'id': "trader_tier_2",
+      'name': "Trader Ritel",
+      'desc': "Mencapai 150 XP dan naik pangkat ke Tier II.",
+      'iconData': Icons.trending_up_rounded,
+      'color': Color(0xfff59e0b),
+    },
+    {
+      'id': "trader_tier_3",
+      'name': "Analis Muda",
+      'desc': "Mencapai 450 XP dan naik pangkat ke Tier III.",
+      'iconData': Icons.query_stats_rounded,
+      'color': Color(0xff38bdf8),
+    },
+    {
+      'id': "trader_tier_4",
+      'name': "Specialist",
+      'desc': "Mencapai 900 XP dan naik pangkat ke Tier IV.",
+      'iconData': Icons.psychology_rounded,
+      'color': Color(0xff10b981),
+    },
+    {
+      'id': "trader_tier_5",
+      'name': "Maestro",
+      'desc': "Mencapai 1.600 XP dan meraih gelar tertinggi Tier V!",
+      'iconData': Icons.workspace_premium_rounded,
+      'color': Color(0xffa855f7),
+    },
   ];
 
   void _showProfileEditPrompt(BuildContext context, AppState appState) {
@@ -1770,7 +1802,255 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 10),
+
+                        // Trader Rank Pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (appState.currentRank['color'] as Color).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: (appState.currentRank['color'] as Color).withOpacity(0.5),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                appState.currentRank['icon'] as IconData,
+                                color: appState.currentRank['color'] as Color,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "TIER ${appState.currentRank['roman']} • ${(appState.currentRank['title'] as String).toUpperCase()}",
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: appState.currentRank['color'] as Color,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Trader Rank & XP Progression Card
+                        GestureDetector(
+                          onTap: () {
+                            AudioService.playClick();
+                            RankProgressionModal.show(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff161f30),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: (appState.currentRank['color'] as Color).withOpacity(0.35),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.military_tech_rounded,
+                                          color: appState.currentRank['color'] as Color,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Text(
+                                          "Jenjang Karier Trader",
+                                          style: TextStyle(
+                                            fontFamily: 'Outfit',
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "${appState.xp} XP",
+                                          style: TextStyle(
+                                            fontFamily: 'Outfit',
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: appState.currentRank['color'] as Color,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.chevron_right_rounded,
+                                          color: Color(0xff94a3b8),
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(5),
+                                  child: LinearProgressIndicator(
+                                    value: appState.rankProgress.clamp(0.0, 1.0),
+                                    minHeight: 6,
+                                    backgroundColor: const Color(0xff0b0f19),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      appState.currentRank['color'] as Color,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      appState.currentRank['title'] as String,
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 10.5,
+                                        color: Color(0xff94a3b8),
+                                      ),
+                                    ),
+                                    Text(
+                                      appState.nextRank != null
+                                          ? "Kurang ${appState.xpToNextRank} XP lagi (${(appState.rankProgress * 100).toInt()}%)"
+                                          : "Gelar Tertinggi ✓",
+                                      style: TextStyle(
+                                        fontFamily: 'Outfit',
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: appState.currentRank['color'] as Color,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Jalur Hadiah XP Banner (Milestone Rewards Track)
+                        GestureDetector(
+                          onTap: () {
+                            AudioService.playClick();
+                            XpRewardModal.show(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xff1e293b), Color(0xff0f172a)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: appState.unclaimedMilestonesCount > 0
+                                    ? const Color(0xfff59e0b)
+                                    : Colors.white.withOpacity(0.08),
+                                width: appState.unclaimedMilestonesCount > 0 ? 1.5 : 1.0,
+                              ),
+                              boxShadow: appState.unclaimedMilestonesCount > 0
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xfff59e0b).withOpacity(0.2),
+                                        blurRadius: 10,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xfff59e0b).withOpacity(0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.card_giftcard_rounded, color: Color(0xfffbbf24), size: 18),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Text(
+                                            "Jalur Hadiah XP",
+                                            style: TextStyle(
+                                              fontFamily: 'Outfit',
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          if (appState.unclaimedMilestonesCount > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xff10b981),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                "${appState.unclaimedMilestonesCount} Hadiah Siap!",
+                                                style: const TextStyle(
+                                                  fontFamily: 'Outfit',
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xfff59e0b).withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                "${appState.xp} XP",
+                                                style: const TextStyle(
+                                                  fontFamily: 'Outfit',
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xfffbbf24),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        "Buka nyawa, pelindung streak & avatar saat XP naik.",
+                                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xfffbbf24), size: 13),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
 
                         // Premium Plan Banner Card Widget
                         GestureDetector(
@@ -1861,16 +2141,50 @@ class _ProfileViewState extends State<ProfileView> {
 
                   const SizedBox(height: 22),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.bar_chart_rounded, color: Color(0xff10b981), size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        _tr(appState, 'profile.statistics'),
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : const Color(0xff0f172a),
+                      Row(
+                        children: [
+                          const Icon(Icons.bar_chart_rounded, color: Color(0xff10b981), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            _tr(appState, 'profile.statistics'),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: isDark ? Colors.white : const Color(0xff0f172a),
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          AudioService.playClick();
+                          LeaderboardModal.show(context);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xfff59e0b).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.emoji_events_rounded, color: Color(0xfffbbf24), size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Liga #${appState.userLeaderboardRank}",
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xfffbbf24),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -1886,115 +2200,299 @@ class _ProfileViewState extends State<ProfileView> {
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.45,
                     children: [
-                      _buildStatCard(context, _tr(appState, 'profile.total_xp'), "${appState.xp} XP", iconData: Icons.monetization_on_rounded, color: const Color(0xfff59e0b)),
-                      _buildStatCard(context, _tr(appState, 'profile.xp_today'), "${appState.dailyXp} / 50", iconData: Icons.track_changes_rounded, color: const Color(0xff3b82f6)),
-                      _buildStatCard(context, _tr(appState, 'profile.streak'), "${appState.streak} ${_tr(appState, 'profile.days_unit')}", iconData: Icons.local_fire_department_rounded, color: const Color(0xffef4444)),
-                      _buildStatCard(context, _tr(appState, 'profile.levels_completed'), "${appState.completedLevels.length} / 10", iconData: Icons.emoji_events_rounded, color: const Color(0xff10b981)),
+                      _buildStatCard(
+                        context,
+                        _tr(appState, 'profile.total_xp'),
+                        "${appState.xp} XP",
+                        iconData: appState.currentRank['icon'] as IconData,
+                        color: appState.currentRank['color'] as Color,
+                        subtitle: "Tier ${appState.currentRank['roman']} • ${appState.currentRank['title']}",
+                        onTap: () {
+                          AudioService.playClick();
+                          RankProgressionModal.show(context);
+                        },
+                      ),
+                      _buildStatCard(
+                        context,
+                        _tr(appState, 'profile.xp_today'),
+                        "${appState.dailyXp} / 50",
+                        iconData: appState.isDailyGoalReached ? Icons.check_circle_rounded : Icons.track_changes_rounded,
+                        color: appState.isDailyGoalReached ? const Color(0xff10b981) : const Color(0xff3b82f6),
+                        subtitle: appState.canClaimDailyGoalBonus
+                            ? (appState.language == 'en' ? "Claim Daily Bonus!" : "Klaim Bonus Hadiah!")
+                            : (appState.isDailyGoalClaimedToday ? (appState.language == 'en' ? "Goal Reached ✓" : "Target Tercapai ✓") : (appState.language == 'en' ? "Target 50 XP/day" : "Target 50 XP/hari")),
+                        onTap: () {
+                          AudioService.playClick();
+                          if (appState.canClaimDailyGoalBonus) {
+                            appState.claimDailyGoalBonus(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(appState.language == 'en' ? "Congrats! Daily Goal Reached: +15 Bonus XP & +1 Heart!" : "Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir!"),
+                                backgroundColor: const Color(0xff059669),
+                              ),
+                            );
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (dCtx) => AlertDialog(
+                                backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  side: BorderSide(color: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0)),
+                                ),
+                                title: Row(
+                                  children: [
+                                    const Icon(Icons.track_changes_rounded, color: Color(0xff38bdf8), size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      appState.language == 'en' ? "Daily Learning Goal" : "Target Belajar Harian",
+                                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xff0f172a), fontSize: 17),
+                                    ),
+                                  ],
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      appState.language == 'en' ? "Today's Progress: ${appState.dailyXp} of 50 XP" : "Progres Hari Ini: ${appState.dailyXp} dari 50 XP",
+                                      style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xff0f172a)),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: LinearProgressIndicator(
+                                        value: (appState.dailyXp / 50).clamp(0.0, 1.0),
+                                        minHeight: 8,
+                                        backgroundColor: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xff10b981)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      appState.canClaimDailyGoalBonus
+                                          ? (appState.language == 'en' ? "Target reached! Claim your daily bonus reward now." : "Target harian tercapai! Klaim bonus hadiah sekarang.")
+                                          : (appState.isDailyGoalClaimedToday
+                                              ? (appState.language == 'en' ? "You have claimed today's bonus. Come back tomorrow!" : "Anda telah mengklaim bonus hari ini. Terus belajar untuk menambah XP!")
+                                              : (appState.language == 'en' ? "Earn 50 XP today from quizzes & lessons to claim 15 XP bonus & 1 heart." : "Kumpulkan 50 XP hari ini dari kuis atau materi untuk mendapatkan bonus 15 XP & 1 Nyawa Petir.")),
+                                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b), height: 1.4),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dCtx).pop(),
+                                    child: Text(appState.language == 'en' ? "Close" : "Tutup", style: const TextStyle(color: Color(0xff94a3b8))),
+                                  ),
+                                  if (appState.canClaimDailyGoalBonus)
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xff10b981)),
+                                      onPressed: () {
+                                        Navigator.of(dCtx).pop();
+                                        appState.claimDailyGoalBonus(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(appState.language == 'en' ? "Daily Goal Bonus Claimed! +15 XP & +1 Heart!" : "Selamat! Bonus Harian Berhasil Diklaim: +15 Bonus XP & +1 Nyawa Petir!"),
+                                            backgroundColor: const Color(0xff059669),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(appState.language == 'en' ? "Claim Now" : "Klaim Sekarang", style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white)),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      _buildStatCard(
+                        context,
+                        _tr(appState, 'profile.streak'),
+                        "${appState.streak} ${_tr(appState, 'profile.days_unit')}",
+                        iconData: Icons.local_fire_department_rounded,
+                        color: const Color(0xffef4444),
+                        subtitle: appState.streak > 0 ? (appState.language == 'en' ? "Keep the fire burning!" : "Pertahankan Api!") : (appState.language == 'en' ? "Start Today!" : "Mulai Hari Ini"),
+                      ),
+                      _buildStatCard(
+                        context,
+                        _tr(appState, 'profile.levels_completed'),
+                        "${appState.completedLevels.length} / 10",
+                        iconData: Icons.emoji_events_rounded,
+                        color: const Color(0xff10b981),
+                        subtitle: "${((appState.completedLevels.length / 10) * 100).toInt()}% ${appState.language == 'en' ? 'Completed' : 'Selesai'}",
+                      ),
                     ],
                   ),
 
                   const SizedBox(height: 24),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.military_tech_rounded, color: Color(0xfff59e0b), size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        _tr(appState, 'profile.badges'),
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : const Color(0xff0f172a),
+                      Row(
+                        children: [
+                          const Icon(Icons.military_tech_rounded, color: Color(0xfff59e0b), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            _tr(appState, 'profile.badges'),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: isDark ? Colors.white : const Color(0xff0f172a),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffcbd5e1)),
+                            ),
+                            child: Text(
+                              "${appState.unlockedBadges.length}/${_badges.length}",
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          AudioService.playClick();
+                          setState(() {
+                            _showAllBadges = !_showAllBadges;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xfff1f5f9),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffcbd5e1)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _showAllBadges
+                                    ? (appState.language == 'en' ? "Collapse" : "Ringkas")
+                                    : (appState.language == 'en' ? "View All" : "Lihat Semua"),
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xff38bdf8),
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Icon(
+                                _showAllBadges ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                color: const Color(0xff38bdf8),
+                                size: 16,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // 3. Hall of Fame Badges Grid 3D
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.88,
-                    ),
-                    itemCount: _badges.length,
-                    itemBuilder: (context, idx) {
-                      final badge = _badges[idx];
-                      final isUnlocked = appState.unlockedBadges.contains(badge['id']);
-                      final IconData iconData = badge['iconData'] as IconData;
-                      final Color badgeColor = badge['color'] as Color;
+                  // 3. Hall of Fame Badges Grid (Compact 4 columns, limited preview)
+                  Builder(
+                    builder: (context) {
+                      // Urutkan: yang sudah terbuka di depan
+                      final sortedBadges = List<Map<String, dynamic>>.from(_badges);
+                      sortedBadges.sort((a, b) {
+                        final aUnlocked = appState.unlockedBadges.contains(a['id']);
+                        final bUnlocked = appState.unlockedBadges.contains(b['id']);
+                        if (aUnlocked && !bUnlocked) return -1;
+                        if (!aUnlocked && bUnlocked) return 1;
+                        return 0;
+                      });
 
-                      return GestureDetector(
-                        onTap: () => _showBadgeDetail(context, badge, isUnlocked),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xff0f172a).withOpacity(0.9) : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isUnlocked ? badgeColor : (isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0)),
-                              width: isUnlocked ? 1.5 : 1.0,
-                            ),
-                            boxShadow: isUnlocked
-                                ? [
-                                    BoxShadow(
-                                      color: badgeColor.withOpacity(0.25),
-                                      blurRadius: 8,
-                                    ),
-                                  ]
-                                : (!isDark
+                      final displayedBadges = _showAllBadges ? sortedBadges : sortedBadges.take(4).toList();
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.85,
+                        ),
+                        itemCount: displayedBadges.length,
+                        itemBuilder: (context, idx) {
+                          final badge = displayedBadges[idx];
+                          final isUnlocked = appState.unlockedBadges.contains(badge['id']);
+                          final IconData iconData = badge['iconData'] as IconData;
+                          final Color badgeColor = badge['color'] as Color;
+
+                          return GestureDetector(
+                            onTap: () => _showBadgeDetail(context, badge, isUnlocked),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0f172a).withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isUnlocked ? badgeColor.withOpacity(0.8) : Colors.white.withOpacity(0.06),
+                                  width: isUnlocked ? 1.2 : 0.8,
+                                ),
+                                boxShadow: isUnlocked
                                     ? [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.04),
+                                          color: badgeColor.withOpacity(0.2),
                                           blurRadius: 6,
-                                          offset: const Offset(0, 2),
                                         ),
                                       ]
-                                    : null),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 52,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isUnlocked ? badgeColor : (isDark ? const Color(0xff475569) : const Color(0xffcbd5e1)),
-                                    width: isUnlocked ? 2.5 : 1.5,
+                                    : null,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isUnlocked ? badgeColor : const Color(0xff334155),
+                                        width: isUnlocked ? 2.0 : 1.0,
+                                      ),
+                                      color: const Color(0xff1e293b),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      iconData,
+                                      color: isUnlocked ? badgeColor : const Color(0xff475569),
+                                      size: 19,
+                                    ),
                                   ),
-                                  color: isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9),
-                                ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  iconData,
-                                  color: isUnlocked ? badgeColor : const Color(0xff64748b),
-                                  size: 26,
-                                ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    badge['name'],
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 10,
+                                      fontWeight: isUnlocked ? FontWeight.w800 : FontWeight.w600,
+                                      color: isUnlocked ? Colors.white : const Color(0xff64748b),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                badge['name'],
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: 'Outfit',
-                                  fontSize: 11.5,
-                                  fontWeight: isUnlocked ? FontWeight.w900 : FontWeight.bold,
-                                  color: isUnlocked
-                                      ? (isDark ? Colors.white : const Color(0xff0f172a))
-                                      : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -2372,80 +2870,93 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String label, String value, {required IconData iconData, required Color color}) {
+  Widget _buildStatCard(
+    BuildContext context,
+    String label,
+    String value, {
+    required IconData iconData,
+    required Color color,
+    VoidCallback? onTap,
+    String? subtitle,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Stack(
-      children: [
-        Positioned.fill(
-          top: 3.5,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xff022c22) : const Color(0xffcbd5e1),
-              borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            top: 3.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xff022c22) : const Color(0xffcbd5e1),
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(bottom: 3.5),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xff0f172a).withOpacity(0.92) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(isDark ? 0.4 : 0.3), width: 1.2),
-            boxShadow: isDark
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+          Container(
+            margin: const EdgeInsets.only(bottom: 3.5),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xff0f172a).withOpacity(0.92) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(isDark ? 0.4 : 0.3), width: 1.2),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Icon(iconData, color: color, size: 20),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: color,
+                        boxShadow: [
+                          BoxShadow(color: color.withOpacity(0.6), blurRadius: 4),
+                        ],
+                      ),
                     ),
                   ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(iconData, color: color, size: 20),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color,
-                      boxShadow: [
-                        BoxShadow(color: color.withOpacity(0.6), blurRadius: 4),
-                      ],
-                    ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: color,
                   ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: color,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  color: isDark ? const Color(0xffcbd5e1) : const Color(0xff64748b),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle ?? label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: isDark ? const Color(0xffcbd5e1) : const Color(0xff64748b),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

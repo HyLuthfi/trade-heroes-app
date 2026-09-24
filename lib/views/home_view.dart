@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
+import '../widgets/rank_progression_modal.dart';
+import '../widgets/leaderboard_modal.dart';
 import 'kuis_view.dart';
 import 'materi_view.dart';
 import 'profile_view.dart';
@@ -140,35 +142,68 @@ class _HomeViewState extends State<HomeView> {
               ),
               const SizedBox(width: 10),
 
-              // XP Stat
-              Tooltip(
-                message: tr('home.tooltip_total_xp'),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color:
-                        isDark ? const Color(0xff1e293b) : colorScheme.surface,
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xff334155)
-                          : colorScheme.outline.withOpacity(0.2),
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
+              // XP & Rank Stat Pill (tappable to view roadmap)
+              GestureDetector(
+                onTap: () {
+                  AudioService.playClick();
+                  RankProgressionModal.show(context);
+                },
+                child: Tooltip(
+                  message: "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      const Icon(Icons.star,
-                          color: Color(0xfff59e0b), size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        "${appState.xp}",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xfff59e0b),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xff1e293b) : colorScheme.surface,
+                          border: Border.all(
+                            color: (appState.currentRank['color'] as Color).withOpacity(0.5),
+                            width: 1.2,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              appState.currentRank['icon'] as IconData,
+                              color: appState.currentRank['color'] as Color,
+                              size: 15,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              "${appState.xp} XP",
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w900,
+                                color: appState.currentRank['color'] as Color,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      // Notification badge alert if rewards are ready to claim
+                      if (appState.unclaimedMilestonesCount > 0)
+                        Positioned(
+                          top: -3,
+                          right: -3,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: const Color(0xffef4444),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xff0f172a), width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xffef4444).withOpacity(0.6),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -214,8 +249,8 @@ class _HomeViewState extends State<HomeView> {
               children: [
                 _buildNavItem(0, Icons.map_outlined, Icons.map,
                     tr('home.nav_quiz')),
-                _buildNavItem(1, Icons.show_chart_outlined,
-                    Icons.show_chart_rounded, tr('home.nav_market')),
+                _buildNavItem(1, Icons.candlestick_chart_outlined,
+                    Icons.candlestick_chart_rounded, tr('home.nav_market')),
                 _buildNavItem(2, Icons.menu_book_outlined, Icons.menu_book,
                     tr('home.nav_materi')),
                 _buildNavItem(3, Icons.person_outline, Icons.person,

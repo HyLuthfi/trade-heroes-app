@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,6 +33,9 @@ class SupabaseService {
       await Supabase.initialize(
         url: supabaseUrl,
         publishableKey: supabasePublishableKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
         debug: kDebugMode,
       );
     } catch (e) {
@@ -67,9 +71,15 @@ class SupabaseService {
 
   // Sign In with Google OAuth
   static Future<bool> signInWithGoogle({String? redirectTo}) async {
+    String? targetRedirect = redirectTo;
+    if (targetRedirect == null && kIsWeb) {
+      try {
+        targetRedirect = '${Uri.base.origin}/';
+      } catch (_) {}
+    }
     return await client.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: redirectTo,
+      redirectTo: targetRedirect,
     );
   }
 
@@ -142,6 +152,21 @@ class SupabaseService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint("Error fetching all profiles: $e");
+      return [];
+    }
+  }
+
+  // Fetch Leaderboard (Ranked by Total XP)
+  static Future<List<Map<String, dynamic>>> fetchLeaderboard({int limit = 25}) async {
+    try {
+      final response = await client
+          .from('profiles')
+          .select('id, name, email, avatar, xp, role, completed_levels, streak')
+          .order('xp', ascending: false)
+          .limit(limit);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint("Error fetching leaderboard from Supabase: $e");
       return [];
     }
   }

@@ -32,13 +32,13 @@ class DailyRewardModal extends StatelessWidget {
     if (currentDay == 0) currentDay = 7;
 
     final List<Map<String, dynamic>> daysData = [
-      {'day': 1, 'xp': 50, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
-      {'day': 2, 'xp': 20, 'petir': 2, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
-      {'day': 3, 'xp': 100, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
-      {'day': 4, 'xp': 30, 'petir': 3, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
-      {'day': 5, 'xp': 150, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
-      {'day': 6, 'xp': 50, 'petir': 5, 'icon': Icons.bolt_rounded, 'color': const Color(0xff34d399)},
-      {'day': 7, 'xp': 300, 'petir': 5, 'icon': Icons.workspace_premium_rounded, 'color': const Color(0xfffbbf24)},
+      {'day': 1, 'rewardStr': '+50 XP', 'xp': 50, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
+      {'day': 2, 'rewardStr': '+2 Petir', 'xp': 20, 'petir': 2, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
+      {'day': 3, 'rewardStr': '+100 XP', 'xp': 100, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
+      {'day': 4, 'rewardStr': '+3 Petir', 'xp': 30, 'petir': 3, 'icon': Icons.bolt_rounded, 'color': const Color(0xff10b981)},
+      {'day': 5, 'rewardStr': '+150 XP', 'xp': 150, 'petir': 0, 'icon': Icons.star_rounded, 'color': const Color(0xfff59e0b)},
+      {'day': 6, 'rewardStr': '+5 Petir', 'xp': 50, 'petir': 5, 'icon': Icons.bolt_rounded, 'color': const Color(0xff34d399)},
+      {'day': 7, 'rewardStr': '+300 XP (Bonus)', 'xp': 300, 'petir': 5, 'icon': Icons.workspace_premium_rounded, 'color': const Color(0xfffbbf24)},
     ];
 
     String formatRewardString(Map<String, dynamic> item) {

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -19,6 +21,19 @@ class _VideoSplashViewState extends State<VideoSplashView> {
   @override
   void initState() {
     super.initState();
+
+    // Instant bypass if returning from Google OAuth redirect (prevents black/frozen screen)
+    if (kIsWeb) {
+      try {
+        final hash = html.window.location.hash;
+        final search = html.window.location.search ?? '';
+        if (hash.contains('access_token') || hash.contains('error') || search.contains('code=')) {
+          _splashCompleted = true;
+          return;
+        }
+      } catch (_) {}
+    }
+
     _initVideoPlayer();
 
     // Guaranteed 3.2-second transition fallback

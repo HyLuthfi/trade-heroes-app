@@ -4,6 +4,7 @@ import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import 'ad_overlay.dart';
+import 'vip_pass_modal.dart';
 
 class QuizOverlay extends StatefulWidget {
   final int levelId;
@@ -93,15 +94,46 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
       _wrongCount++;
       _triggerShake();
       AudioService.playWrong();
-      final hasLives = appState.deductPetir();
-      if (!hasLives && !appState.isPremium) {
-        // Lives ran out mid quiz
-        Future.delayed(const Duration(seconds: 2), () {
-          Navigator.of(context).pop();
-          _showRefillLivesModal(appState);
-        });
-      }
     }
+  }
+
+  void _confirmExit(AppState appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff0f172a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xffef4444), width: 1.5),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Color(0xffef4444), size: 24),
+            SizedBox(width: 8),
+            Text("Keluar dari Kuis?", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          "Jika Anda menyerah sekarang sebelum menyelesaikan kuis, Anda akan dianggap GAGAL dan kehilangan 1 Nyawa Petir.",
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xffcbd5e1), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("LANJUTKAN KUIS", style: TextStyle(color: Color(0xff10b981), fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffef4444)),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              appState.deductPetir(); // Candy crush style: forfeit loses 1 life
+              Navigator.of(context).pop();
+            },
+            child: const Text("MENYERAH (-1 PETIR)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+          ),
+        ],
+      ),
+    );
   }
 
   void _nextQuestion(AppState appState) {
@@ -120,29 +152,57 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
   }
 
   void _finishQuiz(AppState appState) {
-    final xpReward = _scoreCorrect * 10;
-    appState.completeLevel(widget.levelId);
-    
-    // Award Anti Boncos if no mistakes
-    if (_wrongCount == 0) {
-      appState.unlockAntiBoncos(context);
-    }
-    
-    appState.addXp(xpReward, context);
-    AudioService.playReward();
-    
-    Navigator.of(context).pop();
+    final int totalQuestions = widget.questions.length;
+    final double accuracy = totalQuestions > 0 ? _scoreCorrect / totalQuestions : 0.0;
 
-    // Trigger Ad popup simulation
-    AdOverlay.show(context, () {
-      _showResultDialog(appState, xpReward);
-    });
+    // Candy Crush Style Star Thresholds:
+    // 3 Stars: 100% correct (Anti-Boncos)
+    // 2 Stars: >= 66% correct (misal 2/3 atau 4/5)
+    // 1 Star: >= 33% correct (minimal 1 soal benar)
+    // 0 Star: 0% correct (GAGAL)
+    int stars = 0;
+    if (_wrongCount == 0 && _scoreCorrect == totalQuestions) {
+      stars = 3;
+    } else if (accuracy >= 0.66) {
+      stars = 2;
+    } else if (_scoreCorrect >= 1) {
+      stars = 1;
+    }
+
+    final bool isPassed = stars >= 1;
+    final bool isFirstClear = !appState.completedLevels.contains(widget.levelId);
+
+    if (isPassed) {
+      // Candy Crush: Lulus -> Nyawa petir TIDAK BERKURANG! Next level terbuka!
+      final int xpPerCorrect = isFirstClear ? 10 : 3;
+      final xpReward = _scoreCorrect * xpPerCorrect;
+
+      appState.completeLevel(widget.levelId, stars: stars);
+      if (stars == 3) {
+        appState.unlockAntiBoncos(context);
+      }
+      appState.addXp(xpReward, context);
+      AudioService.playReward();
+
+      Navigator.of(context).pop();
+      AdOverlay.show(context, () {
+        _showResultDialog(appState, xpReward, stars, isFirstClear, isPassed: true);
+      });
+    } else {
+      // Candy Crush: GAGAL -> Hilang 1 Nyawa Petir ⚡, level berikutnya TETAP TERKUNCI!
+      appState.deductPetir();
+      AudioService.playWrong();
+
+      Navigator.of(context).pop();
+      _showResultDialog(appState, 0, 0, isFirstClear, isPassed: false);
+    }
   }
 
-  void _showResultDialog(AppState appState, int xpReward) {
+  void _showResultDialog(AppState appState, int xpReward, int stars, bool isFirstClear, {required bool isPassed}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String tr(String key, {Map<String, String> params = const {}}) =>
         AppTranslations.text(appState.language, key, params: params);
+    final isEn = appState.language.startsWith('en');
 
     showDialog(
       context: context,
@@ -151,46 +211,97 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
         backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0xfff59e0b), width: 1.5),
+          side: BorderSide(
+            color: isPassed ? const Color(0xfff59e0b) : const Color(0xffef4444),
+            width: 1.5,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.emoji_events_rounded, color: Color(0xfff59e0b), size: 64),
-            const SizedBox(height: 12),
+            // Icon Emas (Lulus) atau Patah Hati (Gagal)
+            Icon(
+              isPassed ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded,
+              color: isPassed ? const Color(0xfff59e0b) : const Color(0xffef4444),
+              size: 60,
+            ),
+            const SizedBox(height: 10),
+
+            // Candy Crush 3-Star Header Display
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  stars >= 1 ? Icons.star_rounded : Icons.star_outline_rounded,
+                  color: stars >= 1 ? const Color(0xfffbbf24) : const Color(0xff475569),
+                  size: 28,
+                ),
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Icon(
+                    stars >= 2 ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: stars >= 2 ? const Color(0xfffbbf24) : const Color(0xff475569),
+                    size: 38,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  stars >= 3 ? Icons.star_rounded : Icons.star_outline_rounded,
+                  color: stars >= 3 ? const Color(0xfffbbf24) : const Color(0xff475569),
+                  size: 28,
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
             Text(
-              tr('quiz.completed_title'),
-              style: const TextStyle(
+              isPassed
+                  ? (stars == 3 ? (isEn ? "PERFECT PASS!" : "LULUS SEMPURNA!") : (isEn ? "LEVEL PASSED!" : "LEVEL LULUS!"))
+                  : (isEn ? "NOT PASSED YET!" : "BELUM LULUS!"),
+              style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                color: Color(0xfff59e0b),
+                color: isPassed ? const Color(0xfff59e0b) : const Color(0xffef4444),
                 letterSpacing: 0.5,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              tr(
-                'quiz.completed_desc',
-                params: {
-                  'title': widget.title,
-                  'correct': '$_scoreCorrect',
-                  'total': '${widget.questions.length}',
-                },
-              ),
+              isPassed
+                  ? tr(
+                      'quiz.completed_desc',
+                      params: {
+                        'title': widget.title,
+                        'correct': '$_scoreCorrect',
+                        'total': '${widget.questions.length}',
+                      },
+                    )
+                  : (isEn
+                      ? "Unfortunately, you did not meet the 1-star requirement. 1 lightning heart deducted. Study again and retry!"
+                      : "Sayang sekali, Anda belum memenuhi syarat minimal 1 bintang. Nyawa petir berkurang 1. Pelajari materi lagi dan coba ulangi!"),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
-                height: 1.5,
+                height: 1.4,
               ),
             ),
             const SizedBox(height: 16),
+
+            // Stats Card
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xff022c22) : const Color(0xfff0fdf4),
-                border: Border.all(color: const Color(0xff059669).withOpacity(0.5)),
+                color: isPassed
+                    ? (isDark ? const Color(0xff022c22) : const Color(0xfff0fdf4))
+                    : (isDark ? const Color(0xff450a0a) : const Color(0xfffef2f2)),
+                border: Border.all(
+                  color: isPassed
+                      ? const Color(0xff059669).withOpacity(0.5)
+                      : const Color(0xffdc2626).withOpacity(0.5),
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -199,7 +310,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                   Column(
                     children: [
                       Text(
-                        tr('quiz.xp_earned'),
+                        isPassed
+                            ? (isFirstClear ? tr('quiz.xp_earned') : (isEn ? "Practice XP" : "XP Latihan"))
+                            : (isEn ? "Penalty" : "Penalti"),
                         style: TextStyle(
                           fontSize: 11,
                           color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
@@ -207,12 +320,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "+$xpReward XP",
-                        style: const TextStyle(
+                        isPassed ? "+$xpReward XP" : (isEn ? "-1 Life" : "-1 Petir"),
+                        style: TextStyle(
                           fontFamily: 'Outfit',
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xfff59e0b),
+                          color: isPassed ? const Color(0xfff59e0b) : const Color(0xffef4444),
                         ),
                       ),
                     ],
@@ -233,9 +346,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                             : tr('quiz.lives_count', params: {'count': '${appState.petir}'}),
                         style: const TextStyle(
                           fontFamily: 'Outfit',
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xffef4444),
+                          color: Color(0xff34d399),
                         ),
                       ),
                     ],
@@ -246,14 +359,14 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xff059669),
+                backgroundColor: isPassed ? const Color(0xff059669) : const Color(0xffef4444),
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 4,
               ),
               onPressed: () => Navigator.of(ctx).pop(),
               child: Text(
-                tr('quiz.continue_great'),
+                isPassed ? tr('quiz.continue_great') : (isEn ? "TRY AGAIN" : "COBA LAGI"),
                 style: const TextStyle(
                   fontFamily: 'Outfit',
                   color: Colors.white,
@@ -467,60 +580,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                       children: [
                         // Close Button (Golden Rim 3D)
                         GestureDetector(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) {
-                                final dialogIsDark = Theme.of(ctx).brightness == Brightness.dark;
-                                return AlertDialog(
-                                  backgroundColor: dialogIsDark ? const Color(0xff0f172a) : Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    side: const BorderSide(color: Color(0xff059669), width: 1.2),
-                                  ),
-                                  title: Text(
-                                    tr('quiz.exit_title'),
-                                    style: TextStyle(
-                                      fontFamily: 'Outfit',
-                                      color: dialogIsDark ? Colors.white : const Color(0xff0f172a),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  content: Text(
-                                    tr('quiz.exit_desc'),
-                                    style: TextStyle(
-                                      color: dialogIsDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx).pop(),
-                                      child: Text(
-                                        tr('quiz.cancel'),
-                                        style: const TextStyle(
-                                          color: Color(0xff94a3b8),
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(ctx).pop();
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Text(
-                                        tr('quiz.exit_confirm'),
-                                        style: const TextStyle(
-                                          color: Color(0xffef4444),
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
+                          onTap: () => _confirmExit(appState),
                           child: Container(
                             width: 36,
                             height: 36,
@@ -742,8 +802,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                 (qData['options'] as List).length,
                                 (idx) {
                                   final optionLetter = String.fromCharCode(65 + idx);
-                                  final isSelected = _selectedOptionIdx == idx;
+                                  final isSelected = (_selectedOptionIdx == idx);
                                   final isCorrectAnswer = (qData['a'] == idx);
+                                  final bool showCorrectOption = _checked && (isCorrectAnswer && (_isAnswerCorrect || appState.isPremium));
 
                                   Color cardBg;
                                   Color cardShadow;
@@ -753,7 +814,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                   Color optionTextColor;
 
                                   if (_checked) {
-                                    if (isCorrectAnswer) {
+                                    if (showCorrectOption) {
                                       cardBg = const Color(0xff059669);
                                       cardShadow = const Color(0xff047857);
                                       cardBorder = const Color(0xff34d399);
@@ -874,7 +935,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                                     ),
                                                   ),
                                                 ),
-                                                if (_checked && isCorrectAnswer)
+                                                if (showCorrectOption)
                                                   const Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
                                                 if (_checked && isSelected && !isCorrectAnswer)
                                                   const Icon(Icons.cancel_rounded, color: Colors.white, size: 22),
@@ -1013,41 +1074,148 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                           Row(
                             children: [
                               Icon(
-                                _isAnswerCorrect ? Icons.stars_rounded : Icons.cancel_rounded,
+                                _isAnswerCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
                                 color: _isAnswerCorrect
-                                    ? (isDark ? const Color(0xfff59e0b) : const Color(0xff059669))
+                                    ? (isDark ? const Color(0xff34d399) : const Color(0xff059669))
                                     : (isDark ? const Color(0xfffca5a5) : const Color(0xffdc2626)),
-                                size: 26,
+                                size: 24,
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               Text(
                                 _isAnswerCorrect
-                                    ? tr('quiz.correct_feedback')
+                                    ? "${tr('quiz.correct_feedback')} (+10 XP)"
                                     : tr('quiz.wrong_feedback'),
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
                                   color: _isAnswerCorrect
-                                      ? (isDark ? const Color(0xfff59e0b) : const Color(0xff065f46))
+                                      ? (isDark ? const Color(0xff34d399) : const Color(0xff065f46))
                                       : (isDark ? const Color(0xfffca5a5) : const Color(0xff991b1b)),
                                 ),
                               ),
+                              if (!_isAnswerCorrect && appState.isPremium) ...[
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xfff59e0b).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.5)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.workspace_premium_rounded, color: Color(0xfffbbf24), size: 13),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "VIP INSIGHT",
+                                        style: TextStyle(
+                                          fontFamily: 'Outfit',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xfffbbf24),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _isAnswerCorrect
-                                ? qData['explanation']
-                                : "${tr('quiz.correct_answer')}: ${qData['type'] == 'pilgan' ? qData['options'][qData['a']] : qData['a']}\n${qData['explanation']}",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13,
-                              color: isDark ? Colors.white : const Color(0xff1e293b),
-                              height: 1.4,
+                          const SizedBox(height: 8),
+                          if (_isAnswerCorrect) ...[
+                            Text(
+                              qData['explanation'],
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: Colors.white,
+                                height: 1.4,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
+                          ] else if (appState.isPremium) ...[
+                            // User Subs: Muncul Jawaban Benar & Pembahasan
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: "Jawaban Benar: ",
+                                          style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff6ee7b7)),
+                                        ),
+                                        TextSpan(
+                                          text: "${qData['type'] == 'pilgan' ? qData['options'][qData['a']] : qData['a']}",
+                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    qData['explanation'],
+                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.35),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            // User Non-Subs: TIDAK muncul jawaban benar & pembahasan, melainkan info netral + teaser VIP
+                            const Text(
+                              "Pilihan Anda belum tepat. Pelajari kembali materi modul untuk menemukan jawaban yang benar saat mengulang kuis.",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12.5,
+                                color: Color(0xffe2e8f0),
+                                height: 1.35,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => VipPassModal.show(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff0f172a).withOpacity(0.85),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4), width: 1.0),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.lock_rounded, color: Color(0xfffbbf24), size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: const [
+                                          Text(
+                                            "Kunci Jawaban & Pembahasan Terkunci",
+                                            style: TextStyle(fontFamily: 'Outfit', fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
+                                          ),
+                                          Text(
+                                            "Buka pembahasan & kunci jawaban instan dengan VIP Pass",
+                                            style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xff94a3b8)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xfffbbf24), size: 12),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
                           // 3D Continue Button
                           GestureDetector(
                             onTap: () => _nextQuestion(appState),
@@ -1077,7 +1245,6 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
-                                      letterSpacing: 1.0,
                                     ),
                                   ),
                                 ),

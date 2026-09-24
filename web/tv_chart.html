@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TradingView Official Chart</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0f19;
+    }
+    #tv-container {
+      width: 100%;
+      height: 100%;
+    }
+    .tradingview-widget-container {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    .tradingview-widget-container iframe {
+      width: 100% !important;
+      height: 100% !important;
+      border: none !important;
+      display: block;
+    }
+  </style>
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+</head>
+<body>
+  <div id="tv-container">
+    <div id="tv_chart_target" class="tradingview-widget-container"></div>
+  </div>
+
+  <script>
+    (function() {
+      // Clear any cached TradingView resolutions from localStorage to guarantee 1D on load
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('tradingview') || k.startsWith('tv_'))) {
+            localStorage.removeItem(k);
+          }
+        }
+      } catch (e) {}
+
+      const urlParams = new URLSearchParams(window.location.search);
+      let rawTicker = (urlParams.get('ticker') || 'BBCA').toUpperCase().split('_')[0].replace('.JK', '');
+
+      function renderWidget(ticker) {
+        const container = document.getElementById('tv_chart_target');
+        container.innerHTML = '';
+
+        if (typeof TradingView !== 'undefined' && TradingView.widget) {
+          new TradingView.widget({
+            "autosize": true,
+            "symbol": "IDX:" + ticker,
+            "interval": "D",
+            "timezone": "Asia/Jakarta",
+            "theme": "dark",
+            "style": "1",
+            "locale": "id",
+            "toolbar_bg": "#0b0f19",
+            "enable_publishing": false,
+            "withdateranges": true,
+            "hide_side_toolbar": false,
+            "allow_symbol_change": true,
+            "details": false,
+            "hotlist": false,
+            "calendar": true,
+            "doNotStoreSettings": true,
+            "disabled_features": [
+              "use_local_storage_for_settings"
+            ],
+            "studies": [
+              "STD;EMA"
+            ],
+            "container_id": "tv_chart_target"
+          });
+        } else {
+          // Direct fallback iframe if tv.js is delayed
+          const params = new URLSearchParams({
+            'frameElementId': 'tradingview_widget',
+            'symbol': 'IDX:' + ticker,
+            'interval': 'D',
+            'symboledit': '1',
+            'saveimage': '0',
+            'toolbarbg': '0b0f19',
+            'studies': JSON.stringify(['STD;EMA']),
+            'theme': 'dark',
+            'style': '1',
+            'timezone': 'Asia/Jakarta',
+            'withdateranges': '1',
+            'hide_side_toolbar': '0',
+            'allow_symbol_change': '1',
+            'calendar': '1',
+            'locale': 'id'
+          });
+          const ifr = document.createElement('iframe');
+          ifr.src = 'https://s.tradingview.com/widgetembed/?' + params.toString();
+          ifr.style.width = '100%';
+          ifr.style.height = '100%';
+          ifr.style.border = 'none';
+          ifr.allowTransparency = 'true';
+          container.appendChild(ifr);
+        }
+      }
+
+      renderWidget(rawTicker);
+
+      // Listen for postMessage from Flutter app
+      window.addEventListener('message', function(event) {
+        try {
+          const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (!msg || !msg.action) return;
+
+          if (msg.action === 'loadStock') {
+            const nextTicker = (msg.ticker || rawTicker).toUpperCase().split('_')[0].replace('.JK', '');
+            rawTicker = nextTicker;
+            renderWidget(nextTicker);
+          }
+        } catch (e) {
+          console.error('Error handling message:', e);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
