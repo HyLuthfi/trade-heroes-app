@@ -114,7 +114,11 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
   }
 
   void _finishQuiz(AppState appState) {
-    final xpReward = _scoreCorrect * 10;
+    final bool isFirstClear = !appState.completedLevels.contains(widget.levelId);
+    // Anti-Spam XP: First clear = 10 XP per correct (max 30-50 XP), Replay/Review = 3 XP per correct (max 9-15 XP)
+    final int xpPerCorrect = isFirstClear ? 10 : 3;
+    final xpReward = _scoreCorrect * xpPerCorrect;
+
     appState.completeLevel(widget.levelId);
     
     // Award Anti Boncos if no mistakes
@@ -129,11 +133,11 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
 
     // Trigger Ad popup simulation
     AdOverlay.show(context, () {
-      _showResultDialog(appState, xpReward);
+      _showResultDialog(appState, xpReward, isFirstClear);
     });
   }
 
-  void _showResultDialog(AppState appState, int xpReward) {
+  void _showResultDialog(AppState appState, int xpReward, bool isFirstClear) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -148,9 +152,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
           children: [
             const Icon(Icons.emoji_events_rounded, color: Color(0xfff59e0b), size: 64),
             const SizedBox(height: 12),
-            const Text(
-              "KUIS SELESAI!",
-              style: TextStyle(
+            Text(
+              isFirstClear ? "KUIS SELESAI!" : "LATIHAN SELESAI!",
+              style: const TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
@@ -160,7 +164,9 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
             ),
             const SizedBox(height: 8),
             Text(
-              "Anda berhasil menyelesaikan kuis level '${widget.title}' dengan menjawab benar $_scoreCorrect dari ${widget.questions.length} soal!",
+              isFirstClear
+                  ? "Selamat! Anda berhasil menyelesaikan kuis level '${widget.title}' dengan menjawab benar $_scoreCorrect dari ${widget.questions.length} soal!"
+                  : "Bagus! Anda mengulang kuis level '${widget.title}' untuk mempertajam pemahaman ($xpReward XP Latihan diberikan).",
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.5),
             ),
@@ -177,7 +183,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
                 children: [
                   Column(
                     children: [
-                      const Text("XP Diperoleh", style: TextStyle(fontSize: 11, color: Color(0xff94a3b8))),
+                      Text(isFirstClear ? "XP Diperoleh" : "XP Latihan", style: const TextStyle(fontSize: 11, color: Color(0xff94a3b8))),
                       const SizedBox(height: 4),
                       Text("+$xpReward XP", style: const TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xfff59e0b))),
                     ],

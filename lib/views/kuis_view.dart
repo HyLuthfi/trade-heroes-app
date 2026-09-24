@@ -1925,7 +1925,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 const Icon(Icons.star_rounded, color: Color(0xfff59e0b), size: 16),
                                 const SizedBox(width: 5),
                                 Text(
-                                  "+$xpReward XP",
+                                  isCompleted ? "+${qCount * 3} XP (Review)" : "+$xpReward XP",
                                   style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 12,
@@ -2005,9 +2005,9 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   });
                                   QuizOverlay.start(context, id, level['title'], qList);
                                 },
-                                child: const Text(
-                                  "MULAI KUIS",
-                                  style: TextStyle(
+                                child: Text(
+                                  isCompleted ? "ULANG LATIHAN" : "MULAI KUIS",
+                                  style: const TextStyle(
                                     fontFamily: 'Outfit',
                                     fontSize: 15,
                                     fontWeight: FontWeight.w900,

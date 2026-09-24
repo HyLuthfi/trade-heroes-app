@@ -28,6 +28,7 @@ class AppState extends ChangeNotifier {
   int _streakShields = 0; // Streak protections
   List<String> _unlockedAvatars = ["bull", "chart", "wallet"];
   List<int> _claimedXpMilestones = []; // List of claimed milestone target XPs: [50, 100, 200, ...]
+  String _lastDailyGoalClaimDate = ""; // YYYY-MM-DD when daily target bonus was claimed
 
   String _userName = "Calon Trader";
   String _userEmail = "user@kursussaham.com";
@@ -81,6 +82,34 @@ class AppState extends ChangeNotifier {
   int get streakShields => _streakShields;
   List<String> get unlockedAvatars => _unlockedAvatars;
   List<int> get claimedXpMilestones => _claimedXpMilestones;
+  String get lastDailyGoalClaimDate => _lastDailyGoalClaimDate;
+
+  bool get isDailyGoalReached => _dailyXp >= 50;
+  bool get canClaimDailyGoalBonus {
+    final todayStr = DateTime.now().toString().split(' ')[0];
+    return isDailyGoalReached && _lastDailyGoalClaimDate != todayStr;
+  }
+  bool get isDailyGoalClaimedToday {
+    final todayStr = DateTime.now().toString().split(' ')[0];
+    return _lastDailyGoalClaimDate == todayStr;
+  }
+
+  bool claimDailyGoalBonus(BuildContext context) {
+    if (!canClaimDailyGoalBonus) return false;
+    final todayStr = DateTime.now().toString().split(' ')[0];
+    _lastDailyGoalClaimDate = todayStr;
+    // Hadiah bonus target harian: +15 Bonus XP & +1 Nyawa Petir
+    _xp += 15;
+    if (!_isPremium) {
+      _petir = (_petir + 1).clamp(0, 5);
+      if (_petir >= 5) _petirLastUsedTime = null;
+    }
+    AudioService.playReward();
+    _saveState();
+    notifyListeners();
+    _checkAndUnlockBadges(context);
+    return true;
+  }
 
   // Definisi Jalur Hadiah Milestone XP (Tunggal & Gratis)
   static const List<Map<String, dynamic>> xpMilestoneRewards = [
@@ -545,6 +574,7 @@ class AppState extends ChangeNotifier {
     _streakShields = json['streakShields'] ?? 0;
     _unlockedAvatars = List<String>.from(json['unlockedAvatars'] ?? ['bull', 'chart', 'wallet']);
     _claimedXpMilestones = List<int>.from(json['claimedXpMilestones'] ?? []);
+    _lastDailyGoalClaimDate = json['lastDailyGoalClaimDate'] ?? "";
     _userName = json['userName'] ?? "Calon Trader";
     _userEmail = json['userEmail'] ?? "user@kursussaham.com";
     _userAvatar = json['userAvatar'] ?? "bull";
@@ -583,6 +613,9 @@ class AppState extends ChangeNotifier {
     }
     if (data['claimed_xp_milestones'] != null && data['claimed_xp_milestones'] is List) {
       _claimedXpMilestones = (data['claimed_xp_milestones'] as List).map((x) => (x as num).toInt()).toList();
+    }
+    if (data['last_daily_goal_claim_date'] != null) {
+      _lastDailyGoalClaimDate = data['last_daily_goal_claim_date'];
     }
     if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
     if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
@@ -647,6 +680,7 @@ class AppState extends ChangeNotifier {
       'streakShields': _streakShields,
       'unlockedAvatars': _unlockedAvatars,
       'claimedXpMilestones': _claimedXpMilestones,
+      'lastDailyGoalClaimDate': _lastDailyGoalClaimDate,
       'isPremium': _isPremium,
       'isLoggedIn': _isLoggedIn,
       'lastActiveDate': _lastActiveDate,
@@ -693,6 +727,7 @@ class AppState extends ChangeNotifier {
       'streak_shields': _streakShields,
       'unlocked_avatars': _unlockedAvatars,
       'claimed_xp_milestones': _claimedXpMilestones,
+      'last_daily_goal_claim_date': _lastDailyGoalClaimDate,
       'is_premium': _isPremium,
       'petir_last_used_time': _petirLastUsedTime,
       'virtual_balance': _virtualBalance,
@@ -1122,7 +1157,14 @@ class AppState extends ChangeNotifier {
   }
 
   void _startRegenTimer() {
+    int tickCount = 0;
     _regenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      tickCount++;
+      // Auto-check midnight rollover every 30 seconds
+      if (tickCount % 30 == 0) {
+        _checkDailyReset();
+      }
+
       if (_isPremium || _petir >= 5) {
         _petirLastUsedTime = null;
         return;
@@ -1193,10 +1235,18 @@ class AppState extends ChangeNotifier {
 
   // Add XP and notify listeners
   void addXp(int amount, BuildContext context) {
+    final oldTier = currentRank['tier'] as int;
     _xp += amount;
     _dailyXp += amount;
     _saveState();
     notifyListeners();
+
+    // Check Level Up / Tier Up celebration
+    final newTier = currentRank['tier'] as int;
+    if (newTier > oldTier) {
+      _triggerTierUpModal(currentRank, context);
+    }
+
     _checkAndUnlockBadges(context);
   }
 
@@ -1307,6 +1357,131 @@ class AppState extends ChangeNotifier {
       _saveState();
       notifyListeners();
     }
+  }
+
+  void _triggerTierUpModal(Map<String, dynamic> rankData, BuildContext context) {
+    AudioService.playReward();
+    final Color rColor = rankData['color'] as Color;
+    final IconData rIcon = rankData['icon'] as IconData;
+    final String rTitle = rankData['title'] as String;
+    final String rRoman = rankData['roman'] as String;
+    final String rDesc = rankData['desc'] as String;
+    final String rPerk = rankData['perk'] as String;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff0f172a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: rColor, width: 2),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: rColor, width: 3.5),
+                color: const Color(0xff1e293b),
+                boxShadow: [
+                  BoxShadow(
+                    color: rColor.withOpacity(0.55),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Icon(rIcon, color: rColor, size: 46),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: rColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: rColor.withOpacity(0.5)),
+              ),
+              child: Text(
+                "NAIK PANGKAT • TIER $rRoman",
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: rColor,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              rTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              rDesc,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xffcbd5e1), height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xff161f30),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.08)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.stars_rounded, color: Color(0xfffbbf24), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Keistimewaan Baru Terbuka:",
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                        ),
+                        Text(
+                          rPerk,
+                          style: const TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: rColor,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 4,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                "AMBIL GELAR SAYA 👑",
+                style: TextStyle(fontFamily: 'Outfit', color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _triggerBadgeModal(String badgeId, BuildContext context) {

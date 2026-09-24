@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 
 import 'leaderboard_modal.dart';
+import 'xp_reward_modal.dart';
 
 class RankProgressionModal extends StatelessWidget {
   const RankProgressionModal({Key? key}) : super(key: key);
@@ -80,6 +81,47 @@ class RankProgressionModal extends StatelessWidget {
               ),
               Row(
                 children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      XpRewardModal.show(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff10b981).withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.card_giftcard_rounded, color: Color(0xff34d399), size: 14),
+                          const SizedBox(width: 4),
+                          const Text(
+                            "Hadiah XP",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xff34d399),
+                            ),
+                          ),
+                          if (appState.unclaimedMilestonesCount > 0) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xffef4444),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       Navigator.of(context).pop();

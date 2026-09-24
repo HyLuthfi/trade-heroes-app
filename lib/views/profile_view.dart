@@ -1517,7 +1517,95 @@ class _ProfileViewState extends State<ProfileView> {
                           RankProgressionModal.show(context);
                         },
                       ),
-                      _buildStatCard("XP Hari Ini", "${appState.dailyXp} / 50", iconData: Icons.track_changes_rounded, color: const Color(0xff3b82f6)),
+                      _buildStatCard(
+                        "XP Hari Ini",
+                        "${appState.dailyXp} / 50",
+                        iconData: appState.isDailyGoalReached ? Icons.check_circle_rounded : Icons.track_changes_rounded,
+                        color: appState.isDailyGoalReached ? const Color(0xff10b981) : const Color(0xff3b82f6),
+                        subtitle: appState.canClaimDailyGoalBonus
+                            ? "Klaim Bonus Hadiah! 🎁"
+                            : (appState.isDailyGoalClaimedToday ? "Target Tercapai ✓" : "Target 50 XP/hari"),
+                        onTap: () {
+                          AudioService.playClick();
+                          if (appState.canClaimDailyGoalBonus) {
+                            appState.claimDailyGoalBonus(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir! 🎉"),
+                                backgroundColor: Color(0xff059669),
+                              ),
+                            );
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (dCtx) => AlertDialog(
+                                backgroundColor: const Color(0xff0f172a),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  side: const BorderSide(color: Color(0xff334155)),
+                                ),
+                                title: Row(
+                                  children: const [
+                                    Icon(Icons.track_changes_rounded, color: Color(0xff38bdf8), size: 20),
+                                    SizedBox(width: 8),
+                                    Text("Target Belajar Harian", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 17)),
+                                  ],
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Progres Hari Ini: ${appState.dailyXp} dari 50 XP",
+                                      style: const TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: LinearProgressIndicator(
+                                        value: (appState.dailyXp / 50).clamp(0.0, 1.0),
+                                        minHeight: 8,
+                                        backgroundColor: const Color(0xff1e293b),
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xff10b981)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      appState.isDailyGoalClaimedToday
+                                          ? "Hadiah bonus harian (+15 XP & +1 Petir) sudah berhasil Anda klaim hari ini. Keren, pertahankan konsistensimu!"
+                                          : (appState.canClaimDailyGoalBonus
+                                              ? "Target tercapai! Klaim bonus +15 XP & +1 Nyawa Petir sekarang!"
+                                              : "Kumpulkan minimal 50 XP setiap hari melalui kuis atau modul baca untuk mendapatkan bonus ekstra +15 XP & +1 Nyawa Petir!"),
+                                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xff94a3b8), height: 1.4),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  if (appState.canClaimDailyGoalBonus)
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xff10b981)),
+                                      onPressed: () {
+                                        Navigator.of(dCtx).pop();
+                                        appState.claimDailyGoalBonus(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text("Selamat! Target Harian Tercapai: +15 Bonus XP & +1 Nyawa Petir! 🎉"),
+                                            backgroundColor: Color(0xff059669),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text("Klaim Hadiah 🎁", style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white)),
+                                    ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dCtx).pop(),
+                                    child: const Text("Tutup", style: TextStyle(color: Color(0xff94a3b8))),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                      ),
                       _buildStatCard("Streak Belajar", "${appState.streak} Hari", iconData: Icons.local_fire_department_rounded, color: const Color(0xffef4444)),
                       _buildStatCard("Level Selesai", "${appState.completedLevels.length} / 10", iconData: Icons.emoji_events_rounded, color: const Color(0xff10b981)),
                     ],

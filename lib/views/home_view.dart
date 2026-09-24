@@ -126,35 +126,61 @@ class _HomeViewState extends State<HomeView> {
                 },
                 child: Tooltip(
                   message: "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff1e293b),
-                      border: Border.all(
-                        color: (appState.currentRank['color'] as Color).withOpacity(0.5),
-                        width: 1.2,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          appState.currentRank['icon'] as IconData,
-                          color: appState.currentRank['color'] as Color,
-                          size: 15,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xff1e293b),
+                          border: Border.all(
+                            color: (appState.currentRank['color'] as Color).withOpacity(0.5),
+                            width: 1.2,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        const SizedBox(width: 5),
-                        Text(
-                          "${appState.xp} XP",
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w900,
-                            color: appState.currentRank['color'] as Color,
+                        child: Row(
+                          children: [
+                            Icon(
+                              appState.currentRank['icon'] as IconData,
+                              color: appState.currentRank['color'] as Color,
+                              size: 15,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              "${appState.xp} XP",
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w900,
+                                color: appState.currentRank['color'] as Color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Notification badge alert if rewards are ready to claim
+                      if (appState.unclaimedMilestonesCount > 0)
+                        Positioned(
+                          top: -3,
+                          right: -3,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: const Color(0xffef4444),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xff0f172a), width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xffef4444).withOpacity(0.6),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
