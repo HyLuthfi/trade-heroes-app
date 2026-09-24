@@ -148,6 +148,21 @@ class SupabaseService {
     }
   }
 
+  // Fetch Leaderboard (Ranked by Total XP)
+  static Future<List<Map<String, dynamic>>> fetchLeaderboard({int limit = 25}) async {
+    try {
+      final response = await client
+          .from('profiles')
+          .select('id, name, email, avatar, xp, role, completed_levels, streak')
+          .order('xp', ascending: false)
+          .limit(limit);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint("Error fetching leaderboard from Supabase: $e");
+      return [];
+    }
+  }
+
   // Admin Update User Profile
   static Future<bool> adminUpdateProfile(String targetUserId, Map<String, dynamic> updates) async {
     try {

@@ -4,6 +4,8 @@ import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/quiz_overlay.dart';
 import '../widgets/daily_reward_modal.dart';
+import '../widgets/leaderboard_modal.dart';
+import '../widgets/ad_overlay.dart';
 
 class KuisView extends StatefulWidget {
   const KuisView({Key? key}) : super(key: key);
@@ -1991,6 +1993,11 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 onPressed: () {
+                                  if (appState.petir <= 0 && !appState.isPremium) {
+                                    AudioService.playWrong();
+                                    _showRefillLivesModal(context, appState);
+                                    return;
+                                  }
                                   AudioService.playConfirm();
                                   final qList = List<Map<String, dynamic>>.from(level['questions']);
                                   setState(() {
@@ -2020,6 +2027,69 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRefillLivesModal(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff0f172a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0xffef4444), width: 1.5),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.bolt_rounded, color: Color(0xffef4444), size: 64),
+            const SizedBox(height: 12),
+            const Text(
+              "PETIR ANDA HABIS!",
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xffef4444),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Nyawa petir Anda kosong. Klaim hadiah milestone XP, tunggu pemulihan otomatis, atau tonton iklan instan untuk memulai kuis!",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Color(0xffcbd5e1), height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xff10b981), width: 1.5),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                AdOverlay.show(context, () {
+                  appState.refillOnePetir();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("1 Nyawa petir telah berhasil dipulihkan.")),
+                  );
+                });
+              },
+              child: const Text(
+                "🎬 TONTON IKLAN (+1 NYAWA)",
+                style: TextStyle(fontFamily: 'Outfit', color: Color(0xff10b981), fontWeight: FontWeight.w900),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("TUTUP", style: TextStyle(color: Color(0xff94a3b8), fontFamily: 'Outfit')),
+            ),
+          ],
+        ),
       ),
     );
   }

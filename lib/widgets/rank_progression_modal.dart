@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 
+import 'leaderboard_modal.dart';
+
 class RankProgressionModal extends StatelessWidget {
   const RankProgressionModal({Key? key}) : super(key: key);
 
@@ -76,16 +78,50 @@ class RankProgressionModal extends StatelessWidget {
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      LeaderboardModal.show(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xfff59e0b).withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.emoji_events_rounded, color: Color(0xfffbbf24), size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            "Liga Trader",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xfffbbf24),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-                ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.08),
+                      ),
+                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

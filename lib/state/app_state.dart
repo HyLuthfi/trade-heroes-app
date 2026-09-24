@@ -9,7 +9,7 @@ import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
   int _petir = 5;
-  int _xp = 0;
+  int _xp = 0; // Total XP Seumur Hidup (Tunggal & Permanen)
   int _dailyXp = 0;
   int _streak = 0;
   List<int> _completedLevels = [1, 2, 3];
@@ -23,6 +23,11 @@ class AppState extends ChangeNotifier {
   bool _isLoggedIn = false;
   String _lastActiveDate = ""; // YYYY-MM-DD
   int? _petirLastUsedTime; // timestamp in ms
+
+  // XP Milestones Reward Track
+  int _streakShields = 0; // Streak protections
+  List<String> _unlockedAvatars = ["bull", "chart", "wallet"];
+  List<int> _claimedXpMilestones = []; // List of claimed milestone target XPs: [50, 100, 200, ...]
 
   String _userName = "Calon Trader";
   String _userEmail = "user@kursussaham.com";
@@ -46,6 +51,7 @@ class AppState extends ChangeNotifier {
   // Getters
   int get petir => _isPremium ? 999999 : _petir;
   int get xp => _xp;
+  int get totalXp => _xp;
   int get dailyXp => _dailyXp;
   int get streak => _streak;
   List<int> get completedLevels => _completedLevels;
@@ -70,6 +76,230 @@ class AppState extends ChangeNotifier {
   bool get bgmEnabled => _bgmEnabled;
   String get language => _language;
   String get bgmTrack => _bgmTrack;
+
+  // XP Milestones Reward Track Getters
+  int get streakShields => _streakShields;
+  List<String> get unlockedAvatars => _unlockedAvatars;
+  List<int> get claimedXpMilestones => _claimedXpMilestones;
+
+  // Definisi Jalur Hadiah Milestone XP (Tunggal & Gratis)
+  static const List<Map<String, dynamic>> xpMilestoneRewards = [
+    {
+      'targetXp': 50,
+      'title': '+2 Nyawa Petir',
+      'desc': 'Bantuan petir instan untuk terus belajar.',
+      'type': 'petir',
+      'value': 2,
+      'icon': Icons.bolt_rounded,
+      'color': Color(0xff10b981),
+    },
+    {
+      'targetXp': 100,
+      'title': 'Pelindung Streak',
+      'desc': 'Proteksi 1 hari agar streak belajarmu tidak hangus.',
+      'type': 'shield',
+      'value': 1,
+      'icon': Icons.security_rounded,
+      'color': Color(0xff3b82f6),
+    },
+    {
+      'targetXp': 200,
+      'title': 'Avatar Breakout Trader',
+      'desc': 'Buka avatar eksklusif momentum penembusan harga.',
+      'type': 'avatar',
+      'value': 'rocket',
+      'icon': Icons.rocket_launch_rounded,
+      'color': Color(0xff38bdf8),
+    },
+    {
+      'targetXp': 350,
+      'title': 'Full Refill 5 Petir',
+      'desc': 'Isi penuh seluruh energi petir seketika.',
+      'type': 'full_petir',
+      'value': 5,
+      'icon': Icons.flash_on_rounded,
+      'color': Color(0xfff59e0b),
+    },
+    {
+      'targetXp': 500,
+      'title': '+2 Pelindung Streak',
+      'desc': 'Simpanan proteksi ekstra untuk menjaga konsistensi.',
+      'type': 'shield',
+      'value': 2,
+      'icon': Icons.verified_user_rounded,
+      'color': Color(0xff14b8a6),
+    },
+    {
+      'targetXp': 750,
+      'title': 'Avatar Scalper Sejati',
+      'desc': 'Buka avatar eksklusif pembaca volatilitas cepat.',
+      'type': 'avatar',
+      'value': 'fire',
+      'icon': Icons.local_fire_department_rounded,
+      'color': Color(0xffef4444),
+    },
+    {
+      'targetXp': 1000,
+      'title': 'Avatar Market Legend',
+      'desc': 'Buka avatar legendaris bintang pasar modal.',
+      'type': 'avatar',
+      'value': 'star',
+      'icon': Icons.stars_rounded,
+      'color': Color(0xfffbbf24),
+    },
+    {
+      'targetXp': 1500,
+      'title': 'Avatar Grand Master',
+      'desc': 'Buka avatar kehormatan tertinggi akademi.',
+      'type': 'avatar',
+      'value': 'academy',
+      'icon': Icons.school_rounded,
+      'color': Color(0xffec4899),
+    },
+  ];
+
+  bool isMilestoneClaimed(int targetXp) => _claimedXpMilestones.contains(targetXp);
+  bool canClaimMilestone(int targetXp) => _xp >= targetXp && !isMilestoneClaimed(targetXp);
+
+  int get unclaimedMilestonesCount {
+    int count = 0;
+    for (final m in xpMilestoneRewards) {
+      if (canClaimMilestone(m['targetXp'] as int)) count++;
+    }
+    return count;
+  }
+
+  bool claimXpMilestone(int targetXp) {
+    if (!canClaimMilestone(targetXp)) return false;
+    final milestone = xpMilestoneRewards.firstWhere((m) => m['targetXp'] == targetXp);
+    final type = milestone['type'] as String;
+
+    if (type == 'petir') {
+      final add = milestone['value'] as int;
+      _petir = (_petir + add).clamp(0, 5);
+      if (_petir >= 5) _petirLastUsedTime = null;
+    } else if (type == 'full_petir') {
+      _petir = 5;
+      _petirLastUsedTime = null;
+    } else if (type == 'shield') {
+      final add = milestone['value'] as int;
+      _streakShields = (_streakShields + add).clamp(0, 5);
+    } else if (type == 'avatar') {
+      final avaId = milestone['value'] as String;
+      if (!_unlockedAvatars.contains(avaId)) {
+        _unlockedAvatars.add(avaId);
+      }
+    }
+
+    _claimedXpMilestones.add(targetXp);
+    AudioService.playReward();
+    _saveState();
+    notifyListeners();
+    return true;
+  }
+
+  bool isAvatarUnlocked(String id) {
+    if (id == 'vip') return _isPremium;
+    return _unlockedAvatars.contains(id);
+  }
+
+  // Leaderboard State (Stage 3)
+  List<Map<String, dynamic>> _leaderboard = [];
+  bool _isLoadingLeaderboard = false;
+
+  List<Map<String, dynamic>> get leaderboard => _leaderboard;
+  bool get isLoadingLeaderboard => _isLoadingLeaderboard;
+
+  int get userLeaderboardRank {
+    if (_leaderboard.isEmpty) return 1;
+    final myId = _userId;
+    for (int i = 0; i < _leaderboard.length; i++) {
+      final item = _leaderboard[i];
+      if ((myId != null && item['id'] == myId) || item['email'] == _userEmail || item['isCurrentUser'] == true) {
+        return i + 1;
+      }
+    }
+    // If not found in top list, estimate based on XP
+    for (int i = 0; i < _leaderboard.length; i++) {
+      final itemXp = (_leaderboard[i]['xp'] as num?)?.toInt() ?? 0;
+      if (_xp >= itemXp) return i + 1;
+    }
+    return _leaderboard.length + 1;
+  }
+
+  Future<void> loadLeaderboard({bool force = false}) async {
+    if (!force && _leaderboard.isNotEmpty) return;
+    _isLoadingLeaderboard = true;
+    notifyListeners();
+
+    try {
+      final cloudProfiles = await SupabaseService.fetchLeaderboard(limit: 20);
+      final List<Map<String, dynamic>> list = [];
+
+      final communityTraders = [
+        {'id': 'c1', 'name': 'Pratama Trader', 'email': 'pratama@bei.co', 'avatar': 'chart', 'xp': 1850, 'streak': 14, 'role': 'user'},
+        {'id': 'c2', 'name': 'Siti Khadijah', 'email': 'siti@invest.id', 'avatar': 'star', 'xp': 1420, 'streak': 9, 'role': 'user'},
+        {'id': 'c3', 'name': 'Budi Santoso', 'email': 'budi@trader.com', 'avatar': 'bull', 'xp': 960, 'streak': 7, 'role': 'user'},
+        {'id': 'c4', 'name': 'Rian Perkasa', 'email': 'rian@scalp.id', 'avatar': 'fire', 'xp': 680, 'streak': 5, 'role': 'user'},
+        {'id': 'c5', 'name': 'Dewi Lestari', 'email': 'dewi@cuan.com', 'avatar': 'shield', 'xp': 420, 'streak': 4, 'role': 'user'},
+        {'id': 'c6', 'name': 'Arif Wibowo', 'email': 'arif@sahambei.id', 'avatar': 'rocket', 'xp': 230, 'streak': 3, 'role': 'user'},
+        {'id': 'c7', 'name': 'Nadia Putri', 'email': 'nadia@investor.id', 'avatar': 'academy', 'xp': 110, 'streak': 2, 'role': 'user'},
+      ];
+
+      // Add real profiles
+      final Set<String> addedEmails = {};
+      for (final p in cloudProfiles) {
+        final email = p['email']?.toString() ?? '';
+        if (email.isNotEmpty) addedEmails.add(email);
+        final bool isMe = (p['id'] == _userId) || (email == _userEmail);
+        list.add({
+          'id': p['id'] ?? 'user',
+          'name': isMe ? _userName : (p['name'] ?? 'Trader'),
+          'email': email,
+          'avatar': isMe ? _userAvatar : (p['avatar'] ?? 'bull'),
+          'xp': isMe ? _xp : ((p['xp'] as num?)?.toInt() ?? 0),
+          'streak': isMe ? _streak : ((p['streak'] as num?)?.toInt() ?? 1),
+          'role': p['role'] ?? 'user',
+          'isCurrentUser': isMe,
+        });
+      }
+
+      // If current user is not in the list yet, insert current user
+      if (!list.any((item) => item['isCurrentUser'] == true)) {
+        list.add({
+          'id': _userId ?? 'me',
+          'name': _userName,
+          'email': _userEmail,
+          'avatar': _userAvatar,
+          'xp': _xp,
+          'streak': _streak,
+          'role': _role,
+          'isCurrentUser': true,
+        });
+      }
+
+      // Blend community mock traders if total real count < 8
+      for (final mock in communityTraders) {
+        if (!addedEmails.contains(mock['email']) && list.length < 15) {
+          list.add(Map<String, dynamic>.from(mock));
+        }
+      }
+
+      // Sort strictly by XP descending
+      list.sort((a, b) {
+        final xpA = (a['xp'] as num?)?.toInt() ?? 0;
+        final xpB = (b['xp'] as num?)?.toInt() ?? 0;
+        return xpB.compareTo(xpA);
+      });
+
+      _leaderboard = list;
+    } catch (e) {
+      debugPrint("Error loading leaderboard: $e");
+    } finally {
+      _isLoadingLeaderboard = false;
+      notifyListeners();
+    }
+  }
 
   // Trader Rank Progression (Tier I - V based on Total XP)
   static const List<Map<String, dynamic>> traderRanks = [
@@ -312,6 +542,9 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = json['isLoggedIn'] ?? false;
     _lastActiveDate = json['lastActiveDate'] ?? "";
     _petirLastUsedTime = json['petirLastUsedTime'];
+    _streakShields = json['streakShields'] ?? 0;
+    _unlockedAvatars = List<String>.from(json['unlockedAvatars'] ?? ['bull', 'chart', 'wallet']);
+    _claimedXpMilestones = List<int>.from(json['claimedXpMilestones'] ?? []);
     _userName = json['userName'] ?? "Calon Trader";
     _userEmail = json['userEmail'] ?? "user@kursussaham.com";
     _userAvatar = json['userAvatar'] ?? "bull";
@@ -344,6 +577,13 @@ class AppState extends ChangeNotifier {
     if (data['daily_xp'] != null) _dailyXp = data['daily_xp'];
     if (data['streak'] != null) _streak = data['streak'];
     if (data['is_premium'] != null) _isPremium = data['is_premium'];
+    if (data['streak_shields'] != null) _streakShields = data['streak_shields'];
+    if (data['unlocked_avatars'] != null && data['unlocked_avatars'] is List) {
+      _unlockedAvatars = (data['unlocked_avatars'] as List).map((x) => x.toString()).toList();
+    }
+    if (data['claimed_xp_milestones'] != null && data['claimed_xp_milestones'] is List) {
+      _claimedXpMilestones = (data['claimed_xp_milestones'] as List).map((x) => (x as num).toInt()).toList();
+    }
     if (data['last_daily_claim_date'] != null) _lastDailyClaimDate = data['last_daily_claim_date'];
     if (data['petir_last_used_time'] != null) _petirLastUsedTime = data['petir_last_used_time'];
     if (data['role'] != null) _role = data['role'];
@@ -404,6 +644,9 @@ class AppState extends ChangeNotifier {
       'claimedChests': _claimedChests,
       'claimedDailyDays': _claimedDailyDays,
       'lastDailyClaimDate': _lastDailyClaimDate,
+      'streakShields': _streakShields,
+      'unlockedAvatars': _unlockedAvatars,
+      'claimedXpMilestones': _claimedXpMilestones,
       'isPremium': _isPremium,
       'isLoggedIn': _isLoggedIn,
       'lastActiveDate': _lastActiveDate,
@@ -447,6 +690,9 @@ class AppState extends ChangeNotifier {
       'claimed_chests': _claimedChests,
       'claimed_daily_days': _claimedDailyDays,
       'last_daily_claim_date': _lastDailyClaimDate,
+      'streak_shields': _streakShields,
+      'unlocked_avatars': _unlockedAvatars,
+      'claimed_xp_milestones': _claimedXpMilestones,
       'is_premium': _isPremium,
       'petir_last_used_time': _petirLastUsedTime,
       'virtual_balance': _virtualBalance,
@@ -840,7 +1086,12 @@ class AppState extends ChangeNotifier {
         if (diffDays == 1) {
           _streak += 1;
         } else if (diffDays > 1) {
-          _streak = 1;
+          if (_streakShields > 0) {
+            _streakShields -= 1;
+            // Streak diselamatkan oleh Pelindung Streak!
+          } else {
+            _streak = 1;
+          }
         }
       } else {
         _streak = 1;

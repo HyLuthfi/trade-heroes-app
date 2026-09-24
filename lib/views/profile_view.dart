@@ -7,6 +7,8 @@ import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/vip_pass_modal.dart';
 import '../widgets/rank_progression_modal.dart';
+import '../widgets/xp_reward_modal.dart';
+import '../widgets/leaderboard_modal.dart';
 import 'admin_console_view.dart';
 
 class ProfileView extends StatefulWidget {
@@ -18,6 +20,7 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   bool _isUploadingAvatar = false;
+  bool _showAllBadges = false;
 
   final List<Map<String, dynamic>> _badges = const [
     {
@@ -93,15 +96,15 @@ class _ProfileViewState extends State<ProfileView> {
   ];
 
   final List<Map<String, dynamic>> _avatars = const [
-    { 'id': "bull", 'iconData': Icons.trending_up_rounded, 'name': "Bull" },
-    { 'id': "chart", 'iconData': Icons.show_chart_rounded, 'name': "Analyst" },
-    { 'id': "vip", 'iconData': Icons.workspace_premium_rounded, 'name': "VIP Gold" },
-    { 'id': "wallet", 'iconData': Icons.account_balance_wallet_rounded, 'name': "Whale" },
-    { 'id': "rocket", 'iconData': Icons.rocket_launch_rounded, 'name': "Breakout" },
-    { 'id': "star", 'iconData': Icons.stars_rounded, 'name': "Legend" },
-    { 'id': "shield", 'iconData': Icons.security_rounded, 'name': "Guardian" },
-    { 'id': "fire", 'iconData': Icons.local_fire_department_rounded, 'name': "Scalper" },
-    { 'id': "academy", 'iconData': Icons.school_rounded, 'name': "Master" },
+    { 'id': "bull", 'iconData': Icons.trending_up_rounded, 'name': "Bull", 'cost': 0 },
+    { 'id': "chart", 'iconData': Icons.show_chart_rounded, 'name': "Analyst", 'cost': 0 },
+    { 'id': "wallet", 'iconData': Icons.account_balance_wallet_rounded, 'name': "Whale", 'cost': 0 },
+    { 'id': "vip", 'iconData': Icons.workspace_premium_rounded, 'name': "VIP Gold", 'cost': 0, 'vipOnly': true },
+    { 'id': "rocket", 'iconData': Icons.rocket_launch_rounded, 'name': "Breakout", 'cost': 200 },
+    { 'id': "shield", 'iconData': Icons.security_rounded, 'name': "Guardian", 'cost': 300 },
+    { 'id': "fire", 'iconData': Icons.local_fire_department_rounded, 'name': "Scalper", 'cost': 400 },
+    { 'id': "star", 'iconData': Icons.stars_rounded, 'name': "Legend", 'cost': 600 },
+    { 'id': "academy", 'iconData': Icons.school_rounded, 'name': "Master", 'cost': 1000 },
   ];
 
   void _showAvatarSelector(BuildContext context, AppState appState) {
@@ -110,7 +113,30 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xff0f172a),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xff10b981), width: 1.5)),
-        title: const Text("Pilih Avatar Trader", style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Pilih Avatar Trader", style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 18)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xff1e293b),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.star_rounded, color: Color(0xfffbbf24), size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    "${appState.xp} XP",
+                    style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xfffbbf24)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: GridView.builder(
@@ -123,40 +149,146 @@ class _ProfileViewState extends State<ProfileView> {
             itemCount: _avatars.length,
             itemBuilder: (context, idx) {
               final ava = _avatars[idx];
-              final isSelected = appState.userAvatar == ava['id'];
+              final avaId = ava['id'] as String;
+              final isSelected = appState.userAvatar == avaId;
+              final isUnlocked = appState.isAvatarUnlocked(avaId);
+              final cost = ava['cost'] as int? ?? 0;
+              final isVipOnly = ava['vipOnly'] == true;
+
               return GestureDetector(
                 onTap: () {
-                  Navigator.of(ctx).pop();
-                  _showProfileEditPrompt(context, appState, ava['id']);
+                  if (isUnlocked) {
+                    Navigator.of(ctx).pop();
+                    _showProfileEditPrompt(context, appState, avaId);
+                  } else if (isVipOnly) {
+                    Navigator.of(ctx).pop();
+                    _showPremiumUpgradeModal(context, appState);
+                  } else {
+                    // Purchase avatar prompt
+                    _showAvatarPurchaseDialog(ctx, appState, ava);
+                  }
                 },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xff059669).withOpacity(0.4) : const Color(0xff1e293b),
-                    border: Border.all(
-                      color: isSelected ? const Color(0xfff59e0b) : Colors.white.withOpacity(0.12),
-                      width: isSelected ? 2.5 : 1,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xfff59e0b).withOpacity(0.5),
-                              blurRadius: 10,
-                            ),
-                          ]
-                        : null,
-                  ),
+                child: Stack(
                   alignment: Alignment.center,
-                  child: Icon(
-                    ava['iconData'] as IconData,
-                    color: isSelected ? const Color(0xfff59e0b) : const Color(0xff60a5fa),
-                    size: 32,
-                  ),
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xff059669).withOpacity(0.4)
+                            : (isUnlocked ? const Color(0xff1e293b) : const Color(0xff0b0f19)),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xfff59e0b)
+                              : (isUnlocked ? Colors.white.withOpacity(0.12) : const Color(0xff334155)),
+                          width: isSelected ? 2.5 : 1,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xfff59e0b).withOpacity(0.5),
+                                  blurRadius: 10,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        ava['iconData'] as IconData,
+                        color: isSelected
+                            ? const Color(0xfff59e0b)
+                            : (isUnlocked ? const Color(0xff60a5fa) : const Color(0xff64748b)),
+                        size: 32,
+                      ),
+                    ),
+                    if (!isUnlocked)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isVipOnly ? const Color(0xff78350f) : const Color(0xff1e293b),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isVipOnly ? const Color(0xfff59e0b) : const Color(0xff64748b),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            isVipOnly ? "VIP" : "$cost",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: isVipOnly ? const Color(0xfffbbf24) : Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             },
           ),
         ),
+      ),
+    );
+  }
+
+  void _showAvatarPurchaseDialog(BuildContext parentCtx, AppState appState, Map<String, dynamic> ava) {
+    final cost = ava['cost'] as int;
+    final name = ava['name'] as String;
+    final canClaim = appState.canClaimMilestone(cost);
+
+    showDialog(
+      context: parentCtx,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: const Color(0xff0f172a),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xff334155))),
+        title: Text("Buka Avatar $name", style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xff1e293b),
+                border: Border.all(color: const Color(0xfff59e0b), width: 1.5),
+              ),
+              alignment: Alignment.center,
+              child: Icon(ava['iconData'] as IconData, color: const Color(0xfff59e0b), size: 32),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              canClaim
+                  ? "Selamat! Total akumulasi belajar Anda telah mencapai $cost XP. Klaim avatar eksklusif ini sekarang secara gratis di Jalur Hadiah!"
+                  : "Avatar ini merupakan hadiah Jalur Hadiah di target $cost XP. (XP Anda saat ini: ${appState.xp} XP). Terus belajar untuk membuka hadiah ini!",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xffcbd5e1), height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(),
+            child: const Text("Tutup", style: TextStyle(color: Color(0xff94a3b8))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xfff59e0b)),
+            onPressed: () {
+              Navigator.of(dCtx).pop();
+              Navigator.of(parentCtx).pop();
+              XpRewardModal.show(context);
+            },
+            child: const Text(
+              "Buka Jalur Hadiah 🎁",
+              style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.black),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1131,7 +1263,115 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
+
+                        // Jalur Hadiah XP Banner (Milestone Rewards Track)
+                        GestureDetector(
+                          onTap: () {
+                            AudioService.playClick();
+                            XpRewardModal.show(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xff1e293b), Color(0xff0f172a)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: appState.unclaimedMilestonesCount > 0
+                                    ? const Color(0xfff59e0b)
+                                    : Colors.white.withOpacity(0.08),
+                                width: appState.unclaimedMilestonesCount > 0 ? 1.5 : 1.0,
+                              ),
+                              boxShadow: appState.unclaimedMilestonesCount > 0
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xfff59e0b).withOpacity(0.2),
+                                        blurRadius: 10,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xfff59e0b).withOpacity(0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.card_giftcard_rounded, color: Color(0xfffbbf24), size: 18),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Text(
+                                            "Jalur Hadiah XP",
+                                            style: TextStyle(
+                                              fontFamily: 'Outfit',
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          if (appState.unclaimedMilestonesCount > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xff10b981),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                "${appState.unclaimedMilestonesCount} Hadiah Siap!",
+                                                style: const TextStyle(
+                                                  fontFamily: 'Outfit',
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xfff59e0b).withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                "${appState.xp} XP",
+                                                style: const TextStyle(
+                                                  fontFamily: 'Outfit',
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xfffbbf24),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        "Buka nyawa, pelindung streak & avatar saat XP naik.",
+                                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xff94a3b8)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xfffbbf24), size: 13),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
 
                         // Premium Plan Banner Card Widget
                         GestureDetector(
@@ -1212,12 +1452,46 @@ class _ProfileViewState extends State<ProfileView> {
 
                   const SizedBox(height: 22),
                   Row(
-                    children: const [
-                      Icon(Icons.bar_chart_rounded, color: Color(0xff10b981), size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        "Statistik Belajar",
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.bar_chart_rounded, color: Color(0xff10b981), size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            "Statistik Belajar",
+                            style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          AudioService.playClick();
+                          LeaderboardModal.show(context);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xfff59e0b).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xfff59e0b).withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.emoji_events_rounded, color: Color(0xfffbbf24), size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Liga #${appState.userLeaderboardRank}",
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xfffbbf24),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1251,91 +1525,166 @@ class _ProfileViewState extends State<ProfileView> {
 
                   const SizedBox(height: 24),
                   Row(
-                    children: const [
-                      Icon(Icons.military_tech_rounded, color: Color(0xfff59e0b), size: 22),
-                      SizedBox(width: 8),
-                      Text(
-                        "Medali Pencapaian",
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.military_tech_rounded, color: Color(0xfff59e0b), size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "Medali Pencapaian",
+                            style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff1e293b),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.white.withOpacity(0.08)),
+                            ),
+                            child: Text(
+                              "${appState.unlockedBadges.length}/${_badges.length}",
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff94a3b8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          AudioService.playClick();
+                          setState(() {
+                            _showAllBadges = !_showAllBadges;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.06),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _showAllBadges ? "Ringkas" : "Lihat Semua",
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xff38bdf8),
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Icon(
+                                _showAllBadges ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                color: const Color(0xff38bdf8),
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // 3. Hall of Fame Badges Grid 3D
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.88,
-                    ),
-                    itemCount: _badges.length,
-                    itemBuilder: (context, idx) {
-                      final badge = _badges[idx];
-                      final isUnlocked = appState.unlockedBadges.contains(badge['id']);
-                      final IconData iconData = badge['iconData'] as IconData;
-                      final Color badgeColor = badge['color'] as Color;
+                  // 3. Hall of Fame Badges Grid (Compact 4 columns, limited preview)
+                  Builder(
+                    builder: (context) {
+                      // Urutkan: yang sudah terbuka di depan
+                      final sortedBadges = List<Map<String, dynamic>>.from(_badges);
+                      sortedBadges.sort((a, b) {
+                        final aUnlocked = appState.unlockedBadges.contains(a['id']);
+                        final bUnlocked = appState.unlockedBadges.contains(b['id']);
+                        if (aUnlocked && !bUnlocked) return -1;
+                        if (!aUnlocked && bUnlocked) return 1;
+                        return 0;
+                      });
 
-                      return GestureDetector(
-                        onTap: () => _showBadgeDetail(context, badge, isUnlocked),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xff0f172a).withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isUnlocked ? badgeColor : Colors.white.withOpacity(0.1),
-                              width: isUnlocked ? 1.5 : 1.0,
-                            ),
-                            boxShadow: isUnlocked
-                                ? [
-                                    BoxShadow(
-                                      color: badgeColor.withOpacity(0.25),
-                                      blurRadius: 8,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 52,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isUnlocked ? badgeColor : const Color(0xff475569),
-                                    width: isUnlocked ? 2.5 : 1.5,
-                                  ),
-                                  color: const Color(0xff1e293b),
-                                ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  iconData,
-                                  color: isUnlocked ? badgeColor : const Color(0xff64748b),
-                                  size: 26,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                badge['name'],
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: 'Outfit',
-                                  fontSize: 11.5,
-                                  fontWeight: isUnlocked ? FontWeight.w900 : FontWeight.bold,
-                                  color: isUnlocked ? Colors.white : const Color(0xff94a3b8),
-                                ),
-                              ),
-                            ],
-                          ),
+                      final displayedBadges = _showAllBadges ? sortedBadges : sortedBadges.take(4).toList();
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.85,
                         ),
+                        itemCount: displayedBadges.length,
+                        itemBuilder: (context, idx) {
+                          final badge = displayedBadges[idx];
+                          final isUnlocked = appState.unlockedBadges.contains(badge['id']);
+                          final IconData iconData = badge['iconData'] as IconData;
+                          final Color badgeColor = badge['color'] as Color;
+
+                          return GestureDetector(
+                            onTap: () => _showBadgeDetail(context, badge, isUnlocked),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0f172a).withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isUnlocked ? badgeColor.withOpacity(0.8) : Colors.white.withOpacity(0.06),
+                                  width: isUnlocked ? 1.2 : 0.8,
+                                ),
+                                boxShadow: isUnlocked
+                                    ? [
+                                        BoxShadow(
+                                          color: badgeColor.withOpacity(0.2),
+                                          blurRadius: 6,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isUnlocked ? badgeColor : const Color(0xff334155),
+                                        width: isUnlocked ? 2.0 : 1.0,
+                                      ),
+                                      color: const Color(0xff1e293b),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      iconData,
+                                      color: isUnlocked ? badgeColor : const Color(0xff475569),
+                                      size: 19,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    badge['name'],
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 10,
+                                      fontWeight: isUnlocked ? FontWeight.w800 : FontWeight.w600,
+                                      color: isUnlocked ? Colors.white : const Color(0xff64748b),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),

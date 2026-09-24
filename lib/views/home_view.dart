@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/rank_progression_modal.dart';
+import '../widgets/leaderboard_modal.dart';
 import 'kuis_view.dart';
 import 'materi_view.dart';
 import 'profile_view.dart';
