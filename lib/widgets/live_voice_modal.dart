@@ -42,8 +42,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
   String _aiTranscript = "";
   String _errorMessage = "";
   bool _isMicMuted = false;
-  String _selectedEngine = "gemini_charon";
-  String _activeProviderName = "Google Gemini (Charon)";
+  final String _selectedEngine = "gemini_charon";
 
   late AnimationController _orbController;
   late Animation<double> _orbPulse;
@@ -170,13 +169,9 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
         final data = jsonDecode(res.body);
         final replyText = (data['reply'] ?? '').toString();
         final audioUri = (data['audio'] ?? '').toString();
-        final provider = (data['provider'] ?? '').toString();
 
         setState(() {
           _aiTranscript = replyText;
-          if (provider.isNotEmpty) {
-            _activeProviderName = provider;
-          }
         });
 
         if (widget.onConversationEnd != null) {
@@ -234,39 +229,6 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
     } else {
       _startListeningCycle();
     }
-  }
-
-  Widget _buildVoiceChip(String engineKey, String label) {
-    final isSelected = _selectedEngine == engineKey;
-    return GestureDetector(
-      onTap: () {
-        AudioService.playClick();
-        setState(() {
-          _selectedEngine = engineKey;
-          _activeProviderName = label;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xff10b981).withOpacity(0.2) : const Color(0xff1e293b),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? const Color(0xff10b981) : Colors.white.withOpacity(0.08),
-            width: isSelected ? 1.4 : 1.0,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 10.5,
-            fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
-            color: isSelected ? const Color(0xff34d399) : const Color(0xff94a3b8),
-          ),
-        ),
-      ),
-    );
   }
 
   Color _getPrimaryColor() {
@@ -403,25 +365,6 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                   ),
                 ),
 
-                // Voice Engine Selector Chips Row
-                Container(
-                  height: 34,
-                  margin: const EdgeInsets.only(bottom: 6),
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: [
-                      _buildVoiceChip("gemini_charon", "Gemini (Charon)"),
-                      const SizedBox(width: 6),
-                      _buildVoiceChip("gemini_puck", "Gemini (Puck)"),
-                      const SizedBox(width: 6),
-                      _buildVoiceChip("microsoft_ardi", "MS Edge (Ardi)"),
-                      const SizedBox(width: 6),
-                      _buildVoiceChip("auto", "Otomatis"),
-                    ],
-                  ),
-                ),
-
                 const Spacer(flex: 1),
 
                 // Center Animated Glowing Orb
@@ -535,35 +478,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                   ),
                 ),
 
-                const SizedBox(height: 10),
-
-                // Active Voice Engine Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff161f30),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.record_voice_over_rounded, color: curColor, size: 13),
-                      const SizedBox(width: 5),
-                      Text(
-                        "Suara: $_activeProviderName",
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xffcbd5e1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
 
                 // Live Spoken Subtitle Glass Box
                 Container(
