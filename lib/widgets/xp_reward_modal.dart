@@ -237,7 +237,7 @@ class XpRewardModal extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
-                            "KLAIMED ✓",
+                            "SUDAH DIKLAIM",
                             style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xff64748b)),
                           ),
                         )
@@ -253,7 +253,7 @@ class XpRewardModal extends StatelessWidget {
                             appState.claimXpMilestone(targetXp);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text("Selamat! Hadiah '${m['title']}' berhasil diklaim! 🎉"),
+                                content: Text("Selamat! Hadiah '${m['title']}' berhasil diklaim!"),
                                 backgroundColor: const Color(0xff059669),
                               ),
                             );

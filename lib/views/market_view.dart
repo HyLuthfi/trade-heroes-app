@@ -1017,7 +1017,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     _chatMessages.add({
       'isUser': false,
       'time': _formatCurrentTime(),
-      'text': "Halo! Saya **SAI Tech AI Chatbot** 🤖.\n\nKamu sedang memantau saham **$ticker** (${stock['name'] ?? ''}) di harga **$p** ($chg).\n\nAda yang ingin kamu tanyakan mengenai analisa teknikal, valuasi fundamental, atau strategi trading untuk saham ini?",
+      'text': "Halo! Saya **SAI Tech AI Chatbot**.\n\nKamu sedang memantau saham **$ticker** (${stock['name'] ?? ''}) di harga **$p** ($chg).\n\nAda yang ingin kamu tanyakan mengenai analisa teknikal, valuasi fundamental, atau strategi trading untuk saham ini?",
     });
   }
 
@@ -1175,64 +1175,64 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
     final s2 = (price * 0.95).round();
 
     if (qLower.contains('support') || qLower.contains('resistance') || qLower.contains('snr') || qLower.contains('level')) {
-      return "🎯 **Level Kunci Teknikal $ticker:**\n\n"
+      return "**Level Kunci Teknikal $ticker:**\n\n"
           "• **Resistance 2 (Target Kuat):** Rp $r2 (+5.0%)\n"
           "• **Resistance 1 (Uji Breakout):** Rp $r1 (+2.5%)\n"
           "• **Harga Saat Ini:** Rp $pInt\n"
           "• **Support 1 (Area Rebound):** Rp $s1 (-2.5%)\n"
           "• **Support 2 (Batas Stop Loss):** Rp $s2 (-5.0%)\n\n"
-          "💡 **Saran Aksi:** Jika harga mampu bertahan di atas Rp $s1 dengan volume transaksi yang meningkat, saham ini memiliki peluang teknikal untuk menguji Resistance Rp $r1.";
+          "**Saran Aksi:** Jika harga mampu bertahan di atas Rp $s1 dengan volume transaksi yang meningkat, saham ini memiliki peluang teknikal untuk menguji Resistance Rp $r1.";
     }
 
     if (qLower.contains('valuasi') || qLower.contains('rasio') || qLower.contains('per') || qLower.contains('pbv') || qLower.contains('murah') || qLower.contains('mahal')) {
-      return "📊 **Ringkasan Valuasi Fundamental $ticker:**\n\n"
+      return "**Ringkasan Valuasi Fundamental $ticker:**\n\n"
           "• **Sektor:** $sector\n"
           "• **P/E Ratio (PER):** ${per}x\n"
           "• **P/BV Ratio (PBV):** ${pbv}x\n"
           "• **Kapitalisasi Pasar:** ${stock['mcap'] ?? '-'}\n"
           "• **Foreign Flow:** ${stock['foreignNet'] ?? '-'}\n\n"
-          "📌 **Catatan Analis:** Di sektor $sector, PER ${per}x mencerminkan ekspektasi pertumbuhan laba yang solid. Sebagai emiten market leader, $ticker kerap diperdagangkan dengan *premium valuation* karena kualitas neraca yang stabil.";
+          "**Catatan Analis:** Di sektor $sector, PER ${per}x mencerminkan ekspektasi pertumbuhan laba yang solid. Sebagai emiten market leader, $ticker kerap diperdagangkan dengan *premium valuation* karena kualitas neraca yang stabil.";
     }
 
     if (qLower.contains('masuk') || qLower.contains('keluar') || qLower.contains('beli') || qLower.contains('jual') || qLower.contains('strategi') || qLower.contains('target') || qLower.contains('sl')) {
-      return "⚡ **Trading Plan & Strategi Eksekusi $ticker:**\n\n"
+      return "**Trading Plan & Strategi Eksekusi $ticker:**\n\n"
           "1. **Area Buy / Entry:** Sekitar Rp $s1 - Rp $pInt saat terjadi konfirmasi pantulan.\n"
           "2. **Target Profit (TP 1):** Rp $r1 (+2.5%)\n"
           "3. **Target Profit (TP 2):** Rp $r2 (+5.0%)\n"
           "4. **Stop Loss (SL):** Rp $s2 (disiplin cut loss jika breakdown di bawah support untuk membatasi risiko).\n\n"
-          "🛡️ **Money Management:** Gunakan alokasi maksimal 10-15% dari total portofolio untuk satu emiten agar risiko terkontrol.";
+          "**Money Management:** Gunakan alokasi maksimal 10-15% dari total portofolio untuk satu emiten agar risiko terkontrol.";
     }
 
     if (qLower.contains('pemula') || qLower.contains('tips') || qLower.contains('nabung') || qLower.contains('dca') || qLower.contains('aman')) {
-      return "📚 **Panduan & Tips Pemula untuk Saham $ticker:**\n\n"
+      return "**Panduan & Tips Pemula untuk Saham $ticker:**\n\n"
           "1. **Karakter Emiten:** $ticker ($name) merupakan saham kategori **Blue Chip (LQ45)** dengan likuiditas tinggi, sehingga relatif lebih aman dan tidak mudah digerakkan oleh spekulan.\n"
           "2. **Metode Akumulasi:** Sangat cocok menggunakan strategi **Dollar Cost Averaging (DCA)** — membeli secara rutin tiap bulan tanpa pusing menebak titik terendah pasar.\n"
           "3. **Dividen Tahunan:** Perusahaan ini konsisten membagikan dividen tunai kepada pemegang saham setiap tahun buku.\n\n"
-          "💡 **Langkah Awal:** Cukup beli 1 lot (100 lembar) terlebih dahulu untuk membiasakan diri memantau fluktuasi harga.";
+          "**Langkah Awal:** Cukup beli 1 lot (100 lembar) terlebih dahulu untuk membiasakan diri memantau fluktuasi harga.";
     }
 
     if (qLower.contains('smc') || qLower.contains('fvg') || qLower.contains('imbalance') || qLower.contains('smart money') || qLower.contains('order block')) {
-      return "🏛️ **Smart Money Concepts (SMC) & FVG $ticker:**\n\n"
+      return "**Smart Money Concepts (SMC) & FVG $ticker:**\n\n"
           "• **Konsep Dasar:** SMC melacak jejak transaksi investor institusi besar melalui area ketidakseimbangan likuiditas (*Fair Value Gap / FVG*).\n"
           "• **Zona Imbalance (FVG):** Celah harga yang ditinggalkan saat ada pembelian/penjualan agresif satu arah. Celah ini cenderung menjadi magnet yang akan dikunjungi kembali oleh harga.\n"
           "• **Order Block (Demand/Supply):** Area harga di mana institusi menumpuk order akumulasi sebelum terjadi kenaikan tajam.\n\n"
-          "💡 **Tips Pemula:** Jangan buru-buru membeli saat harga melesat meninggalkan FVG. Tunggu harga melakukan *pullback* (koreksi sehat) kembali ke area bantalan support untuk rasio *risk-to-reward* terbaik.";
+          "**Tips Pemula:** Jangan buru-buru membeli saat harga melesat meninggalkan FVG. Tunggu harga melakukan *pullback* (koreksi sehat) kembali ke area bantalan support untuk rasio *risk-to-reward* terbaik.";
     }
 
     if (qLower.contains('zerolag') || qLower.contains('zero-lag') || qLower.contains('momentum') || qLower.contains('jenuh') || qLower.contains('volatilitas')) {
-      return "⚡ **Zero-Lag Momentum & Volatilitas $ticker:**\n\n"
+      return "**Zero-Lag Momentum & Volatilitas $ticker:**\n\n"
           "• **Prinsip Zero-Lag:** Indikator pergerakan harga tanpa keterlambatan (*lag-free*), mengukur apakah dorongan harga didukung oleh volume institusi nyata atau spekulasi sesaat.\n"
           "• **Kondisi Pasar:** Harga saat ini di Rp $pInt bergerak dalam pita volatilitas yang sehat.\n"
           "• **Status Akumulasi:** Momentum menunjukkan fase konsolidasi terarah, menandakan pergerakan harga sedang mengumpulkan tenaga sebelum menentukan arah ekspansi.\n\n"
-          "💡 **Strategi Edukatif:** Saat volatilitas sedang kompresi (menyempit), hindari trading agresif. Tunggu konfirmasi penembusan (*breakout*) dengan lonjakan volume.";
+          "**Strategi Edukatif:** Saat volatilitas sedang kompresi (menyempit), hindari trading agresif. Tunggu konfirmasi penembusan (*breakout*) dengan lonjakan volume.";
     }
 
     // Default Prospek Analysis
-    return "💡 **Analisa Prospek Bisnis & Tren $ticker:**\n\n"
+    return "**Analisa Prospek Bisnis & Tren $ticker:**\n\n"
         "• **Model Bisnis:** Sebagai pemain dominan di sektor $sector, $name memiliki *economic moat* yang kuat dan basis pelanggan yang loyal.\n"
         "• **Arus Dana Institusi:** Aktivitas net foreign tercatat ${stock['foreignNet'] ?? '-'}, menandakan minat investor institusi tetap aktif.\n"
         "• **Sentimen Pasar:** Tren harga di Rp $pInt menunjukkan konsolidasi sehat di area support teknikal.\n\n"
-        "🎯 **Kesimpulan AI:** Saham ini menarik untuk dijadikan fondasi portofolio jangka menengah-panjang. Silakan manfaatkan koreksi wajar di area Rp $s1 untuk akumulasi bertahap.";
+        "**Kesimpulan AI:** Saham ini menarik untuk dijadikan fondasi portofolio jangka menengah-panjang. Silakan manfaatkan koreksi wajar di area Rp $s1 untuk akumulasi bertahap.";
   }
 
   Widget _buildAiThinkingBubble() {

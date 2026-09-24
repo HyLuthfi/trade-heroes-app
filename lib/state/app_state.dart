@@ -1592,7 +1592,7 @@ class AppState extends ChangeNotifier {
               ),
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text(
-                "AMBIL GELAR SAYA 👑",
+                "AMBIL GELAR SAYA",
                 style: TextStyle(fontFamily: 'Outfit', color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
               ),
             ),

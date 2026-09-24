@@ -484,7 +484,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                     if (streak > 0) ...[
                       const SizedBox(width: 6),
                       Text(
-                        "• 🔥 $streak Hari",
+                        "• $streak Hari",
                         style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xfff87171)),
                       ),
                     ],
@@ -573,7 +573,7 @@ class _LeaderboardModalState extends State<LeaderboardModal> {
                 const SizedBox(height: 1),
                 Text(
                   userRank == 1
-                      ? "👑 Anda memimpin posisi teratas Liga!"
+                      ? "Anda memimpin posisi teratas Liga!"
                       : (xpToOvertake > 0
                           ? "Butuh $xpToOvertake XP lagi untuk menyalip #$userRank-1 ($overtakeName)"
                           : "Terus selesaikan kuis untuk naik peringkat!"),

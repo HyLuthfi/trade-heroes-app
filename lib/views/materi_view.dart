@@ -321,12 +321,12 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
         Color badgeBorder = const Color(0xff3b82f6).withOpacity(0.5);
 
         if (isRead) {
-          badgeText = "SELESAI DIBACA ✓";
+          badgeText = "SELESAI DIBACA";
           badgeColor = const Color(0xff064e3b);
           badgeTextColor = const Color(0xff34d399);
           badgeBorder = const Color(0xff10b981);
         } else if (isLocked) {
-          badgeText = "PREMIUM EXCLUSIVE 👑";
+          badgeText = "PREMIUM EXCLUSIVE";
           badgeColor = const Color(0xff78350f);
           badgeTextColor = const Color(0xfff59e0b);
           badgeBorder = const Color(0xfff59e0b);
@@ -397,7 +397,6 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                           ),
                           child: Row(
                             children: [
-                              const Text("🪙 ", style: TextStyle(fontSize: 11)),
                               Text(
                                 "+${mod['xp']} XP",
                                 style: const TextStyle(
@@ -470,7 +469,7 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                isLocked ? "KUNCI 🔒" : "BACA SEKARANG →",
+                                isLocked ? "TERKUNCI" : "BACA SEKARANG →",
                                 style: const TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 11.5,
@@ -633,7 +632,7 @@ class _MateriViewState extends State<MateriView> with SingleTickerProviderStateM
                     AdOverlay.show(context, () {});
                   },
                   child: Text(
-                    "SELESAI MEMBACA (+${mod['xp']} XP) 🚀",
+                    "SELESAI MEMBACA (+${mod['xp']} XP)",
                     style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 15,

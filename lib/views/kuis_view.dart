@@ -1387,7 +1387,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     final bgColor = isUnlocked ? activeColor : const Color(0xff334155);
     final shadowColor = isUnlocked ? activeShadowColor : const Color(0xff1e293b);
     final iconData = isUnlocked ? _getZoneIcon(zoneTag) : Icons.lock_rounded;
-    final badgeText = isUnlocked ? levelRange : "Terkunci 🔒";
+    final badgeText = isUnlocked ? levelRange : "Terkunci";
 
     return Positioned(
       left: 0,
@@ -1490,7 +1490,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
     Color chestBorder = const Color(0xff475569);
     IconData chestIcon = Icons.lock_rounded;
     Color iconColor = const Color(0xff94a3b8);
-    String labelText = "$title 🔒";
+    String labelText = title;
 
     if (isCompleted) {
       if (isClaimed) {
@@ -1498,7 +1498,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
         chestBorder = const Color(0xff10b981);
         chestIcon = Icons.card_giftcard_rounded;
         iconColor = const Color(0xff34d399);
-        labelText = "Diklaim ✓";
+        labelText = "Diklaim";
       } else {
         chestBg = const Color(0xff78350f);
         chestBorder = const Color(0xfff59e0b);
@@ -1552,7 +1552,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 ],
               ),
               child: Text(
-                isClaimed ? "Diklaim ✓" : (isCompleted ? "+$xpReward XP ✨" : "$title 🔒"),
+                isClaimed ? "Diklaim" : (isCompleted ? "+$xpReward XP" : title),
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 10.5,
@@ -1654,7 +1654,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
             const SizedBox(height: 6),
             Text(
               isClaimed
-                  ? "Hadiah +$xpReward XP telah diklaim ✓"
+                  ? "Hadiah +$xpReward XP telah diklaim"
                   : isCompleted
                       ? "Bonus +$xpReward XP siap diklaim!"
                       : "Selesaikan Level $levelId untuk membuka",
@@ -2096,7 +2096,7 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                 });
               },
               child: const Text(
-                "🎬 TONTON IKLAN (+1 NYAWA)",
+                "TONTON IKLAN (+1 NYAWA)",
                 style: TextStyle(fontFamily: 'Outfit', color: Color(0xff10b981), fontWeight: FontWeight.w900),
               ),
             ),

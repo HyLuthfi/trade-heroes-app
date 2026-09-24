@@ -1249,7 +1249,7 @@ class _ProfileViewState extends State<ProfileView> {
                                     Text(
                                       appState.nextRank != null
                                           ? "Kurang ${appState.xpToNextRank} XP lagi (${(appState.rankProgress * 100).toInt()}%)"
-                                          : "Gelar Tertinggi ✓",
+                                          : "Gelar Tertinggi",
                                       style: TextStyle(
                                         fontFamily: 'Outfit',
                                         fontSize: 10.5,
@@ -1524,7 +1524,7 @@ class _ProfileViewState extends State<ProfileView> {
                         color: appState.isDailyGoalReached ? const Color(0xff10b981) : const Color(0xff3b82f6),
                         subtitle: appState.canClaimDailyGoalBonus
                             ? "Klaim Bonus Hadiah!"
-                            : (appState.isDailyGoalClaimedToday ? "Target Tercapai ✓" : "Target 50 XP/hari"),
+                            : (appState.isDailyGoalClaimedToday ? "Target Tercapai" : "Target 50 XP/hari"),
                         onTap: () {
                           AudioService.playClick();
                           if (appState.canClaimDailyGoalBonus) {
