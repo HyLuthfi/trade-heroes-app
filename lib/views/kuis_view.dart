@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../data/kuis_data.dart';
 import '../l10n/app_translations.dart';
 import '../services/audio_service.dart';
 import '../state/app_state.dart';
@@ -185,407 +186,9 @@ static bool _translationsRegistered = false;
   }
 
 
-  // Question database for reference
-  final List<Map<String, dynamic>> _levelData = [
-    {
-      'id': 1,
-      'title': "Pengenalan Saham",
-      'desc': "Pahami konsep dasar kepemilikan modal & inflasi.",
-      'zone': 1,
-      'xFactor': 0.5,
-      'y': 1580.0,
-      'icon': Icons.book_outlined,
-      'questions': [
-        {
-          'type': 'pilgan',
-          'q': "Apa pengertian dasar dari saham?",
-          'options': [
-            "Surat utang yang diterbitkan oleh pemerintah",
-            "Bukti kepemilikan modal atas suatu perusahaan",
-            "Mata uang kripto hasil penambangan digital",
-            "Sertifikat deposito bank komersial"
-          ],
-          'a': 1,
-          'explanation': "Saham adalah surat berharga yang menunjukkan bagian kepemilikan atas suatu perusahaan."
-        },
-        {
-          'type': 'esai',
-          'q': "Tuliskan nama instrumen bukti kepemilikan sebagian aset perusahaan (dimulai dengan huruf S):",
-          'a': "saham",
-          'explanation': "Saham merupakan bukti kepemilikan modal di suatu perseroan terbatas."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Jika Anda membeli saham PT Telkom Indonesia, Anda berstatus sebagai...",
-          'options': [
-            "Karyawan tetap Telkom",
-            "Kreditor pemberi pinjaman",
-            "Salah satu pemilik Telkom",
-            "Direktur utama Telkom"
-          ],
-          'a': 2,
-          'explanation': "Membeli saham berarti memiliki porsi modal perusahaan, sehingga Anda menjadi salah satu pemilik (pemegang saham) perusahaan tersebut."
-        }
-      ]
-    },
-    {
-      'id': 2,
-      'title': "Bursa Efek",
-      'desc': "Kenali institusi tempat perdagangan efek berlangsung.",
-      'zone': 1,
-      'xFactor': 0.28,
-      'y': 1440.0,
-      'icon': Icons.business,
-      'questions': [
-        {
-          'type': 'esai',
-          'q': "Apa singkatan resmi dari Bursa Efek Indonesia?",
-          'a': "bei",
-          'explanation': "Bursa Efek Indonesia biasa disingkat BEI (atau IDX dalam bahasa Inggris)."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Tempat bertemunya para penjual dan pembeli saham/efek secara resmi dinamakan...",
-          'options': [
-            "Bank Indonesia",
-            "Pasar Tradisional",
-            "Bursa Efek",
-            "Koperasi Unit Desa"
-          ],
-          'a': 2,
-          'explanation': "Bursa Efek adalah lembaga resmi penyedia sistem perdagangan efek."
-        },
-        {
-          'type': 'esai',
-          'q': "Singkatan dari indeks rata-rata pergerakan harga seluruh saham di BEI adalah...",
-          'a': "ihsg",
-          'explanation': "IHSG singkatan dari Indeks Harga Saham Gabungan."
-        }
-      ]
-    },
-    {
-      'id': 3,
-      'title': "Dividen & Capital Gain",
-      'desc': "Pelajari 2 sumber keuntungan utama investasi saham.",
-      'zone': 1,
-      'xFactor': 0.72,
-      'y': 1300.0,
-      'icon': Icons.attach_money,
-      'questions': [
-        {
-          'type': 'pilgan',
-          'q': "Keuntungan yang didapat dari selisih kenaikan harga jual saham dibanding harga beli disebut...",
-          'options': [
-            "Dividen",
-            "Capital Gain",
-            "Capital Loss",
-            "Kupon Obligasi"
-          ],
-          'a': 1,
-          'explanation': "Capital Gain terjadi saat harga saham yang Anda beli mengalami kenaikan saat dijual."
-        },
-        {
-          'type': 'esai',
-          'q': "Bagian laba bersih perusahaan yang dibagikan kepada pemegang saham dinamakan...",
-          'a': "dividen",
-          'explanation': "Dividen dibayarkan perusahaan secara berkala berdasarkan keputusan RUPS."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Kerugian yang timbul ketika Anda menjual saham di bawah harga pembeliaan awal disebut...",
-          'options': [
-            "Capital Gain",
-            "Capital Loss",
-            "Dividen Yield",
-            "Cashback"
-          ],
-          'a': 1,
-          'explanation': "Capital Loss adalah kerugian modal ketika harga penutupan/jual lebih rendah dari modal beli."
-        }
-      ]
-    },
-    {
-      'id': 4,
-      'title': "Candlestick Dasar",
-      'desc': "Belajar memahami pergerakan harga melalui grafik lilin.",
-      'zone': 2,
-      'xFactor': 0.28,
-      'y': 1060.0,
-      'icon': Icons.candlestick_chart,
-      'questions': [
-        {
-          'type': 'pilgan',
-          'q': "Secara umum pada grafik saham, lilin berwarna hijau menandakan bahwa harga...",
-          'options': [
-            "Ditutup lebih rendah dari harga buka (Turun)",
-            "Ditutup lebih tinggi dari harga buka (Naik)",
-            "Sama sekali tidak bergerak",
-            "Mengalami transaksi bodong"
-          ],
-          'a': 1,
-          'explanation': "Lilin hijau (Bullish) menunjukkan penutupan harga lebih tinggi dari harga pembukaan."
-        },
-        {
-          'type': 'esai',
-          'q': "Titik teratas pada sumbu (shadow) grafik candlestick menggambarkan harga...",
-          'a': "tertinggi",
-          'explanation': "Ujung atas ekor candlestick adalah harga tertinggi (High) pada periode tersebut."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Lilin berwarna merah pada candlestick chart mengindikasikan dominan tekanan...",
-          'options': [
-            "Pembelian (Beli)",
-            "Penjualan (Jual)",
-            "Stagnan",
-            "Pembagian Dividen"
-          ],
-          'a': 1,
-          'explanation': "Lilin merah (Bearish) menandakan harga saham tertekan turun oleh dorongan aksi jual."
-        }
-      ]
-    },
-    {
-      'id': 5,
-      'title': "Support & Resistance",
-      'desc': "Tentukan batas lantai dan atap pergerakan harga saham.",
-      'zone': 2,
-      'xFactor': 0.72,
-      'y': 920.0,
-      'icon': Icons.horizontal_rule,
-      'questions': [
-        {
-          'type': 'esai',
-          'q': "Area batas bawah psikologis di mana harga saham cenderung menahan penurunan disebut...",
-          'a': "support",
-          'explanation': "Support adalah tingkat harga di mana pembeli diprakirakan cukup kuat untuk menahan harga turun."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Apa arti dari batas Resistance dalam grafik teknikal saham?",
-          'options': [
-            "Langsung naik drastis tanpa hambatan",
-            "Tertahan naik dan berpotensi berbalik turun",
-            "Volume perdagangan langsung habis",
-            "Perusahaan melakukan stock split"
-          ],
-          'a': 1,
-          'explanation': "Resistance bertindak sebagai 'atap' psikologis di mana pasokan jual bertambah dan menahan kenaikan harga."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Apa yang terjadi jika suatu level Resistance berhasil ditembus ke atas (Breakout)?",
-          'options': [
-            "Level tersebut hilang selamanya",
-            "Level tersebut berpotensi berubah menjadi Support baru",
-            "Harga saham langsung disuspensi",
-            "Investor wajib menjual semua sahamnya"
-          ],
-          'a': 1,
-          'explanation': "Dalam analisis teknikal, Resistance yang tertembus ke atas cenderung berbalik fungsi menjadi Support baru (Principle of Role Reversal)."
-        }
-      ]
-    },
-    {
-      'id': 6,
-      'title': "Trendlines",
-      'desc': "Membaca arah tren pasar saham.",
-      'zone': 2,
-      'xFactor': 0.28,
-      'y': 780.0,
-      'icon': Icons.trending_up,
-      'questions': [
-        {
-          'type': 'esai',
-          'q': "Tren pergerakan harga saham yang terus mencetak puncak dan lembah lebih tinggi disebut...",
-          'a': "uptrend",
-          'explanation': "Uptrend dicirikan dengan formasi Higher High (HH) dan Higher Low (HL)."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Keadaan pasar di mana harga bergerak mendatar dalam range tertentu disebut...",
-          'options': [
-            "Uptrend",
-            "Downtrend",
-            "Sideways",
-            "Bullrun"
-          ],
-          'a': 2,
-          'explanation': "Sideways (atau konsolidasi) adalah fase pasar tanpa tren naik atau turun yang dominan."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Untuk menggambar garis Downtrend yang valid, kita harus menghubungkan...",
-          'options': [
-            "Titik-titik lembah terendah (swing lows)",
-            "Titik-titik puncak tertinggi (swing highs) yang semakin menurun",
-            "Harga pembukaan di pagi hari saja",
-            "Harga penutupan di akhir tahun saja"
-          ],
-          'a': 1,
-          'explanation': "Downtrend line digambar dengan menghubungkan minimal dua titik puncak harga (lower highs) untuk membatasi pergerakan naik."
-        }
-      ]
-    },
-    {
-      'id': 7,
-      'title': "Indikator Dasar",
-      'desc': "Menggunakan alat bantu visual matematis untuk trading.",
-      'zone': 2,
-      'xFactor': 0.72,
-      'y': 640.0,
-      'icon': Icons.settings,
-      'questions': [
-        {
-          'type': 'esai',
-          'q': "Indikator rata-rata pergerakan harga historis saham disingkat MA, kepanjangannya adalah...",
-          'a': "moving average",
-          'explanation': "Moving Average (Rerata Bergerak) meratakan fluktuasi harga untuk membantu melihat tren utama."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Fungsi utama dari indikator osilator RSI adalah mengukur...",
-          'options': [
-            "Likuiditas bandar saham",
-            "Kondisi jenuh beli (overbought) dan jenuh jual (oversold)",
-            "Pendapatan tahunan perusahaan terbaru",
-            "Ketebalan antrean bid dan offer"
-          ],
-          'a': 1,
-          'explanation': "Relative Strength Index (RSI) mengukur momentum kekuatan harga pada rentang skala 0 hingga 100."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Angka standar indikator RSI yang menandakan saham masuk area jenuh beli (Overbought) adalah...",
-          'options': [
-            "Di bawah 30",
-            "Di atas 50",
-            "Di atas 70",
-            "Tepat di angka 0"
-          ],
-          'a': 2,
-          'explanation': "Umumnya, nilai RSI di atas 70 menunjukkan overbought (potensi jenuh beli/turun), sedangkan di bawah 30 menunjukkan oversold (potensi jenuh jual/naik)."
-        }
-      ]
-    },
-    {
-      'id': 8,
-      'title': "Money Management",
-      'desc': "Lindungi modal trading Anda dari kebangkrutan.",
-      'zone': 3,
-      'xFactor': 0.28,
-      'y': 400.0,
-      'icon': Icons.security,
-      'questions': [
-        {
-          'type': 'pilgan',
-          'q': "Berapa persen batasan risiko maksimal dari total modal per transaksi yang disarankan bagi trader?",
-          'options': [
-            "10% - 20%",
-            "50%",
-            "1% - 2%",
-            "Tidak ada batasan risiko"
-          ],
-          'a': 2,
-          'explanation': "Aturan 1-2% memastikan modal trader tidak habis meskipun mengalami kerugian berturut-turut."
-        },
-        {
-          'type': 'esai',
-          'q': "Perbandingan antara risiko kerugian dan potensi keuntungan transaksi disebut Risk to... Ratio:",
-          'a': "reward",
-          'explanation': "Risk to Reward Ratio membantu mengukur apakah suatu trading layak diambil dibanding risikonya."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Jika Anda memiliki modal Rp 10.000.000 dan menerapkan batasan risiko 2%, batas kerugian maksimal per trading adalah...",
-          'options': [
-            "Rp 2.000.000",
-            "Rp 200.000",
-            "Rp 500.000",
-            "Rp 20.000"
-          ],
-          'a': 1,
-          'explanation': "Rp 10.000.000 x 2% = Rp 200.000."
-        }
-      ]
-    },
-    {
-      'id': 9,
-      'title': "Psikologi Trading",
-      'desc': "Kuasai emosi FOMO dan serakah saat trading.",
-      'zone': 3,
-      'xFactor': 0.72,
-      'y': 260.0,
-      'icon': Icons.psychology,
-      'questions': [
-        {
-          'type': 'esai',
-          'q': "Sindrom takut tertinggal peluang cuan di saham sehingga beli terburu-buru di harga pucuk disebut...",
-          'a': "fomo",
-          'explanation': "FOMO singkatan dari Fear Of Missing Out."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Apa pemicu utama trader pemula enggan melakukan Cut Loss ketika saham terus merosot?",
-          'options': [
-            "Terlalu disiplin mengikuti rencana awal",
-            "Rasa enggan mengakui kerugian (loss aversion) & harapan semu",
-            "Ketentuan komisi broker yang terlalu murah",
-            "Saran dari Bursa Efek Indonesia"
-          ],
-          'a': 1,
-          'explanation': "Loss aversion menyebabkan trader menolak kenyataan bahwa mereka salah dan terus memegang saham turun dengan harapan berbalik arah."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Apa istilah trading impulsif dengan modal besar demi membalas kerugian sebelumnya?",
-          'options': [
-            "Swing Trading",
-            "Revenge Trading",
-            "Scalping",
-            "Value Investing"
-          ],
-          'a': 1,
-          'explanation': "Revenge trading (trading balas dendam) dipicu emosi kemarahan dan seringkali merusak perencanaan trading secara rasional."
-        }
-      ]
-    },
-    {
-      'id': 10,
-      'title': "Cut Loss vs TP",
-      'desc': "Ketahui kapan harus mengunci profit dan memotong kerugian.",
-      'zone': 3,
-      'xFactor': 0.28,
-      'y': 120.0,
-      'icon': Icons.swap_vert,
-      'questions': [
-        {
-          'type': 'esai',
-          'q': "Menjual saham yang merugi demi melindungi sisa modal dari penurunan lebih dalam disebut Cut...",
-          'a': "loss",
-          'explanation': "Cut Loss adalah tindakan wajib untuk membatasi risiko kerugian secara disiplin."
-        },
-        {
-          'type': 'esai',
-          'q': "Mengamankan keuntungan trading dengan menjual saham sesuai target awal dinamakan Take...",
-          'a': "profit",
-          'explanation': "Take Profit mengunci keuntungan agar tidak berbalik menjadi kerugian."
-        },
-        {
-          'type': 'pilgan',
-          'q': "Apa nama fitur perdagangan otomatis yang membantu menutup posisi rugi secara instan?",
-          'options': [
-            "Limit Order",
-            "Stop Loss / Trailing Stop",
-            "Market Maker",
-            "Dividen Payout"
-          ],
-          'a': 1,
-          'explanation': "Stop Loss otomatis memicu order jual ketika harga menyentuh batas bawah pengaman yang ditentukan."
-        }
-      ]
-    }
-  ];
+  // Centralized bilingual level data getter
+  List<Map<String, dynamic>> _getLevelData(String language) =>
+      KuisData.getLevelData(language);
 
   late AnimationController _bobController;
   late Animation<double> _bobAnimation;
@@ -602,9 +205,10 @@ static bool _translationsRegistered = false;
         final appState = Provider.of<AppState>(context, listen: false);
         int activeLevelId = appState.completedLevels.length + 1;
         if (activeLevelId > 10) activeLevelId = 10;
-        final activeNode = _levelData.firstWhere(
+        final levels = _getLevelData(appState.language);
+        final activeNode = levels.firstWhere(
           (l) => l['id'] == activeLevelId,
-          orElse: () => _levelData.first,
+          orElse: () => levels.first,
         );
         final double activeY = (activeNode['y'] as double);
         final double targetScroll = (activeY - 260.0).clamp(0.0, _scrollController.position.maxScrollExtent);
@@ -670,12 +274,13 @@ static bool _translationsRegistered = false;
 
     _ensureTranslations();
     final language = appState.language;
+    final levelData = _getLevelData(language);
     String tr(String key, {Map<String, String> params = const {}}) =>
         AppTranslations.text(language, key, params: params);
 
     int activeLevelId = appState.completedLevels.length + 1;
     if (activeLevelId > 10) activeLevelId = 10;
-    final activeLevel = _levelData.firstWhere((l) => l['id'] == activeLevelId);
+    final activeLevel = levelData.firstWhere((l) => l['id'] == activeLevelId);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -937,7 +542,7 @@ static bool _translationsRegistered = false;
                               child: RepaintBoundary(
                                 child: CustomPaint(
                                   painter: RoadmapLinePainter(
-                                    levelData: _levelData,
+                                    levelData: levelData,
                                     completedLevels: appState.completedLevels,
                                     mapWidth: mapWidth,
                                   ),
@@ -983,7 +588,7 @@ static bool _translationsRegistered = false;
                             ),
 
                             // 3. Node Circles (Duolingo 3D Button style)
-                            ..._levelData.map((level) {
+                            ...levelData.map((level) {
                               final id = level['id'] as int;
                               final isCompleted = appState.completedLevels.contains(id);
                               final isUnlocked = id == 1 || appState.completedLevels.contains(id - 1);
@@ -1979,7 +1584,8 @@ IconData _getZoneIcon(dynamic zone) {
   }
 
   Widget _buildInFrameModalSheet(AppState appState, String language) {
-    final level = _levelData.firstWhere((l) => l['id'] == _selectedLevelId);
+    final levelData = _getLevelData(language);
+    final level = levelData.firstWhere((l) => l['id'] == _selectedLevelId);
     final id = level['id'] as int;
     final isCompleted = appState.completedLevels.contains(id);
     final qCount = (level['questions'] as List).length;

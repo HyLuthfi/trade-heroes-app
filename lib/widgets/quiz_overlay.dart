@@ -73,7 +73,12 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
       correct = (_selectedOptionIdx == qData['a']);
     } else {
       final userAns = _essayController.text.trim().toLowerCase();
-      correct = (userAns == (qData['a'] as String).toLowerCase());
+      final target = (qData['a'] as String).toLowerCase();
+      final acceptedList = (qData['accepted'] as List?)
+              ?.map((e) => e.toString().toLowerCase())
+              .toList() ??
+          [];
+      correct = (userAns == target || acceptedList.contains(userAns));
     }
 
     setState(() {

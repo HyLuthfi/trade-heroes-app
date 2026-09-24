@@ -270,6 +270,97 @@
       window.setTradeAudioTheme = globalThis.setTradeAudioTheme = window['window.setTradeAudioTheme'] = setAudioThemeImpl;
       window.setTradeBgmTrack = globalThis.setTradeBgmTrack = window['window.setTradeBgmTrack'] = setBgmTrackImpl;
     })();
+
+    // High-Performance Zero-Dependency Web Notification Engine
+    (function() {
+      let origDocTitle = document.title;
+      let titleResetTimeout = null;
+
+      function hasNotificationSupport() {
+        return typeof window !== 'undefined' && 'Notification' in window;
+      }
+
+      function getNotificationPermission() {
+        if (!hasNotificationSupport()) return 'unsupported';
+        return Notification.permission; // 'granted', 'denied', or 'default'
+      }
+
+      async function requestNotificationPermission() {
+        if (!hasNotificationSupport()) return 'unsupported';
+        try {
+          const res = await Notification.requestPermission();
+          return res;
+        } catch (e) {
+          console.warn('[TradeHeroes Notification] requestPermission error:', e);
+          return 'denied';
+        }
+      }
+
+      function sendNotification(title, body, iconUrl, tag) {
+        if (!hasNotificationSupport()) return false;
+        if (Notification.permission !== 'granted') return false;
+
+        const options = {
+          body: body || '',
+          icon: iconUrl || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || 'trade-heroes-daily',
+          renotify: true,
+          requireInteraction: false
+        };
+
+        // 1. Play soft audio chime if audio engine is loaded
+        try {
+          if (typeof window.playTradeSound === 'function') {
+            window.playTradeSound('reward', 0.6);
+          }
+        } catch (_) {}
+
+        // 2. Pulse document title if page is hidden
+        try {
+          if (document.hidden) {
+            clearTimeout(titleResetTimeout);
+            document.title = '🔥 ' + title + ' — Trade Heroes';
+            titleResetTimeout = setTimeout(function() {
+              document.title = origDocTitle;
+            }, 8000);
+          }
+        } catch (_) {}
+
+        // 3. Try standard W3C Notification constructor
+        try {
+          const notif = new Notification(title, options);
+          notif.onclick = function() {
+            try {
+              window.focus();
+            } catch (_) {}
+            try {
+              notif.close();
+            } catch (_) {}
+          };
+          return true;
+        } catch (err) {
+          // Fallback for Android Chrome / Service Worker environments
+          if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+            navigator.serviceWorker.ready.then(function(reg) {
+              if (reg && reg.showNotification) {
+                reg.showNotification(title, options);
+              }
+            }).catch(function(swErr) {
+              console.warn('[TradeHeroes Notification] SW fallback failed:', swErr);
+            });
+            return true;
+          }
+          console.warn('[TradeHeroes Notification] Notification display failed:', err);
+          return false;
+        }
+      }
+
+      window.hasTradeNotificationSupport = globalThis.hasTradeNotificationSupport = hasNotificationSupport;
+      window.getTradeNotificationPermission = globalThis.getTradeNotificationPermission = getNotificationPermission;
+      window.requestTradeNotificationPermission = globalThis.requestTradeNotificationPermission = requestNotificationPermission;
+      window.sendTradeNotification = globalThis.sendTradeNotification = sendNotification;
+    })();
   </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.

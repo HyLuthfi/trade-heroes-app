@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../l10n/locale_resolver.dart';
 import '../services/audio_service.dart';
+import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -40,6 +41,9 @@ class AppState extends ChangeNotifier {
   // Preferences
   bool _darkMode = true;
   bool _dailyReminder = true;
+  String _lastReminderSentDate = "";
+  String _lastDailyRewardReminderDate = "";
+  bool _petirFullNotified = true;
   bool _soundHaptic = true;
   bool _bgmEnabled = false;
   String _language = "id";
@@ -207,6 +211,7 @@ class AppState extends ChangeNotifier {
 
       _checkDailyReset();
       _checkPetirRegenOnLoad();
+      _checkDailyNotifications();
       notifyListeners();
     } catch (e) {
       debugPrint("Error initializing AppState: $e");
@@ -238,6 +243,9 @@ class AppState extends ChangeNotifier {
     _userId = json['userId'];
     _darkMode = json['darkMode'] ?? true;
     _dailyReminder = json['dailyReminder'] ?? true;
+    _lastReminderSentDate = json['lastReminderSentDate'] ?? "";
+    _lastDailyRewardReminderDate = json['lastDailyRewardReminderDate'] ?? "";
+    NotificationService.setNotificationsEnabled(_dailyReminder);
     _soundHaptic = json['soundHaptic'] ?? true;
     _bgmEnabled = json['bgmEnabled'] ?? false;
     _bgmTrack = json['bgmTrack'] ?? 'default';
@@ -348,6 +356,8 @@ class AppState extends ChangeNotifier {
       'role': _role,
       'darkMode': _darkMode,
       'dailyReminder': _dailyReminder,
+      'lastReminderSentDate': _lastReminderSentDate,
+      'lastDailyRewardReminderDate': _lastDailyRewardReminderDate,
       'soundHaptic': _soundHaptic,
       'bgmEnabled': _bgmEnabled,
       'bgmTrack': _bgmTrack,
@@ -551,8 +561,25 @@ class AppState extends ChangeNotifier {
 
   void toggleDailyReminder(bool val) {
     _dailyReminder = val;
+    NotificationService.setNotificationsEnabled(val);
     _saveState();
     notifyListeners();
+  }
+
+  Future<bool> requestNotificationPermission() async {
+    final granted = await NotificationService.requestPermission();
+    if (granted) {
+      _dailyReminder = true;
+      NotificationService.setNotificationsEnabled(true);
+      _saveState();
+      notifyListeners();
+      NotificationService.sendTestNotification(language: _language);
+    }
+    return granted;
+  }
+
+  void testNotification() {
+    NotificationService.sendTestNotification(language: _language);
   }
 
   void toggleSoundHaptic(bool val) {
@@ -789,6 +816,43 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  void _checkDailyNotifications() {
+    if (!_dailyReminder) return;
+    final now = DateTime.now();
+    final today =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    // 1. Daily Streak Reminder (Pukul 19:00 WIB ke atas jika belum ada daily XP hari ini)
+    if (now.hour >= 19 && _lastReminderSentDate != today) {
+      if (_dailyXp == 0) {
+        final sent = NotificationService.sendDailyStreakReminder(
+          streak: _streak > 0 ? _streak : 1,
+          language: _language,
+        );
+        if (sent) {
+          _lastReminderSentDate = today;
+          _saveState();
+        }
+      } else {
+        // Smart scheduling: User already practiced today, no nagging needed!
+        _lastReminderSentDate = today;
+        _saveState();
+      }
+    }
+
+    // 2. Daily Reward Reminder (Pukul 10:00 WIB ke atas jika belum klaim hari ini)
+    if (now.hour >= 10 &&
+        _lastDailyRewardReminderDate != today &&
+        canClaimDailyToday) {
+      final sent =
+          NotificationService.sendDailyRewardReminder(language: _language);
+      if (sent) {
+        _lastDailyRewardReminderDate = today;
+        _saveState();
+      }
+    }
+  }
+
   void _checkPetirRegenOnLoad() {
     if (_isPremium || _petir >= 5 || _petirLastUsedTime == null) return;
 
@@ -812,6 +876,9 @@ class AppState extends ChangeNotifier {
     _regenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_isPremium || _petir >= 5) {
         _petirLastUsedTime = null;
+        if (DateTime.now().second % 30 == 0) {
+          _checkDailyNotifications();
+        }
         return;
       }
 
@@ -828,11 +895,19 @@ class AppState extends ChangeNotifier {
         _petir = (_petir + 1).clamp(0, 5);
         if (_petir >= 5) {
           _petirLastUsedTime = null;
+          if (_dailyReminder && !_petirFullNotified) {
+            _petirFullNotified = true;
+            NotificationService.sendPetirFullReminder(language: _language);
+          }
         } else {
           _petirLastUsedTime = now;
         }
         _saveState();
         notifyListeners();
+      }
+
+      if (DateTime.now().second % 30 == 0) {
+        _checkDailyNotifications();
       }
     });
   }
@@ -855,6 +930,7 @@ class AppState extends ChangeNotifier {
     if (_petir > 0) {
       if (_petir == 5) {
         _petirLastUsedTime = DateTime.now().millisecondsSinceEpoch;
+        _petirFullNotified = false;
       }
       _petir -= 1;
       _saveState();

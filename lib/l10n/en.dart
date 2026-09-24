@@ -83,6 +83,11 @@ const Map<String, String> enTranslations = {
   'settings.daily_reminder_off': 'Reminder disabled',
   'settings.daily_reminder_enabled': 'Learning reminder enabled (19:00 WIB)',
   'settings.daily_reminder_disabled': 'Learning reminder disabled',
+  'settings.test_notification': 'Test Notification',
+  'settings.test_notification_sent': 'Test notification sent successfully!',
+  'settings.notification_blocked_title': 'Notification Blocked',
+  'settings.notification_blocked_desc':
+      'Your browser is blocking notifications. Click the lock icon in the URL bar to allow notifications for Trade Heroes.',
   'settings.sound_haptic_title': 'Sound & Haptics',
   'settings.sound_haptic_on': 'Quiz sounds & touch vibration active',
   'settings.sound_haptic_off': 'Sound & vibration effects disabled',

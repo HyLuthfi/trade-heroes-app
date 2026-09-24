@@ -633,6 +633,58 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  void _showNotificationBlockedDialog(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            const Icon(Icons.notifications_off_rounded, color: Color(0xfff59e0b), size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _tr(appState, 'settings.notification_blocked_title'),
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: isDark ? Colors.white : const Color(0xff0f172a),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          _tr(appState, 'settings.notification_blocked_desc'),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13,
+            color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              _tr(appState, 'profile.close'),
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                color: Color(0xff10b981),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showFaqModal(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
@@ -1613,16 +1665,80 @@ class _ProfileViewState extends State<ProfileView> {
                               ? _tr(appState, 'settings.daily_reminder_on')
                               : _tr(appState, 'settings.daily_reminder_off'),
                           value: appState.dailyReminder,
-                          onChanged: (val) {
-                            appState.toggleDailyReminder(val);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(val ? _tr(appState, 'settings.daily_reminder_enabled') : _tr(appState, 'settings.daily_reminder_disabled')),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
+                          onChanged: (val) async {
+                            if (val) {
+                              final granted = await appState.requestNotificationPermission();
+                              if (mounted) {
+                                if (granted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      behavior: SnackBarBehavior.floating,
+                                      content: Text(_tr(appState, 'settings.daily_reminder_enabled')),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                } else {
+                                  _showNotificationBlockedDialog(context, appState);
+                                }
+                              }
+                            } else {
+                              appState.toggleDailyReminder(false);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    behavior: SnackBarBehavior.floating,
+                                    content: Text(_tr(appState, 'settings.daily_reminder_disabled')),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              }
+                            }
                           },
                         ),
+                        if (appState.dailyReminder) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(56, 0, 16, 12),
+                            child: Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    side: BorderSide(
+                                      color: isDark
+                                          ? const Color(0xfff59e0b).withOpacity(0.5)
+                                          : const Color(0xffd97706),
+                                      width: 1.0,
+                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: () {
+                                    try {
+                                      AudioService.playClick();
+                                    } catch (_) {}
+                                    appState.testNotification();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        behavior: SnackBarBehavior.floating,
+                                        content: Text(_tr(appState, 'settings.test_notification_sent')),
+                                        duration: const Duration(seconds: 1),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.send_rounded, size: 14, color: Color(0xfff59e0b)),
+                                  label: Text(
+                                    _tr(appState, 'settings.test_notification'),
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? const Color(0xfff59e0b) : const Color(0xffd97706),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
                         _buildSettingSwitchTile(
                           context: context,

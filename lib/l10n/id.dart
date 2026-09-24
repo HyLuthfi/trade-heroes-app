@@ -83,6 +83,11 @@ const Map<String, String> idTranslations = {
   'settings.daily_reminder_off': 'Pengingat dinonaktifkan',
   'settings.daily_reminder_enabled': 'Pengingat belajar aktif (19:00 WIB)',
   'settings.daily_reminder_disabled': 'Pengingat belajar dinonaktifkan',
+  'settings.test_notification': 'Tes Notifikasi',
+  'settings.test_notification_sent': 'Notifikasi percobaan berhasil dikirim!',
+  'settings.notification_blocked_title': 'Izin Notifikasi Diblokir',
+  'settings.notification_blocked_desc':
+      'Browser Anda memblokir notifikasi. Klik ikon gembok pada URL bar untuk mengizinkan notifikasi Trade Heroes.',
   'settings.sound_haptic_title': 'Efek Suara & Haptik',
   'settings.sound_haptic_on': 'Suara kuis & getaran sentuhan aktif',
   'settings.sound_haptic_off': 'Efek suara & getaran nonaktif',
