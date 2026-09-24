@@ -116,24 +116,24 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
     }
   }
 
-  Future<void> _adjustBalance(Map<String, dynamic> user, double delta) async {
+  Future<void> _adjustXp(Map<String, dynamic> user, int delta) async {
     final userId = user['id'] as String;
-    final current = (user['virtual_balance'] as num?)?.toDouble() ?? 100000000.0;
-    final newBal = (current + delta).clamp(0.0, 10000000000.0);
+    final current = (user['xp'] as num?)?.toInt() ?? 0;
+    final newXp = (current + delta).clamp(0, 999999);
 
     final success = await SupabaseService.adminUpdateProfile(userId, {
-      'virtual_balance': newBal,
+      'xp': newXp,
     });
 
     if (success && mounted) {
       setState(() {
-        user['virtual_balance'] = newBal;
+        user['xp'] = newXp;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 2),
           backgroundColor: const Color(0xff059669),
-          content: Text("Saldo kas ${user['name'] ?? user['email']} disetel ke ${_formatRp(newBal)}"),
+          content: Text("XP ${user['name'] ?? user['email']} disetel ke $newXp XP"),
         ),
       );
     }
@@ -143,13 +143,13 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
   Widget build(BuildContext context) {
     final totalUsers = _profiles.length;
     final vipCount = _profiles.where((p) => p['is_premium'] == true).length;
-    double totalCash = 0;
     int totalXp = 0;
 
     for (var p in _profiles) {
-      totalCash += (p['virtual_balance'] as num?)?.toDouble() ?? 100000000.0;
       totalXp += (p['xp'] as num?)?.toInt() ?? 0;
     }
+
+    final avgXp = totalUsers > 0 ? (totalXp / totalUsers).round() : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xff090d16),
@@ -228,9 +228,9 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
                     _buildDivider(),
                     _buildTopStatCell("VIP Gold", "$vipCount", const Color(0xfff59e0b)),
                     _buildDivider(),
-                    _buildTopStatCell("Kas Beredar", _formatRp(totalCash), const Color(0xff34d399)),
+                    _buildTopStatCell("Total XP", "$totalXp", const Color(0xff34d399)),
                     _buildDivider(),
-                    _buildTopStatCell("Total XP", "$totalXp", const Color(0xffa78bfa)),
+                    _buildTopStatCell("Rata-rata XP", "$avgXp", const Color(0xffa78bfa)),
                   ],
                 ),
               ),
@@ -373,7 +373,7 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
     final isAdmin = u['role'] == 'admin';
     final avatarUrl = u['avatar'] as String?;
     final petir = u['petir'] ?? 5;
-    final balance = (u['virtual_balance'] as num?)?.toDouble() ?? 100000000.0;
+    final levelCount = (u['completed_levels'] as List?)?.length ?? 0;
     final xp = u['xp'] ?? 0;
     final streak = u['streak'] ?? 0;
 
@@ -493,7 +493,7 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildCompactStat("Kas", _formatRp(balance), const Color(0xff34d399)),
+                _buildCompactStat("Level", "$levelCount", const Color(0xff34d399)),
                 _buildCompactStat("XP", "$xp", const Color(0xff60a5fa)),
                 _buildCompactStat("Petir", "$petir/5", const Color(0xfff59e0b)),
                 _buildCompactStat("Streak", "$streak Hari", const Color(0xfff87171)),
@@ -519,9 +519,9 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
               ),
               const SizedBox(width: 6),
               _buildMiniActionBtn(
-                label: "+Rp 50M",
+                label: "+50 XP",
                 color: const Color(0xff38bdf8),
-                onTap: () => _adjustBalance(u, 50000000.0),
+                onTap: () => _adjustXp(u, 50),
               ),
             ],
           ),

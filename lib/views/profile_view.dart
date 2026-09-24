@@ -647,8 +647,8 @@ class _ProfileViewState extends State<ProfileView> {
         'a': "VIP Gold Pass memberikan Nyawa Tak Terbatas (∞ Petir), bebas dari penayangan iklan pop-up, serta akses eksklusif ke seluruh modul analisis materi."
       },
       {
-        'q': "Apakah simulator pasar saham ini menggunakan uang sungguhan?",
-        'a': "Tidak. Trade Heroes adalah platform simulasi dan edukasi pasar modal murni. Seluruh transaksi, saldo kas virtual, dan kuis tidak melibatkan uang atau risiko finansial nyata."
+        'q': "Apakah materi dan kuis ini menggunakan uang sungguhan?",
+        'a': "Tidak. Trade Heroes adalah platform edukasi pasar modal murni. Seluruh fitur pembelajaran dan kuis tidak melibatkan uang atau risiko finansial nyata."
       },
       {
         'q': "Bagaimana cara mempertahankan Streak Belajar?",
