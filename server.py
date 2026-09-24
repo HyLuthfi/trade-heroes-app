@@ -88,6 +88,9 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             pass
 
     def do_POST(self):
+        if self.path.startswith('/api/ai/live-stream'):
+            self._handle_ai_live_stream()
+            return
         if self.path.startswith('/api/ai/chat'):
             self._handle_ai_chat()
             return
@@ -96,6 +99,208 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             return
         self.send_response(404)
         self.end_headers()
+
+    def _handle_ai_live_stream(self):
+        """Streaming Live Voice endpoint: SSE stream of progressive text deltas and chunked audio synthesized on sentence boundaries"""
+        import json
+        import re
+        import threading
+        import queue
+        import urllib.request
+        from engine.tts_service import synthesize_voice
+
+        try:
+            content_len = int(self.headers.get('Content-Length', 0))
+            post_body = self.rfile.read(content_len)
+            req_data = json.loads(post_body.decode('utf-8'))
+        except Exception:
+            self.send_response(400)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"error":"invalid json"}')
+            return
+
+        prompt = req_data.get('prompt', '')
+        ticker = req_data.get('ticker', 'BBCA').upper().replace('.JK', '')
+        stock = req_data.get('stock', {})
+        name = stock.get('name', ticker)
+        sector = stock.get('sector', 'Umum')
+        voice_engine = req_data.get('voiceEngine') or 'gemini_charon'
+
+        # 1. Fetch live price
+        live_price = stock.get('price', '-')
+        live_chg_pct = stock.get('changePct', '-')
+        day_low = stock.get('low', '-')
+        day_high = stock.get('high', '-')
+        day_vol = stock.get('volume', '-')
+        trend_5d = ""
+        try:
+            yf_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}.JK?interval=1d&range=5d"
+            yf_req = urllib.request.Request(yf_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(yf_req, timeout=3.5) as yf_resp:
+                yf_data = json.loads(yf_resp.read().decode('utf-8'))
+                meta = yf_data.get('chart', {}).get('result', [{}])[0].get('meta', {})
+                quotes = yf_data.get('chart', {}).get('result', [{}])[0].get('indicators', {}).get('quote', [{}])[0]
+                if meta.get('regularMarketPrice'):
+                    live_price = f"{meta['regularMarketPrice']:,.0f}".replace(',', '.')
+                if meta.get('regularMarketDayLow'):
+                    day_low = f"{meta['regularMarketDayLow']:,.0f}".replace(',', '.')
+                if meta.get('regularMarketDayHigh'):
+                    day_high = f"{meta['regularMarketDayHigh']:,.0f}".replace(',', '.')
+                closes = [c for c in quotes.get('close', []) if c is not None]
+                if len(closes) >= 2:
+                    first_p = closes[0]
+                    last_p = closes[-1]
+                    chg = ((last_p - first_p) / first_p) * 100
+                    live_chg_pct = f"{chg:+.2f}%"
+                    trend_5d = "Menguat (Bullish)" if chg > 0.5 else ("Melemah (Bearish)" if chg < -0.5 else "Konsolidasi")
+        except Exception:
+            pass
+
+        # 2. Quant context
+        quant_context = ""
+        try:
+            from engine.quant_hub import analyze_stock_quant
+            q_res = analyze_stock_quant(ticker)
+            if q_res and 'summary' in q_res:
+                quant_context = f"Indikator Kuantitatif: {q_res['summary']}. Support terdekat: Rp {q_res.get('support', day_low)}. Resisten terdekat: Rp {q_res.get('resistance', day_high)}."
+        except Exception:
+            pass
+
+        # 3. System prompt tailored for rapid spoken live voice delivery
+        system_prompt = (
+            f"Kamu adalah SAI Tech AI Chatbot, analis pasar modal Indonesia (BEI) di Trade Heroes.\n"
+            f"Saham: {ticker} ({name}) • Sektor: {sector}\n"
+            f"Data BEI: Harga Rp {live_price} ({live_chg_pct}), Low {day_low} - High {day_high}, Tren: {trend_5d if trend_5d else 'Stabil'}.\n"
+            f"{quant_context}\n\n"
+            f"ATURAN FORMAT JAWABAN LIVE VOICE (SANGAT PENTING):\n"
+            f"- Jawabanmu akan langsung disintesis menjadi suara percakapan lisan.\n"
+            f"- Buat HANYA 2 kalimat padat, natural, santai, to-the-point.\n"
+            f"- Kalimat 1: Langsung sebutkan tren dan posisi harga terkini (maks 10-12 kata).\n"
+            f"- Kalimat 2: Sebutkan level support resisten kunci dan rekomendasi tindakan praktis.\n"
+            f"- DILARANG KERAS menggunakan format markdown (**tebal**, #, list bullet, tabel, dsb). Murni teks mengalir."
+        )
+
+        key = get_router_key()
+        history = req_data.get('history', [])
+        messages = [{'role': 'system', 'content': system_prompt}]
+        for h in history[-4:]:
+            r = 'user' if (h.get('isUser') or h.get('role') == 'user') else 'assistant'
+            c = (h.get('content') or h.get('text') or '').strip()
+            if c:
+                messages.append({'role': r, 'content': c})
+        if not messages or messages[-1].get('role') != 'user' or messages[-1].get('content') != prompt:
+            messages.append({'role': 'user', 'content': prompt})
+
+        # Send SSE Headers
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+        self.send_header('Cache-Control', 'no-cache, no-transform')
+        self.send_header('Connection', 'keep-alive')
+        self.send_header('X-Accel-Buffering', 'no')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+        write_lock = threading.Lock()
+        is_client_connected = True
+
+        def send_sse(event_type, payload):
+            nonlocal is_client_connected
+            if not is_client_connected:
+                return
+            with write_lock:
+                try:
+                    msg = f"event: {event_type}\ndata: {json.dumps(payload)}\n\n"
+                    self.wfile.write(msg.encode('utf-8'))
+                    self.wfile.flush()
+                except Exception:
+                    is_client_connected = False
+
+        sentence_q = queue.Queue()
+
+        def tts_stream_worker():
+            nonlocal is_client_connected
+            while is_client_connected:
+                item = sentence_q.get()
+                if item is None:
+                    break
+                s_idx, s_text = item
+                try:
+                    tts_res = synthesize_voice(s_text, voice_engine=voice_engine)
+                    audio_uri = tts_res.get('audio', '')
+                    if audio_uri and is_client_connected:
+                        send_sse('audio', {
+                            'index': s_idx,
+                            'sentence': s_text,
+                            'audio': audio_uri,
+                            'provider': tts_res.get('provider', '')
+                        })
+                except Exception as tts_err:
+                    print(f"Streaming TTS error for sentence #{s_idx}: {tts_err}")
+                finally:
+                    sentence_q.task_done()
+
+        tts_thread = threading.Thread(target=tts_stream_worker, daemon=True)
+        tts_thread.start()
+
+        # Connect to 9Router stream
+        router_payload = {
+            'model': 'ag/gemini-3.8-flash-low',
+            'messages': messages,
+            'stream': True,
+            'max_tokens': 120
+        }
+
+        full_reply_text = ""
+        buffer = ""
+        sentence_count = 0
+
+        try:
+            req = urllib.request.Request(
+                'http://127.0.0.1:20128/v1/chat/completions',
+                data=json.dumps(router_payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {key}'}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                for raw_line in resp:
+                    if not is_client_connected:
+                        break
+                    line = raw_line.decode('utf-8').strip()
+                    if not line.startswith('data: '):
+                        continue
+                    data_str = line[6:].strip()
+                    if data_str == '[DONE]':
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                        content = chunk.get('choices', [{}])[0].get('delta', {}).get('content', '')
+                        if content:
+                            full_reply_text += content
+                            send_sse('text', {'delta': content, 'accumulated': full_reply_text})
+                            buffer += content
+                            m = re.search(r'([.!?\n])', buffer)
+                            if m:
+                                cut_pos = m.end()
+                                sent = buffer[:cut_pos].strip()
+                                buffer = buffer[cut_pos:].strip()
+                                if len(sent) > 5:
+                                    sentence_count += 1
+                                    sentence_q.put((sentence_count, sent))
+                    except Exception:
+                        pass
+        except Exception as e:
+            send_sse('error', {'error': str(e)})
+
+        # Flush any remaining text in buffer
+        if buffer.strip() and is_client_connected:
+            sentence_count += 1
+            sentence_q.put((sentence_count, buffer.strip()))
+
+        sentence_q.put(None)
+        tts_thread.join(timeout=30)
+
+        if is_client_connected:
+            send_sse('done', {'fullText': full_reply_text, 'sentences': sentence_count})
 
     def _handle_ai_tts(self):
         """Synthesize text to speech using Google Gemini or Microsoft Edge TTS"""

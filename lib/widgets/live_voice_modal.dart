@@ -139,75 +139,56 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
     final stock = widget.stock;
     final ticker = stock['ticker']?.toString() ?? 'BBCA';
 
-    try {
-      final res = await http.post(
-        Uri.parse('/api/ai/chat'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'prompt': prompt,
-          'ticker': ticker,
-          'liveVoice': true,
-          'voice': true,
-          'voiceEngine': _selectedEngine,
-          'stock': {
-            'name': stock['name'] ?? '',
-            'price': stock['price'],
-            'change': stock['change'],
-            'changePct': stock['changePct'],
-            'sector': stock['sector'] ?? 'Umum',
-            'per': stock['per'] ?? '15.0',
-            'pbv': stock['pbv'] ?? '2.0',
-            'mcap': stock['mcap'] ?? '-',
-            'foreignNet': stock['foreignNet'] ?? '-',
-          },
-        }),
-      ).timeout(const Duration(seconds: 40));
+    final payloadJson = jsonEncode({
+      'prompt': prompt,
+      'ticker': ticker,
+      'liveVoice': true,
+      'voiceEngine': _selectedEngine,
+      'stock': {
+        'name': stock['name'] ?? '',
+        'price': stock['price'],
+        'change': stock['change'],
+        'changePct': stock['changePct'],
+        'sector': stock['sector'] ?? 'Umum',
+        'per': stock['per'] ?? '15.0',
+        'pbv': stock['pbv'] ?? '2.0',
+        'mcap': stock['mcap'] ?? '-',
+        'foreignNet': stock['foreignNet'] ?? '-',
+      },
+    });
 
-      if (!mounted) return;
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final replyText = (data['reply'] ?? '').toString();
-        final audioUri = (data['audio'] ?? '').toString();
-
+    LiveVoiceService.startVoiceStream(
+      payloadJson: payloadJson,
+      onTextDelta: (delta, accumulated) {
+        if (!mounted) return;
         setState(() {
-          _aiTranscript = replyText;
+          _aiTranscript = accumulated;
         });
-
-        if (widget.onConversationEnd != null) {
-          widget.onConversationEnd!(prompt, replyText);
+      },
+      onFirstAudio: () {
+        if (!mounted) return;
+        setState(() {
+          _state = VoiceState.speaking;
+        });
+      },
+      onAllDone: () {
+        if (!mounted) return;
+        if (widget.onConversationEnd != null && _aiTranscript.isNotEmpty) {
+          widget.onConversationEnd!(prompt, _aiTranscript);
         }
-
-        if (audioUri.isNotEmpty && audioUri.startsWith('data:audio/')) {
-          setState(() {
-            _state = VoiceState.speaking;
-          });
-          LiveVoiceService.playAudio(
-            audioUri,
-            onEnded: () {
-              if (mounted && _state == VoiceState.speaking) {
-                // Auto switch back to listening after AI finishes speaking
-                _startListeningCycle();
-              }
-            },
-          );
-        } else {
-          // If TTS failed or empty, fallback to short pause and listen again
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) _startListeningCycle();
-          });
+        if (_state == VoiceState.speaking) {
+          _startListeningCycle();
         }
-      } else {
-        throw Exception("Server returned HTTP ${res.statusCode}");
-      }
-    } catch (e) {
-      if (!mounted) return;
-      debugPrint("Live Voice API error: $e");
-      setState(() {
-        _errorMessage = "Gagal memproses suara ($e). Ketuk untuk coba lagi.";
-        _state = VoiceState.idle;
-      });
-    }
+      },
+      onError: (err) {
+        if (!mounted) return;
+        debugPrint("Live Voice stream error: $err");
+        setState(() {
+          _errorMessage = "Koneksi terputus. Silakan coba lagi.";
+          _state = VoiceState.idle;
+        });
+      },
+    );
   }
 
   void _interruptAndListen() {

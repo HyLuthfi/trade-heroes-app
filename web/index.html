@@ -278,14 +278,59 @@
       window.setTradeAudioTheme = globalThis.setTradeAudioTheme = window['window.setTradeAudioTheme'] = setAudioThemeImpl;
       window.setTradeBgmTrack = globalThis.setTradeBgmTrack = window['window.setTradeBgmTrack'] = setBgmTrackImpl;
 
-      // === LIVE VOICE & GEMINI AUDIO ENGINE ===
+      // === LIVE VOICE & GEMINI AUDIO STREAMING ENGINE ===
       let activeVoiceAudio = null;
       let voiceRecognition = null;
+      let liveVoiceAudioQueue = [];
+      let isPlayingVoiceQueue = false;
+      let activeVoiceStreamAbort = null;
+      let isVoiceStreamDone = false;
+      let onVoiceStreamAllEndedCb = null;
+
+      function playNextVoiceQueueChunk() {
+        if (liveVoiceAudioQueue.length === 0) {
+          isPlayingVoiceQueue = false;
+          activeVoiceAudio = null;
+          if (isVoiceStreamDone && typeof onVoiceStreamAllEndedCb === 'function') {
+            const cb = onVoiceStreamAllEndedCb;
+            onVoiceStreamAllEndedCb = null;
+            cb();
+          }
+          return;
+        }
+
+        isPlayingVoiceQueue = true;
+        const nextUri = liveVoiceAudioQueue.shift();
+        activeVoiceAudio = new Audio(nextUri);
+
+        activeVoiceAudio.onended = function() {
+          playNextVoiceQueueChunk();
+        };
+
+        activeVoiceAudio.onerror = function(err) {
+          console.warn('Live voice chunk error:', err);
+          playNextVoiceQueueChunk();
+        };
+
+        activeVoiceAudio.play().catch(function(e) {
+          console.warn('Live voice chunk play error:', e);
+          playNextVoiceQueueChunk();
+        });
+      }
+
+      window.enqueueLiveVoiceAudio = globalThis.enqueueLiveVoiceAudio = function(dataUri, onStarted, onAllEnded) {
+        if (typeof onAllEnded === 'function') {
+          onVoiceStreamAllEndedCb = onAllEnded;
+        }
+        liveVoiceAudioQueue.push(dataUri);
+        if (!isPlayingVoiceQueue) {
+          if (typeof onStarted === 'function') onStarted();
+          playNextVoiceQueueChunk();
+        }
+      };
 
       window.playVoiceAudioUri = globalThis.playVoiceAudioUri = function(dataUri, onEnded) {
-        if (activeVoiceAudio) {
-          try { activeVoiceAudio.pause(); } catch(e) {}
-        }
+        window.stopVoiceAudio();
         activeVoiceAudio = new Audio(dataUri);
         activeVoiceAudio.onended = function() {
           if (typeof onEnded === 'function') onEnded();
@@ -301,6 +346,14 @@
       };
 
       window.stopVoiceAudio = globalThis.stopVoiceAudio = function() {
+        if (activeVoiceStreamAbort) {
+          try { activeVoiceStreamAbort.abort(); } catch(e) {}
+          activeVoiceStreamAbort = null;
+        }
+        liveVoiceAudioQueue = [];
+        isPlayingVoiceQueue = false;
+        isVoiceStreamDone = false;
+        onVoiceStreamAllEndedCb = null;
         if (activeVoiceAudio) {
           try {
             activeVoiceAudio.pause();
@@ -308,6 +361,93 @@
           } catch(e) {}
           activeVoiceAudio = null;
         }
+      };
+
+      window.startLiveVoiceStream = globalThis.startLiveVoiceStream = function(payloadJson, onTextDelta, onFirstAudio, onAllDone, onError) {
+        window.stopVoiceAudio();
+
+        activeVoiceStreamAbort = new AbortController();
+        isVoiceStreamDone = false;
+        onVoiceStreamAllEndedCb = onAllDone;
+
+        fetch('/api/ai/live-stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payloadJson,
+          signal: activeVoiceStreamAbort.signal
+        }).then(response => {
+          if (!response.ok) {
+            throw new Error('HTTP error ' + response.status);
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+
+          function pump() {
+            reader.read().then(({ done, value }) => {
+              if (done) {
+                isVoiceStreamDone = true;
+                if (!isPlayingVoiceQueue && liveVoiceAudioQueue.length === 0) {
+                  if (typeof onVoiceStreamAllEndedCb === 'function') {
+                    const cb = onVoiceStreamAllEndedCb;
+                    onVoiceStreamAllEndedCb = null;
+                    cb();
+                  }
+                }
+                return;
+              }
+
+              buffer += decoder.decode(value, { stream: true });
+              const blocks = buffer.split('\n\n');
+              buffer = blocks.pop(); // incomplete remainder
+
+              for (const block of blocks) {
+                if (!block.trim()) continue;
+                let eventName = '';
+                let dataStr = '';
+                for (const line of block.split('\n')) {
+                  if (line.startsWith('event: ')) {
+                    eventName = line.substring(7).trim();
+                  } else if (line.startsWith('data: ')) {
+                    dataStr = line.substring(6).trim();
+                  }
+                }
+
+                if (dataStr) {
+                  try {
+                    const parsed = JSON.parse(dataStr);
+                    if (eventName === 'text' && typeof onTextDelta === 'function') {
+                      onTextDelta(parsed.delta || '', parsed.accumulated || '');
+                    } else if (eventName === 'audio' && parsed.audio) {
+                      window.enqueueLiveVoiceAudio(parsed.audio, onFirstAudio, onAllDone);
+                    } else if (eventName === 'done') {
+                      isVoiceStreamDone = true;
+                      if (!isPlayingVoiceQueue && liveVoiceAudioQueue.length === 0) {
+                        if (typeof onVoiceStreamAllEndedCb === 'function') {
+                          const cb = onVoiceStreamAllEndedCb;
+                          onVoiceStreamAllEndedCb = null;
+                          cb();
+                        }
+                      }
+                    } else if (eventName === 'error' && typeof onError === 'function') {
+                      onError(parsed.error || 'Stream error');
+                    }
+                  } catch(e) {}
+                }
+              }
+
+              pump();
+            }).catch(err => {
+              if (err.name === 'AbortError') return;
+              if (typeof onError === 'function') onError(err.toString());
+            });
+          }
+
+          pump();
+        }).catch(err => {
+          if (err.name === 'AbortError') return;
+          if (typeof onError === 'function') onError(err.toString());
+        });
       };
 
       window.startLiveSpeechRecognition = globalThis.startLiveSpeechRecognition = function(lang, onTranscript, onStateChange, onError) {

@@ -7,6 +7,15 @@ external void _jsPlayVoiceAudioUri(JSString uri, JSFunction? onEnded);
 @JS('stopVoiceAudio')
 external void _jsStopVoiceAudio();
 
+@JS('startLiveVoiceStream')
+external void _jsStartLiveVoiceStream(
+  JSString payloadJson,
+  JSFunction onTextDelta,
+  JSFunction onFirstAudio,
+  JSFunction onAllDone,
+  JSFunction onError,
+);
+
 @JS('startLiveSpeechRecognition')
 external JSBoolean _jsStartLiveSpeechRecognition(
   JSString lang,
@@ -51,6 +60,48 @@ class LiveVoiceService {
       _jsStopVoiceAudio();
     } catch (e) {
       debugPrint("LiveVoiceService stopAudio error: $e");
+    }
+  }
+
+  /// Start progressive SSE voice streaming (ChatGPT Voice Style)
+  static void startVoiceStream({
+    required String payloadJson,
+    required Function(String delta, String accumulated) onTextDelta,
+    required VoidCallback onFirstAudio,
+    required VoidCallback onAllDone,
+    required Function(String error) onError,
+  }) {
+    if (!kIsWeb) return;
+    try {
+      final jsTextCb = ((JSString jsDelta, JSString jsAcc) {
+        onTextDelta(jsDelta.toDart, jsAcc.toDart);
+      }).toJS;
+
+      final jsFirstAudioCb = ((JSObject? _) {
+        _isPlaying = true;
+        onFirstAudio();
+      }).toJS;
+
+      final jsAllDoneCb = ((JSObject? _) {
+        _isPlaying = false;
+        onAllDone();
+      }).toJS;
+
+      final jsErrorCb = ((JSString jsErr) {
+        _isPlaying = false;
+        onError(jsErr.toDart);
+      }).toJS;
+
+      _jsStartLiveVoiceStream(
+        payloadJson.toJS,
+        jsTextCb,
+        jsFirstAudioCb,
+        jsAllDoneCb,
+        jsErrorCb,
+      );
+    } catch (e) {
+      debugPrint("LiveVoiceService startVoiceStream error: $e");
+      onError(e.toString());
     }
   }
 
