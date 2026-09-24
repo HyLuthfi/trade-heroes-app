@@ -835,11 +835,26 @@ class AppState extends ChangeNotifier {
         _userEmail = user.email ?? email;
         _userName = name ?? (email.contains('@') ? email.split('@')[0] : email);
         
+        try {
+          final cloudProfile = await SupabaseService.fetchProfile(user.id);
+          if (cloudProfile != null) {
+            _applyProfileData(cloudProfile);
+          }
+        } catch (_) {}
+
         await _saveState();
         notifyListeners();
         return null; // success
       }
       return "Pendaftaran gagal, silakan coba lagi.";
+    } on AuthException catch (e) {
+      if (e.message.contains("already registered")) {
+        return "Email ini sudah terdaftar. Silakan masuk menggunakan kata sandi Anda.";
+      }
+      if (e.message.contains("Password should be at least")) {
+        return "Kata sandi minimal harus 6 karakter.";
+      }
+      return e.message;
     } catch (e) {
       return e.toString().replaceAll("Exception: ", "");
     }
@@ -879,6 +894,14 @@ class AppState extends ChangeNotifier {
         return null; // success
       }
       return "Login gagal, silakan periksa email dan kata sandi.";
+    } on AuthException catch (e) {
+      if (e.message.contains("Invalid login credentials")) {
+        return "Email atau kata sandi tidak cocok. Silakan periksa kembali.";
+      }
+      if (e.message.contains("Email not confirmed")) {
+        return "Email belum dikonfirmasi. Silakan periksa kotak masuk email Anda.";
+      }
+      return e.message;
     } catch (e) {
       return e.toString().replaceAll("Exception: ", "");
     }
