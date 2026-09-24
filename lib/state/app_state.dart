@@ -525,9 +525,13 @@ class AppState extends ChangeNotifier {
                 _userName = metaName;
               }
               try {
-                final cloudProfile = await SupabaseService.fetchProfile(_userId!);
+                final cloudProfile = await SupabaseService.fetchProfile(_userId!)
+                    .timeout(const Duration(seconds: 4));
                 if (cloudProfile != null) {
                   _applyProfileData(cloudProfile);
+                } else {
+                  // Profil baru di Supabase: simpan state awal ke cloud
+                  await _saveState();
                 }
               } catch (e) {
                 debugPrint("Profile fetch error in auth change: $e");
@@ -538,24 +542,33 @@ class AppState extends ChangeNotifier {
               } catch (e) {
                 debugPrint("Cache save error in auth change: $e");
               }
+              _isAuthLoading = false;
               notifyListeners();
             }
           } else if (event == AuthChangeEvent.signedOut) {
             _isLoggedIn = false;
+            _isAuthLoading = false;
             _userId = null;
             try {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('is_logged_in', false);
             } catch (_) {}
             notifyListeners();
+          } else if (event == AuthChangeEvent.initialSession) {
+            _isAuthLoading = false;
+            notifyListeners();
           }
         },
         onError: (err, stack) {
           debugPrint("Supabase onAuthStateChange stream error caught safely: $err");
+          _isAuthLoading = false;
+          notifyListeners();
         },
       );
     } catch (e) {
       debugPrint("Auth subscription error: $e");
+      _isAuthLoading = false;
+      notifyListeners();
     }
   }
 
@@ -575,17 +588,24 @@ class AppState extends ChangeNotifier {
           _userName = metaName;
         }
 
-        // Try load from Supabase Cloud Profile
-        final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id);
-        if (cloudProfile != null) {
-          _applyProfileData(cloudProfile);
-          await _saveToLocalCache(prefs);
-          _checkDailyReset();
-          _checkPetirRegenOnLoad();
-          _isAuthLoading = false;
-          notifyListeners();
-          return;
+        // Try load from Supabase Cloud Profile with safety timeout
+        try {
+          final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id)
+              .timeout(const Duration(seconds: 4));
+          if (cloudProfile != null) {
+            _applyProfileData(cloudProfile);
+          } else {
+            await _saveState();
+          }
+        } catch (e) {
+          debugPrint("Profile load timeout or error: $e");
         }
+        await _saveToLocalCache(prefs);
+        _checkDailyReset();
+        _checkPetirRegenOnLoad();
+        _isAuthLoading = false;
+        notifyListeners();
+        return;
       }
 
       // 2. Fallback to Local Cache (SharedPreferences)

@@ -77,9 +77,32 @@ class KursusSahamApp extends StatelessWidget {
         child: Consumer<AppState>(
           builder: (context, appState, child) {
             if (appState.isAuthLoading) {
-              return const Scaffold(
-                backgroundColor: Color(0xff060a12),
-                body: SizedBox(),
+              return Scaffold(
+                backgroundColor: const Color(0xff0b0f19),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo.png',
+                        width: 64,
+                        height: 64,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.show_chart_rounded, color: Color(0xff10b981), size: 56),
+                      ),
+                      const SizedBox(height: 16),
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2.5),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Menghubungkan akun...",
+                        style: TextStyle(fontFamily: 'Outfit', color: Color(0xff94a3b8), fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
             return appState.isLoggedIn ? const HomeView() : const LoginView();
