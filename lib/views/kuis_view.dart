@@ -431,23 +431,23 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    final appState = Provider.of<AppState>(context, listen: false);
+    int activeLevelId = appState.completedLevels.length + 1;
+    if (activeLevelId > 10) activeLevelId = 10;
+    final activeNode = _levelData.firstWhere(
+      (l) => l['id'] == activeLevelId,
+      orElse: () => _levelData.first,
+    );
+    final double activeY = (activeNode['y'] as double);
+    final double initialOffset = (activeY - 180.0).clamp(0.0, 1825.0);
+
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        final appState = Provider.of<AppState>(context, listen: false);
-        int activeLevelId = appState.completedLevels.length + 1;
-        if (activeLevelId > 10) activeLevelId = 10;
-        final activeNode = _levelData.firstWhere(
-          (l) => l['id'] == activeLevelId,
-          orElse: () => _levelData.first,
-        );
-        final double activeY = (activeNode['y'] as double);
-        final double targetScroll = (activeY - 260.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-        _scrollController.animateTo(
-          targetScroll,
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOutCubic,
-        );
+        final double targetScroll = (activeY - 180.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+        if ((_scrollController.offset - targetScroll).abs() > 1.0) {
+          _scrollController.jumpTo(targetScroll);
+        }
       }
     });
     
