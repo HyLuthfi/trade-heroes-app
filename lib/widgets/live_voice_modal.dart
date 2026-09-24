@@ -294,7 +294,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                "Live Voice Analyst",
+                                "SAI Tech AI Solutions",
                                 style: TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 16,
