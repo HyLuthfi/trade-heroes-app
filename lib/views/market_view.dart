@@ -26,6 +26,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   String _selectedTimeframe = "1D";
   String _selectedSector = "Semua";
   int _selectedTabIdx = 0;
+  bool _isChartFullscreen = false;
   
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
@@ -425,14 +426,17 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
         body: SafeArea(
           child: Column(
             children: [
-              // 1. Interactive Real Search Bar & Sector Filter Chips
-              _buildSearchBarAndFilters(),
+              // 1. Interactive Real Search Bar & Sector Filter Chips (hidden in fullscreen chart)
+              if (!_isChartFullscreen || _selectedTabIdx != 0)
+                _buildSearchBarAndFilters(),
 
-              // 2. Stock Watchlist Selector Carousel
-              _buildStockWatchlistBar(filtered),
+              // 2. Stock Watchlist Selector Carousel (hidden in fullscreen chart)
+              if (!_isChartFullscreen || _selectedTabIdx != 0)
+                _buildStockWatchlistBar(filtered),
 
-              // 3. Pro Terminal Main Content Tabs
-              _buildTerminalTabSelector(),
+              // 3. Pro Terminal Main Content Tabs (hidden in fullscreen chart)
+              if (!_isChartFullscreen || _selectedTabIdx != 0)
+                _buildTerminalTabSelector(),
 
               // 4. Tab Body Content
               Expanded(
@@ -761,6 +765,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
               onTap: () {
                 setState(() {
                   _selectedTabIdx = idx;
+                  _isChartFullscreen = false;
                 });
               },
               child: Container(
@@ -810,127 +815,153 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
   // TAB 1: TRADINGVIEW ULTRA CHART ENGINE
   Widget _buildTradingViewUltraChartTab(Map<String, dynamic> stock, Color mainColor) {
     final bool isUp = ((stock['changePct'] as num?)?.toDouble() ?? 0.0) >= 0;
-    List<Map<String, dynamic>> candles = [];
-    final rawTfMap = stock['timeframesMap'];
-    if (rawTfMap is Map && rawTfMap[_selectedTimeframe] is List) {
-      candles = List<Map<String, dynamic>>.from(rawTfMap[_selectedTimeframe]);
-    } else if (stock['candles'] is List) {
-      candles = List<Map<String, dynamic>>.from(stock['candles']);
-    }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(14),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Stock Detail Header
+          // Stock Detail Header & Quick Actions
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        stock['ticker']?.toString() ?? '',
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          stock['ticker']?.toString() ?? '',
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        stock['sector']?.toString() ?? '',
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          color: Color(0xff64748b),
+                        const SizedBox(width: 6),
+                        Text(
+                          stock['sector']?.toString() ?? '',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.5,
+                            color: Color(0xff64748b),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff064e3b),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: Color(0xff10b981),
-                                shape: BoxShape.circle,
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff064e3b),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xff10b981).withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xff10b981),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _isLoadingRealData ? "REFRESHING..." : "LIVE BEI",
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xff10b981),
+                              const SizedBox(width: 4),
+                              Text(
+                                _isLoadingRealData ? "REFRESH..." : "LIVE BEI",
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xff10b981),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    stock['name']?.toString() ?? '',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: Color(0xff94a3b8),
+                      ],
                     ),
-                  ),
-                ],
+                    Text(
+                      stock['name']?.toString() ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: Color(0xff94a3b8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    "Rp ${(stock['price'] as num?)?.toStringAsFixed(0) ?? '0'}",
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: mainColor,
-                    ),
-                  ),
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Text(
+                        "Rp ${(stock['price'] as num?)?.toStringAsFixed(0) ?? '0'}",
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: mainColor,
+                        ),
+                      ),
                       Text(
                         "${isUp ? '+' : ''}${(stock['change'] as num?)?.toInt() ?? 0} (${isUp ? '+' : ''}${stock['changePct'] ?? 0}%)",
                         style: TextStyle(
                           fontFamily: 'Outfit',
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w900,
                           color: mainColor,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(width: 8),
+                  // Fullscreen chart toggle
+                  GestureDetector(
+                    onTap: () {
+                      AudioService.playClick();
+                      setState(() {
+                        _isChartFullscreen = !_isChartFullscreen;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _isChartFullscreen ? const Color(0xff10b981).withOpacity(0.15) : const Color(0xff1e293b),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isChartFullscreen ? const Color(0xff10b981) : Colors.white.withOpacity(0.08),
+                        ),
+                      ),
+                      child: Icon(
+                        _isChartFullscreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
+                        color: _isChartFullscreen ? const Color(0xff10b981) : const Color(0xff94a3b8),
+                        size: 20,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
-          // Financial Metrics Grid
+          // Financial Metrics Grid (Compact Strip)
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: const Color(0xff111827),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.white.withOpacity(0.08)),
             ),
             child: Row(
@@ -939,16 +970,15 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
                 _buildMetricCell("Open", "Rp ${(stock['open'] as num?)?.toInt() ?? 0}"),
                 _buildMetricCell("High", "Rp ${(stock['high'] as num?)?.toInt() ?? 0}"),
                 _buildMetricCell("Low", "Rp ${(stock['low'] as num?)?.toInt() ?? 0}"),
-                _buildMetricCell("Val (Rp)", stock['value']?.toString() ?? "-"),
+                _buildMetricCell("Val", stock['value']?.toString() ?? "-"),
                 _buildMetricCell("Foreign", stock['foreignNet']?.toString() ?? "-"),
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
-          // TRADINGVIEW OFFICIAL ADVANCED REAL-TIME CHART
-          SizedBox(
-            height: 520,
+          // TRADINGVIEW OFFICIAL ADVANCED REAL-TIME CHART (Auto-Fill Screen Height - Zero Page Scroll!)
+          Expanded(
             child: TradingViewChart(
               key: ValueKey('${stock['ticker']}'),
               ticker: stock['ticker']?.toString() ?? 'BBCA',
