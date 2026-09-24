@@ -315,7 +315,7 @@ class FlutterWebHandler(SimpleHTTPRequestHandler):
             'model': 'ag/gemini-3.8-flash-low',
             'messages': messages,
             'stream': False,
-            'max_tokens': 450
+            'max_tokens': 140 if is_live_voice else 450
         }
 
         try:

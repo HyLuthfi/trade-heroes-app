@@ -1109,7 +1109,7 @@ class _MarketViewState extends State<MarketView> with SingleTickerProviderStateM
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final audioUri = (data['audio'] ?? '').toString();
-        if (audioUri.isNotEmpty && audioUri.startsWith('data:audio/wav;base64,')) {
+        if (audioUri.isNotEmpty && audioUri.startsWith('data:audio/')) {
           LiveVoiceService.playAudio(
             audioUri,
             onEnded: () {

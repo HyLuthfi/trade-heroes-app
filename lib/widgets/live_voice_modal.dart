@@ -160,7 +160,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
             'foreignNet': stock['foreignNet'] ?? '-',
           },
         }),
-      ).timeout(const Duration(seconds: 14));
+      ).timeout(const Duration(seconds: 40));
 
       if (!mounted) return;
 
@@ -177,7 +177,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
           widget.onConversationEnd!(prompt, replyText);
         }
 
-        if (audioUri.isNotEmpty && audioUri.startsWith('data:audio/wav;base64,')) {
+        if (audioUri.isNotEmpty && audioUri.startsWith('data:audio/')) {
           setState(() {
             _state = VoiceState.speaking;
           });
@@ -203,7 +203,7 @@ class _LiveVoiceModalState extends State<LiveVoiceModal> with TickerProviderStat
       if (!mounted) return;
       debugPrint("Live Voice API error: $e");
       setState(() {
-        _errorMessage = "Koneksi analis terputus. Silakan coba lagi.";
+        _errorMessage = "Gagal memproses suara ($e). Ketuk untuk coba lagi.";
         _state = VoiceState.idle;
       });
     }

@@ -4,8 +4,10 @@ import json
 import struct
 import base64
 import sqlite3
+import asyncio
 import urllib.request
 import urllib.error
+import concurrent.futures
 
 _gemini_keys_cache = []
 _gemini_key_index = 0
@@ -85,10 +87,40 @@ def wrap_pcm_wav(pcm_bytes: bytes, sample_rate: int = 24000, channels: int = 1, 
     )
     return riff_header + fmt_chunk + data_chunk + pcm_bytes
 
+def synthesize_edge_tts(clean_text: str, voice: str = "id-ID-GadisNeural") -> str:
+    """Fallback generator using Microsoft Edge TTS (id-ID-GadisNeural) for ultra-fast, zero-rate-limit audio."""
+    try:
+        import edge_tts
+
+        async def _run():
+            communicate = edge_tts.Communicate(clean_text, voice)
+            audio_bytes = b''
+            async for chunk in communicate.stream():
+                if chunk['type'] == 'audio':
+                    audio_bytes += chunk['data']
+            return audio_bytes
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    data = executor.submit(asyncio.run, _run()).result(timeout=8)
+            else:
+                data = loop.run_until_complete(_run())
+        except RuntimeError:
+            data = asyncio.run(_run())
+
+        if data:
+            return f"data:audio/mp3;base64,{base64.b64encode(data).decode('utf-8')}"
+    except Exception as e:
+        print(f"Edge TTS fallback error: {e}")
+    return ""
+
 def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2.5-flash-preview-tts") -> str:
     """
-    Generate spoken voice audio via Google Gemini Generative Audio API.
-    Returns a data URI string: 'data:audio/wav;base64,...'
+    Generate spoken voice audio via Google Gemini Generative Audio API,
+    with automatic ultra-fast fallback to Microsoft Edge TTS (id-ID-GadisNeural)
+    if Gemini encounters rate limits or latency.
     """
     global _gemini_key_index
     clean_text = clean_text_for_speech(text)
@@ -96,58 +128,55 @@ def synthesize_gemini_tts(text: str, voice: str = "Puck", model: str = "gemini-2
         return ""
 
     keys = get_gemini_keys()
-    if not keys:
-        print("Warning: No Gemini API keys found in environment or 9Router DB.")
-        return ""
-
     num_keys = len(keys)
-    prompt_text = f"Please read the following text aloud naturally and expressively in Indonesian without adding or replying anything:\n\n{clean_text}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt_text}]}],
-        "generationConfig": {
-            "responseModalities": ["AUDIO"],
-            "speechConfig": {
-                "voiceConfig": {
-                    "prebuiltVoiceConfig": {
-                        "voiceName": voice
+
+    if num_keys > 0:
+        prompt_text = f"Please read the following text aloud naturally and expressively in Indonesian without adding or replying anything:\n\n{clean_text}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt_text}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {
+                        "prebuiltVoiceConfig": {
+                            "voiceName": voice
+                        }
                     }
                 }
             }
         }
-    }
-    json_bytes = json.dumps(payload).encode('utf-8')
+        json_bytes = json.dumps(payload).encode('utf-8')
 
-    max_retries = min(4, num_keys)
-    for attempt in range(max_retries):
-        idx = (_gemini_key_index + attempt) % num_keys
-        key = keys[idx]
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        # Try 1 key with short timeout (2.8s) so response never hangs
+        max_retries = min(1, num_keys)
+        for attempt in range(max_retries):
+            idx = (_gemini_key_index + attempt) % num_keys
+            key = keys[idx]
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
 
-        try:
-            req = urllib.request.Request(
-                url,
-                data=json_bytes,
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode('utf-8'))
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        audio_part = next((p for p in parts if "inlineData" in p or "inline_data" in p), None)
-                        if audio_part:
-                            b64 = (audio_part.get("inlineData") or audio_part.get("inline_data") or {}).get("data", "")
-                            if b64:
-                                pcm = base64.b64decode(b64)
-                                wav = wrap_pcm_wav(pcm)
-                                _gemini_key_index = (idx + 1) % num_keys
-                                return f"data:audio/wav;base64,{base64.b64encode(wav).decode('utf-8')}"
-        except urllib.error.HTTPError as he:
-            print(f"Gemini TTS Key #{idx} returned HTTP {he.code}, rotating to next key...")
-            continue
-        except Exception as ex:
-            print(f"Gemini TTS Key #{idx} error: {ex}, rotating to next key...")
-            continue
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=json_bytes,
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=2.8) as resp:
+                    if resp.status == 200:
+                        data = json.loads(resp.read().decode('utf-8'))
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            audio_part = next((p for p in parts if "inlineData" in p or "inline_data" in p), None)
+                            if audio_part:
+                                b64 = (audio_part.get("inlineData") or audio_part.get("inline_data") or {}).get("data", "")
+                                if b64:
+                                    pcm = base64.b64decode(b64)
+                                    wav = wrap_pcm_wav(pcm)
+                                    _gemini_key_index = (idx + 1) % num_keys
+                                    return f"data:audio/wav;base64,{base64.b64encode(wav).decode('utf-8')}"
+            except Exception as ex:
+                print(f"Gemini TTS notice: {ex}, switching directly to fast Edge TTS...")
+                break
 
-    return ""
+    # Fallback to high-speed Edge TTS
+    return synthesize_edge_tts(clean_text)
