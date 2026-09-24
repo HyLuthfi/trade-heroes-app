@@ -141,6 +141,7 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
     gemini_voice = "Puck"
     if voice_engine == "gemini_charon" or voice_engine == "charon":
         gemini_voice = "Charon"
+    model = "gemini-3.8-flash-lite-tts"
 
     keys = get_gemini_keys()
     num_keys = len(keys)
@@ -163,10 +164,10 @@ def synthesize_voice(text: str, voice_engine: str = "auto") -> dict:
         }
         json_bytes = json.dumps(payload).encode('utf-8')
 
-        # If auto, try 1 key quickly (2.0s), if explicit gemini requested, try up to 3 keys (4.0s)
+        # If auto, try 1 key with 6s timeout; if explicit gemini requested, give up to 14s timeout
         is_explicit_gemini = voice_engine in ["gemini_puck", "gemini_charon", "puck", "charon"]
-        timeout_sec = 4.0 if is_explicit_gemini else 2.0
-        max_attempts_count = 3 if is_explicit_gemini else 1
+        timeout_sec = 14.0 if is_explicit_gemini else 6.0
+        max_attempts_count = 2 if is_explicit_gemini else 1
 
         preferred_indices = [2, 4, 5, 6, 10, 15, 16, 17, 19, 20]
         attempts = [preferred_indices[(_gemini_key_index + i) % len(preferred_indices)] for i in range(min(max_attempts_count, len(preferred_indices)))]
