@@ -17,6 +17,7 @@ class KuisView extends StatefulWidget {
 class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
   int? _selectedLevelId;
   int? _pressedLevelId;
+  bool _isMulaiBubblePressed = false;
   late ScrollController _scrollController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -733,15 +734,30 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                         ),
                         onPressed: () {
                           AudioService.playClick();
-                          // Smoothly scroll and center back to the active level if scrolled away
+                          final activeNode = _levelData.firstWhere(
+                            (l) => l['id'] == activeLevelId,
+                            orElse: () => _levelData.first,
+                          );
+                          final double activeY = (activeNode['y'] as double);
+
                           if (_scrollController.hasClients) {
-                            final double activeY = (activeLevel['y'] as double);
                             final double targetScroll = (activeY - 180.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-                            _scrollController.animateTo(
-                              targetScroll,
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeOutCubic,
-                            );
+                            final double dist = (_scrollController.offset - targetScroll).abs();
+                            if (dist > 30.0) {
+                              // Smoothly re-center back to active level first, then open level sheet
+                              _scrollController.animateTo(
+                                targetScroll,
+                                duration: const Duration(milliseconds: 380),
+                                curve: Curves.easeOutCubic,
+                              ).then((_) {
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedLevelId = activeLevelId;
+                                  });
+                                }
+                              });
+                              return;
+                            }
                           }
                           setState(() {
                             _selectedLevelId = activeLevelId;
@@ -1101,22 +1117,40 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 return Positioned(
                                   left: x - 46, // Centered perfectly (width is 92, so center is exactly x)
                                   top: y - 68,  // Positioned directly above active node
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      AudioService.playClick();
-                                      setState(() {
-                                        _selectedLevelId = activeLevelId;
-                                      });
-                                    },
-                                    child: AnimatedBuilder(
-                                      animation: _bobAnimation,
-                                      builder: (context, child) {
-                                        return Transform.translate(
-                                          offset: Offset(0, _bobAnimation.value),
-                                          child: child,
-                                        );
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTapDown: (_) {
+                                        setState(() {
+                                          _isMulaiBubblePressed = true;
+                                        });
                                       },
-                                      child: _buildMulaiBubble(),
+                                      onTapUp: (_) {
+                                        setState(() {
+                                          _isMulaiBubblePressed = false;
+                                          _selectedLevelId = activeLevelId;
+                                        });
+                                        AudioService.playClick();
+                                      },
+                                      onTapCancel: () {
+                                        setState(() {
+                                          _isMulaiBubblePressed = false;
+                                        });
+                                      },
+                                      child: AnimatedBuilder(
+                                        animation: _bobAnimation,
+                                        builder: (context, child) {
+                                          return Transform.translate(
+                                            offset: Offset(0, _bobAnimation.value + (_isMulaiBubblePressed ? 3.0 : 0.0)),
+                                            child: Transform.scale(
+                                              scale: _isMulaiBubblePressed ? 0.94 : 1.0,
+                                              child: child,
+                                            ),
+                                          );
+                                        },
+                                        child: _buildMulaiBubble(),
+                                      ),
                                     ),
                                   ),
                                 );
@@ -1788,13 +1822,16 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: const Color(0xff182232),
-              border: Border.all(color: const Color(0xff58cc02), width: 2.5),
+              border: Border.all(
+                color: _isMulaiBubblePressed ? const Color(0xff46a302) : const Color(0xff58cc02),
+                width: 2.5,
+              ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+                  color: const Color(0xff58cc02).withOpacity(_isMulaiBubblePressed ? 0.15 : 0.35),
+                  blurRadius: _isMulaiBubblePressed ? 3 : 8,
+                  offset: Offset(0, _isMulaiBubblePressed ? 1 : 3),
                 ),
               ],
             ),
@@ -1816,11 +1853,17 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
               child: Container(
                 width: 12,
                 height: 12,
-                decoration: const BoxDecoration(
-                  color: Color(0xff182232),
+                decoration: BoxDecoration(
+                  color: const Color(0xff182232),
                   border: Border(
-                    right: BorderSide(color: Color(0xff58cc02), width: 2.5),
-                    bottom: BorderSide(color: Color(0xff58cc02), width: 2.5),
+                    right: BorderSide(
+                      color: _isMulaiBubblePressed ? const Color(0xff46a302) : const Color(0xff58cc02),
+                      width: 2.5,
+                    ),
+                    bottom: BorderSide(
+                      color: _isMulaiBubblePressed ? const Color(0xff46a302) : const Color(0xff58cc02),
+                      width: 2.5,
+                    ),
                   ),
                 ),
               ),
