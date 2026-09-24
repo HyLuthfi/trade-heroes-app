@@ -171,7 +171,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
       final int xpPerCorrect = isFirstClear ? 10 : 3;
       final xpReward = _scoreCorrect * xpPerCorrect;
 
-      appState.completeLevel(widget.levelId, stars: stars);
+      appState.completeLevel(widget.levelId, stars: stars, correctAnswers: _scoreCorrect);
       if (stars == 3) {
         appState.unlockAntiBoncos(context);
       }
@@ -185,6 +185,7 @@ class _QuizOverlayState extends State<QuizOverlay> with SingleTickerProviderStat
     } else {
       // Candy Crush: GAGAL -> Hilang 1 Nyawa Petir ⚡, level berikutnya TETAP TERKUNCI!
       appState.deductPetir();
+      appState.recordLevelAttempt(widget.levelId, _scoreCorrect);
       AudioService.playWrong();
 
       Navigator.of(context).pop();

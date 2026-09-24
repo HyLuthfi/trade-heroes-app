@@ -653,58 +653,68 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Progress Bar & Percentage
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              Container(
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              FractionallySizedBox(
-                                widthFactor: (appState.completedLevels.length / 10.0).clamp(0.0, 1.0),
-                                child: Container(
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xffa7f3d0), Colors.white],
+                    // Progress Bar & Percentage of Active Level Questions
+                    Builder(
+                      builder: (context) {
+                        final activeQList = (activeLevel['questions'] as List?) ?? [];
+                        final activeQCount = activeQList.length > 0 ? activeQList.length : 3;
+                        final activeCorrect = appState.getCorrectAnswersForLevel(activeLevelId);
+                        final double activeProgress = (activeCorrect / activeQCount).clamp(0.0, 1.0);
+                        final int activePct = (activeProgress * 100).round();
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
-                                    borderRadius: BorderRadius.circular(4),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.white.withOpacity(0.5),
-                                        blurRadius: 4,
-                                      ),
-                                    ],
                                   ),
+                                  FractionallySizedBox(
+                                    widthFactor: activeProgress,
+                                    child: Container(
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xffa7f3d0), Colors.white],
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.white.withOpacity(0.5),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                "$activePct%",
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            "${(appState.completedLevels.length * 10).clamp(0, 100)}%",
-                            style: const TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
                             ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 14),
                     // Quick Action Button: "Lanjutkan Belajar"
@@ -916,12 +926,16 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                 ),
                               );
 
-                              // If active, wrap it in a pulsing progress ring with outer glowing aura
-                              if (isActive) {
+                              // Ring indicator around node showing question completion progress (Duolingo Style)
+                              final qCount = ((level['questions'] as List?)?.length ?? 3).clamp(1, 100);
+                              final correctCount = appState.getCorrectAnswersForLevel(id);
+                              final double levelProgress = (correctCount / qCount).clamp(0.0, 1.0);
+
+                              if (isActive || (isUnlocked && levelProgress > 0 && levelProgress < 1.0)) {
                                 nodeWidget = AnimatedBuilder(
                                   animation: _pulseAnimation,
                                   builder: (context, child) {
-                                    final scale = _pulseAnimation.value;
+                                    final scale = isActive ? _pulseAnimation.value : 1.0;
                                     return Container(
                                       width: 98,
                                       height: 104,
@@ -929,30 +943,31 @@ class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
                                       child: Stack(
                                         alignment: Alignment.center,
                                         children: [
-                                          // Outer Glowing Pulsing Aura
-                                          Transform.scale(
-                                            scale: scale,
-                                            child: Container(
-                                              width: 86,
-                                              height: 86,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: const Color(0xff58cc02).withOpacity(0.25),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(0xff58cc02).withOpacity(0.5),
-                                                    blurRadius: 18,
-                                                    spreadRadius: 4,
-                                                  ),
-                                                ],
+                                          // Outer Glowing Pulsing Aura (Only for active level)
+                                          if (isActive)
+                                            Transform.scale(
+                                              scale: scale,
+                                              child: Container(
+                                                width: 86,
+                                                height: 86,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: const Color(0xff58cc02).withOpacity(0.25),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: const Color(0xff58cc02).withOpacity(0.5),
+                                                      blurRadius: 18,
+                                                      spreadRadius: 4,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                          ),
                                           SizedBox(
                                             width: 90,
                                             height: 90,
                                             child: CircularProgressIndicator(
-                                              value: 0.6,
+                                              value: levelProgress,
                                               strokeWidth: 7,
                                               strokeCap: StrokeCap.round,
                                               color: const Color(0xff58cc02),

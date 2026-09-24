@@ -14,6 +14,7 @@ class AppState extends ChangeNotifier {
   int _streak = 0;
   List<int> _completedLevels = [1, 2, 3];
   Map<int, int> _levelStars = {1: 3, 2: 3, 3: 3}; // levelId -> stars (1, 2, or 3) Candy Crush style
+  Map<int, int> _levelCorrectAnswers = {1: 3, 2: 3, 3: 3}; // levelId -> jumlah soal benar
   List<int> _readModules = [];
   List<Map<String, dynamic>> _favorites = []; // { 'levelId': int, 'qIndex': int, 'questionText': String }
   List<String> _unlockedBadges = [];
@@ -59,8 +60,10 @@ class AppState extends ChangeNotifier {
   int get streak => _streak;
   List<int> get completedLevels => _completedLevels;
   Map<int, int> get levelStars => _levelStars;
+  Map<int, int> get levelCorrectAnswers => _levelCorrectAnswers;
 
   int getStarsForLevel(int levelId) => _levelStars[levelId] ?? 0;
+  int getCorrectAnswersForLevel(int levelId) => _levelCorrectAnswers[levelId] ?? (_completedLevels.contains(levelId) ? 3 : 0);
   List<int> get readModules => _readModules;
   List<Map<String, dynamic>> get favorites => _favorites;
   List<String> get unlockedBadges => _unlockedBadges;
@@ -645,6 +648,13 @@ class AppState extends ChangeNotifier {
     } else {
       _levelStars = {1: 3, 2: 3, 3: 3};
     }
+    if (json['levelCorrectAnswers'] != null && json['levelCorrectAnswers'] is Map) {
+      _levelCorrectAnswers = (json['levelCorrectAnswers'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    } else {
+      _levelCorrectAnswers = {1: 3, 2: 3, 3: 3};
+    }
     _readModules = List<int>.from(json['readModules'] ?? []);
     _favorites = List<Map<String, dynamic>>.from(json['favorites'] ?? []);
     _unlockedBadges = List<String>.from(json['unlockedBadges'] ?? []);
@@ -723,6 +733,11 @@ class AppState extends ChangeNotifier {
         (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
       );
     }
+    if (data['level_correct_answers'] != null && data['level_correct_answers'] is Map) {
+      _levelCorrectAnswers = (data['level_correct_answers'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    }
     if (data['read_modules'] != null && data['read_modules'] is List) {
       _readModules = (data['read_modules'] as List).map((x) => (x as num).toInt()).toList();
     }
@@ -761,6 +776,7 @@ class AppState extends ChangeNotifier {
       'streak': _streak,
       'completedLevels': _completedLevels,
       'levelStars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
+      'levelCorrectAnswers': _levelCorrectAnswers.map((k, v) => MapEntry(k.toString(), v)),
       'readModules': _readModules,
       'favorites': _favorites,
       'unlockedBadges': _unlockedBadges,
@@ -809,6 +825,7 @@ class AppState extends ChangeNotifier {
       'streak': _streak,
       'completed_levels': _completedLevels,
       'level_stars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
+      'level_correct_answers': _levelCorrectAnswers.map((k, v) => MapEntry(k.toString(), v)),
       'read_modules': _readModules,
       'favorites': _favorites,
       'unlocked_badges': _unlockedBadges,
@@ -1411,8 +1428,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Level completed with Candy Crush style Stars (1, 2, or 3)
-  void completeLevel(int levelId, {int stars = 3}) {
+  // Level completed with Candy Crush style Stars (1, 2, or 3) and correct answer count
+  void completeLevel(int levelId, {int stars = 3, int correctAnswers = 0}) {
     if (!_completedLevels.contains(levelId)) {
       _completedLevels.add(levelId);
     }
@@ -1420,8 +1437,22 @@ class AppState extends ChangeNotifier {
     if (stars > curStars) {
       _levelStars[levelId] = stars;
     }
+    final curCorrect = _levelCorrectAnswers[levelId] ?? 0;
+    if (correctAnswers > curCorrect) {
+      _levelCorrectAnswers[levelId] = correctAnswers;
+    }
     _saveState();
     notifyListeners();
+  }
+
+  // Record quiz attempt (even if not full stars/passed, tracks correct answers)
+  void recordLevelAttempt(int levelId, int correctAnswers) {
+    final curCorrect = _levelCorrectAnswers[levelId] ?? 0;
+    if (correctAnswers > curCorrect) {
+      _levelCorrectAnswers[levelId] = correctAnswers;
+      _saveState();
+      notifyListeners();
+    }
   }
 
   // Award Anti Boncos if no mistakes
