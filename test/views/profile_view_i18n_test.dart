@@ -16,6 +16,22 @@ void main() {
       'settings.sound_haptic_title',
       'settings.bgm_title',
       'settings.choose_bgm',
+      'settings.reminder_time',
+      'settings.reminder_time_title',
+      'settings.reminder_time_desc',
+      'settings.reminder_time_8',
+      'settings.reminder_time_16',
+      'settings.reminder_time_19',
+      'settings.reminder_time_20',
+      'settings.reset_progress',
+      'settings.reset_progress_confirm_title',
+      'settings.reset_progress_confirm_desc',
+      'settings.reset_progress_action',
+      'settings.reset_progress_success',
+      'profile.edit_name',
+      'profile.edit_name_desc',
+      'profile.name_updated',
+      'profile.name_empty',
     ];
 
     for (final key in keys) {

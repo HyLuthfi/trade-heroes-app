@@ -41,6 +41,7 @@ class AppState extends ChangeNotifier {
   // Preferences
   bool _darkMode = true;
   bool _dailyReminder = true;
+  int _reminderHour = 19;
   String _lastReminderSentDate = "";
   String _lastDailyRewardReminderDate = "";
   bool _petirFullNotified = true;
@@ -72,6 +73,7 @@ class AppState extends ChangeNotifier {
   bool get isCloudSynced => SupabaseService.isAuthenticated;
   bool get darkMode => _darkMode;
   bool get dailyReminder => _dailyReminder;
+  int get reminderHour => _reminderHour;
   bool get soundHaptic => _soundHaptic;
   bool get bgmEnabled => _bgmEnabled;
   String get language => _language;
@@ -243,6 +245,7 @@ class AppState extends ChangeNotifier {
     _userId = json['userId'];
     _darkMode = json['darkMode'] ?? true;
     _dailyReminder = json['dailyReminder'] ?? true;
+    _reminderHour = json['reminderHour'] ?? 19;
     _lastReminderSentDate = json['lastReminderSentDate'] ?? "";
     _lastDailyRewardReminderDate = json['lastDailyRewardReminderDate'] ?? "";
     NotificationService.setNotificationsEnabled(_dailyReminder);
@@ -356,6 +359,7 @@ class AppState extends ChangeNotifier {
       'role': _role,
       'darkMode': _darkMode,
       'dailyReminder': _dailyReminder,
+      'reminderHour': _reminderHour,
       'lastReminderSentDate': _lastReminderSentDate,
       'lastDailyRewardReminderDate': _lastDailyRewardReminderDate,
       'soundHaptic': _soundHaptic,
@@ -566,6 +570,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setReminderHour(int hour) {
+    _reminderHour = hour;
+    _saveState();
+    notifyListeners();
+  }
+
   Future<bool> requestNotificationPermission() async {
     final granted = await NotificationService.requestPermission();
     if (granted) {
@@ -613,6 +623,27 @@ class AppState extends ChangeNotifier {
     _bgmTrack = track;
     AudioService.setBgmTrack(track);
     _saveState();
+    notifyListeners();
+  }
+
+  void resetProgress() {
+    _completedLevels = [1, 2, 3];
+    _readModules = [];
+    _favorites = [];
+    _unlockedBadges = [];
+    _claimedChests = [];
+    _claimedDailyDays = [];
+    _lastDailyClaimDate = "";
+    _xp = 0;
+    _dailyXp = 0;
+    _streak = 0;
+    _petir = 5;
+    _petirLastUsedTime = null;
+    _virtualBalance = 100000000.0;
+    _portfolio = [];
+    _tradeHistory = [];
+    _saveState();
+    _syncToCloudBackground();
     notifyListeners();
   }
 
@@ -822,8 +853,8 @@ class AppState extends ChangeNotifier {
     final today =
         "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-    // 1. Daily Streak Reminder (Pukul 19:00 WIB ke atas jika belum ada daily XP hari ini)
-    if (now.hour >= 19 && _lastReminderSentDate != today) {
+    // 1. Daily Streak Reminder (Pukul _reminderHour WIB ke atas jika belum ada daily XP hari ini)
+    if (now.hour >= _reminderHour && _lastReminderSentDate != today) {
       if (_dailyXp == 0) {
         final sent = NotificationService.sendDailyStreakReminder(
           streak: _streak > 0 ? _streak : 1,
@@ -969,6 +1000,7 @@ class AppState extends ChangeNotifier {
     _userEmail = email;
     _userAvatar = avatar;
     _saveState();
+    _syncToCloudBackground();
     notifyListeners();
   }
 

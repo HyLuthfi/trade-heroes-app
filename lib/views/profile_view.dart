@@ -80,136 +80,226 @@ class _ProfileViewState extends State<ProfileView> {
     { 'id': "academy", 'iconData': Icons.school_rounded, 'name': "Master" },
   ];
 
-  void _showAvatarSelector(BuildContext context, AppState appState) {
+  void _showProfileEditPrompt(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final nameController = TextEditingController(text: appState.userName);
+    String currentAvatar = appState.userAvatar;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xff10b981), width: 1.5)),
-        title: Text(_tr(appState, 'profile.avatar_picker'), style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: GridView.builder(
-            shrinkWrap: true,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setDialogState) => AlertDialog(
+          backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0),
+              width: 1.2,
             ),
-            itemCount: _avatars.length,
-            itemBuilder: (context, idx) {
-              final ava = _avatars[idx];
-              final isSelected = appState.userAvatar == ava['id'];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _showProfileEditPrompt(context, appState, ava['id']);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xff059669).withOpacity(0.4) : const Color(0xff1e293b),
-                    border: Border.all(
-                      color: isSelected ? const Color(0xfff59e0b) : Colors.white.withOpacity(0.12),
-                      width: isSelected ? 2.5 : 1,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xfff59e0b).withOpacity(0.5),
-                              blurRadius: 10,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    ava['iconData'] as IconData,
-                    color: isSelected ? const Color(0xfff59e0b) : const Color(0xff60a5fa),
-                    size: 32,
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xff10b981).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.edit_rounded, color: Color(0xff10b981), size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _tr(appState, 'profile.edit_name'),
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    color: isDark ? Colors.white : const Color(0xff0f172a),
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showProfileEditPrompt(BuildContext context, AppState appState, String selectedAvatar) {
-    final nameController = TextEditingController(text: appState.userName);
-    final emailController = TextEditingController(text: appState.userEmail);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xff10b981), width: 1.5)),
-        title: Text(_tr(appState, 'profile.edit_info'), style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                labelText: _tr(appState, 'profile.name_label'),
-                labelStyle: TextStyle(color: Color(0xff94a3b8)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff334155))),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff10b981))),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _tr(appState, 'profile.edit_name_desc'),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  maxLength: 25,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xff0f172a),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: _tr(appState, 'profile.name_label'),
+                    labelStyle: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 13,
+                      color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: isDark ? const Color(0xff334155) : const Color(0xffcbd5e1),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xff10b981), width: 1.8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _tr(appState, 'profile.avatar_picker'),
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xff0f172a),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 54,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _avatars.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, idx) {
+                      final ava = _avatars[idx];
+                      final isSelected = currentAvatar == ava['id'];
+                      return GestureDetector(
+                        onTap: () {
+                          AudioService.playClick();
+                          setDialogState(() {
+                            currentAvatar = ava['id'] as String;
+                          });
+                        },
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected
+                                ? const Color(0xff10b981).withOpacity(0.2)
+                                : (isDark ? const Color(0xff0f172a) : const Color(0xfff1f5f9)),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xff10b981) : Colors.transparent,
+                              width: 2.0,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            ava['iconData'] as IconData,
+                            color: isSelected ? const Color(0xff10b981) : (isDark ? Colors.white70 : const Color(0xff475569)),
+                            size: 24,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                _tr(appState, 'profile.cancel'),
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: emailController,
-              style: const TextStyle(color: Colors.white, fontFamily: 'Outfit'),
-              decoration: InputDecoration(
-                labelText: _tr(appState, 'profile.email_label'),
-                labelStyle: TextStyle(color: Color(0xff94a3b8)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff334155))),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xff10b981))),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff10b981),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+              onPressed: () {
+                final newName = nameController.text.trim();
+                if (newName.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      content: Text(_tr(appState, 'profile.name_empty')),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.of(ctx).pop();
+                AudioService.playReward();
+                appState.updateProfile(
+                  name: newName,
+                  email: appState.userEmail,
+                  avatar: currentAvatar,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    behavior: SnackBarBehavior.floating,
+                    content: Text(_tr(appState, 'profile.name_updated')),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+              label: Text(
+                _tr(appState, 'profile.save'),
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(_tr(appState, 'profile.cancel'), style: const TextStyle(color: Color(0xff94a3b8), fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff10b981),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              appState.updateProfile(
-                name: nameController.text.trim().isNotEmpty ? nameController.text.trim() : appState.userName,
-                email: emailController.text.trim().isNotEmpty ? emailController.text.trim() : appState.userEmail,
-                avatar: selectedAvatar,
-              );
-            },
-            icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-            label: Text(_tr(appState, 'profile.save'), style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
 
   void _showBadgeDetail(BuildContext context, Map<String, dynamic> badge, bool isUnlocked) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final IconData iconData = badge['iconData'] as IconData;
     final Color badgeColor = badge['color'] as Color;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0f172a),
+        backgroundColor: isDark ? const Color(0xff0f172a) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: isUnlocked ? badgeColor : const Color(0xff334155), width: 1.5),
+          side: BorderSide(
+            color: isUnlocked
+                ? badgeColor
+                : (isDark ? const Color(0xff334155) : const Color(0xffe2e8f0)),
+            width: 1.5,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -220,10 +310,12 @@ class _ProfileViewState extends State<ProfileView> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isUnlocked ? badgeColor : const Color(0xff475569),
+                  color: isUnlocked
+                      ? badgeColor
+                      : (isDark ? const Color(0xff475569) : const Color(0xffcbd5e1)),
                   width: isUnlocked ? 3.5 : 2,
                 ),
-                color: const Color(0xff1e293b),
+                color: isDark ? const Color(0xff1e293b) : const Color(0xfff8fafc),
                 boxShadow: isUnlocked
                     ? [
                         BoxShadow(
@@ -236,34 +328,58 @@ class _ProfileViewState extends State<ProfileView> {
               alignment: Alignment.center,
               child: Opacity(
                 opacity: isUnlocked ? 1.0 : 0.35,
-                child: Icon(iconData, color: isUnlocked ? badgeColor : const Color(0xff64748b), size: 42),
+                child: Icon(iconData,
+                    color: isUnlocked
+                        ? badgeColor
+                        : (isDark ? const Color(0xff64748b) : const Color(0xff94a3b8)),
+                    size: 42),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               badge['name'],
-              style: const TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : const Color(0xff0f172a),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               badge['desc'],
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xffcbd5e1), height: 1.4),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: isUnlocked ? badgeColor.withOpacity(0.2) : const Color(0xff1e293b),
+                color: isUnlocked
+                    ? badgeColor.withOpacity(0.2)
+                    : (isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9)),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isUnlocked ? badgeColor : const Color(0xff475569),
+                  color: isUnlocked
+                      ? badgeColor
+                      : (isDark ? const Color(0xff475569) : const Color(0xffcbd5e1)),
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(isUnlocked ? Icons.check_circle_rounded : Icons.lock_rounded, size: 14, color: isUnlocked ? badgeColor : const Color(0xff94a3b8)),
+                  Icon(
+                    isUnlocked ? Icons.check_circle_rounded : Icons.lock_rounded,
+                    size: 14,
+                    color: isUnlocked
+                        ? badgeColor
+                        : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     isUnlocked ? "MEDALI TELAH TERBUKA" : "BELUM DIDAPATKAN",
@@ -271,7 +387,9 @@ class _ProfileViewState extends State<ProfileView> {
                       fontFamily: 'Outfit',
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,
-                      color: isUnlocked ? badgeColor : const Color(0xff94a3b8),
+                      color: isUnlocked
+                          ? badgeColor
+                          : (isDark ? const Color(0xff94a3b8) : const Color(0xff64748b)),
                       letterSpacing: 0.6,
                     ),
                   ),
@@ -286,7 +404,11 @@ class _ProfileViewState extends State<ProfileView> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text("TUTUP", style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w900)),
+              child: const Text("TUTUP",
+                  style: TextStyle(
+                      fontFamily: 'Outfit',
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900)),
             ),
           ],
         ),
@@ -299,6 +421,9 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   void _showBgmPickerDialog(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final iconMap = {
       'default': Icons.piano_rounded,
       'ambient_piano': Icons.blur_on_rounded,
@@ -327,11 +452,20 @@ class _ProfileViewState extends State<ProfileView> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setDialogState) {
           return AlertDialog(
-            backgroundColor: const Color(0xff1e293b),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0),
+              ),
+            ),
             title: Text(
               _tr(appState, 'settings.choose_bgm'),
-              style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xff0f172a),
+              ),
             ),
             content: SizedBox(
               width: double.maxFinite,
@@ -344,8 +478,18 @@ class _ProfileViewState extends State<ProfileView> {
                   final isSelected = appState.bgmTrack == track;
                   final isPreviewing = previewingTrack == track;
                   return ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    tileColor: isSelected ? const Color(0xff064e3b) : const Color(0xff0f172a),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xff10b981)
+                            : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0)),
+                        width: isSelected ? 1.5 : 1.0,
+                      ),
+                    ),
+                    tileColor: isSelected
+                        ? (isDark ? const Color(0xff064e3b) : const Color(0xffd1fae5))
+                        : (isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc)),
                     leading: Icon(
                       iconMap[track] ?? Icons.music_note_rounded,
                       color: colorMap[track] ?? Colors.white,
@@ -353,11 +497,20 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                     title: Text(
                       AudioService.bgmLabels[track] ?? track,
-                      style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        color: isDark ? Colors.white : const Color(0xff0f172a),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     subtitle: Text(
                       AudioService.bgmDescriptions[track] ?? '',
-                      style: TextStyle(fontFamily: 'Outfit', color: Colors.white.withOpacity(0.5), fontSize: 11),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                        fontSize: 11,
+                      ),
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -386,7 +539,7 @@ class _ProfileViewState extends State<ProfileView> {
                             decoration: BoxDecoration(
                               color: isPreviewing
                                   ? (colorMap[track] ?? Colors.white).withOpacity(0.2)
-                                  : Colors.white.withOpacity(0.08),
+                                  : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0)),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -407,7 +560,10 @@ class _ProfileViewState extends State<ProfileView> {
                       setDialogState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text("Musik latar: ${AudioService.bgmLabels[track]}"),
+                          behavior: SnackBarBehavior.floating,
+                          content: Text(
+                            _tr(appState, 'settings.bgm_selected', params: {'track': AudioService.bgmLabels[track] ?? track}),
+                          ),
                           duration: const Duration(seconds: 1),
                         ),
                       );
@@ -667,6 +823,114 @@ class _ProfileViewState extends State<ProfileView> {
             color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
             height: 1.4,
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              _tr(appState, 'profile.close'),
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                color: Color(0xff10b981),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReminderTimePickerDialog(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final presetHours = [
+      {'hour': 8, 'labelKey': 'settings.reminder_time_8'},
+      {'hour': 16, 'labelKey': 'settings.reminder_time_16'},
+      {'hour': 19, 'labelKey': 'settings.reminder_time_19'},
+      {'hour': 20, 'labelKey': 'settings.reminder_time_20'},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0),
+          ),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.access_time_filled_rounded, color: Color(0xfff59e0b), size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _tr(appState, 'settings.reminder_time_title'),
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isDark ? Colors.white : const Color(0xff0f172a),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: presetHours.map((preset) {
+            final h = preset['hour'] as int;
+            final isSelected = appState.reminderHour == h;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? (isDark ? const Color(0xff78350f).withOpacity(0.4) : const Color(0xfffef3c7))
+                    : (isDark ? const Color(0xff0f172a) : const Color(0xfff8fafc)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xfff59e0b)
+                      : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0)),
+                  width: isSelected ? 1.5 : 1.0,
+                ),
+              ),
+              child: ListTile(
+                dense: true,
+                onTap: () {
+                  AudioService.playClick();
+                  appState.setReminderHour(h);
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      content: Text(
+                        '${_tr(appState, 'settings.reminder_time')}: ${h.toString().padLeft(2, '0')}:00 WIB',
+                      ),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                leading: Icon(
+                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  color: isSelected ? const Color(0xfff59e0b) : (isDark ? const Color(0xff64748b) : const Color(0xff94a3b8)),
+                  size: 20,
+                ),
+                title: Text(
+                  _tr(appState, preset['labelKey'] as String),
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 12.5,
+                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xff0f172a),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
         actions: [
           TextButton(
@@ -1277,15 +1541,48 @@ class _ProfileViewState extends State<ProfileView> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // Name
-                        Text(
-                          appState.userName,
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : const Color(0xff0f172a),
-                          ),
+                        // Name with Edit Button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                appState.userName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.white : const Color(0xff0f172a),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                AudioService.playClick();
+                                _showProfileEditPrompt(context, appState);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xff1e293b) : const Color(0xfff1f5f9),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isDark ? const Color(0xff334155) : const Color(0xffe2e8f0),
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.edit_rounded,
+                                  size: 15,
+                                  color: isDark ? const Color(0xff10b981) : const Color(0xff059669),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 3),
                         // Email
@@ -1662,7 +1959,7 @@ class _ProfileViewState extends State<ProfileView> {
                           iconColor: const Color(0xfff59e0b),
                           title: _tr(appState, 'settings.daily_reminder_title'),
                           subtitle: appState.dailyReminder
-                              ? _tr(appState, 'settings.daily_reminder_on')
+                              ? '${_tr(appState, 'settings.reminder_time')}: ${appState.reminderHour.toString().padLeft(2, '0')}:00 WIB'
                               : _tr(appState, 'settings.daily_reminder_off'),
                           value: appState.dailyReminder,
                           onChanged: (val) async {
@@ -1698,11 +1995,36 @@ class _ProfileViewState extends State<ProfileView> {
                         if (appState.dailyReminder) ...[
                           Padding(
                             padding: const EdgeInsets.fromLTRB(56, 0, 16, 12),
-                            child: Row(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
                               children: [
                                 OutlinedButton.icon(
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    side: BorderSide(
+                                      color: isDark
+                                          ? const Color(0xfff59e0b).withOpacity(0.5)
+                                          : const Color(0xffd97706),
+                                      width: 1.0,
+                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: () => _showReminderTimePickerDialog(context, appState),
+                                  icon: const Icon(Icons.access_time_rounded, size: 14, color: Color(0xfff59e0b)),
+                                  label: Text(
+                                    '${appState.reminderHour.toString().padLeft(2, '0')}:00 WIB',
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? const Color(0xfff59e0b) : const Color(0xffd97706),
+                                    ),
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     side: BorderSide(
                                       color: isDark
                                           ? const Color(0xfff59e0b).withOpacity(0.5)
@@ -1817,6 +2139,15 @@ class _ProfileViewState extends State<ProfileView> {
                           title: _tr(appState, 'profile.privacy_terms'),
                           trailingText: _tr(appState, 'profile.legal'),
                           onTap: () => _showPrivacyPolicyModal(context),
+                        ),
+                        Divider(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffe2e8f0), height: 1),
+                        _buildSettingItemTile(
+                          context: context,
+                          icon: Icons.restart_alt_rounded,
+                          iconColor: const Color(0xfff43f5e),
+                          title: _tr(appState, 'settings.reset_progress'),
+                          trailingText: 'Reset',
+                          onTap: () => _showResetProgressDialog(context, appState),
                         ),
                       ],
                     ),
@@ -2044,13 +2375,18 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   void _showLogoutConfirmationDialog(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff1e293b),
+        backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          side: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0),
+          ),
         ),
         title: Text(
           _tr(appState, 'profile.logout_confirm'),
@@ -2058,13 +2394,19 @@ class _ProfileViewState extends State<ProfileView> {
             fontFamily: 'Outfit',
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: isDark ? Colors.white : const Color(0xff0f172a),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(_tr(appState, 'profile.logout_cancel'), style: const TextStyle(fontFamily: 'Inter', color: Color(0xff94a3b8))),
+            child: Text(
+              _tr(appState, 'profile.logout_cancel'),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -2076,7 +2418,96 @@ class _ProfileViewState extends State<ProfileView> {
               Navigator.of(ctx).pop();
               appState.logout();
             },
-            child: Text(_tr(appState, 'profile.logout_action'), style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              _tr(appState, 'profile.logout_action'),
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetProgressDialog(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xff1e293b) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xffe2e8f0),
+          ),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xffef4444), size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _tr(appState, 'settings.reset_progress_confirm_title'),
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isDark ? Colors.white : const Color(0xff0f172a),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          _tr(appState, 'settings.reset_progress_confirm_desc'),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13,
+            color: isDark ? const Color(0xffcbd5e1) : const Color(0xff475569),
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              _tr(appState, 'profile.cancel'),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xffef4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              appState.resetProgress();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  content: Text(_tr(appState, 'settings.reset_progress_success')),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Text(
+              _tr(appState, 'settings.reset_progress_action'),
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),

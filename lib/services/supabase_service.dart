@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,13 +9,22 @@ class SupabaseService {
 
   static bool get isInitialized {
     try {
-      return Supabase.instance.client.auth.currentSession != null || true;
+      final _ = Supabase.instance;
+      return true;
     } catch (_) {
       return false;
     }
   }
 
-  static User? get currentUser => client.auth.currentUser;
+  static User? get currentUser {
+    if (!isInitialized) return null;
+    try {
+      return client.auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static bool get isAuthenticated => currentUser != null;
 
   static Future<void> initialize() async {
