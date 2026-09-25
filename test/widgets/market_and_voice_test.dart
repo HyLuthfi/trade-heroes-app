@@ -59,7 +59,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Live Voice Analyst'), findsOneWidget);
+      expect(find.text('SAI Tech AI Solutions'), findsOneWidget);
       expect(find.textContaining('BBCA'), findsWidgets);
       expect(find.byIcon(Icons.mic_rounded), findsWidgets);
       expect(find.byIcon(Icons.close_rounded), findsOneWidget);
@@ -82,7 +82,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Live Voice Analyst'), findsOneWidget);
+      expect(find.text('SAI Tech AI Solutions'), findsOneWidget);
       expect(find.textContaining('TLKM'), findsWidgets);
       expect(find.byIcon(Icons.mic_rounded), findsWidgets);
     });

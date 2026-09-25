@@ -1831,7 +1831,6 @@ class AppState extends ChangeNotifier {
                   letterSpacing: 0.8,
                 ),
               ),
-              ),
             ),
           ],
         ),
@@ -1950,8 +1949,17 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  bool _isDisposed = false;
+
+  @override
+  void notifyListeners() {
+    if (_isDisposed) return;
+    super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _isDisposed = true;
     _regenTimer?.cancel();
     _authSubscription?.cancel();
     super.dispose();
