@@ -2029,8 +2029,40 @@ class RoadmapLinePainter extends CustomPainter {
   void _drawRoadway(Canvas canvas, List<Offset> pts, bool isUnlocked) {
     if (pts.length < 2) return;
 
-    // NO UNDERLYING ROAD OR MA LINES - ONLY GIANT 3D CANDLESTICKS!
-    const double spacing = 34.0; // Spaced evenly for GIANT MASSIVE candles
+    // 1. Sleek subtle connecting guide trail along the spline curve
+    final guidePath = Path();
+    guidePath.moveTo(pts.first.dx, pts.first.dy);
+    for (int i = 1; i < pts.length; i++) {
+      guidePath.lineTo(pts[i].dx, pts[i].dy);
+    }
+
+    // Outer soft glow aura
+    canvas.drawPath(
+      guidePath,
+      Paint()
+        ..color = isUnlocked
+            ? const Color(0xff10b981).withOpacity(0.18)
+            : const Color(0xff334155).withOpacity(0.15)
+        ..strokeWidth = 5.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // Inner dashed guide line
+    canvas.drawPath(
+      guidePath,
+      Paint()
+        ..color = isUnlocked
+            ? const Color(0xffa7f3d0).withOpacity(0.35)
+            : const Color(0xff64748b).withOpacity(0.25)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // 2. Refined, crisp financial candlesticks along the curve
+    const double spacing = 26.0; // Clean, proportionate spacing
     double acc = 0.0;
     int candleIndex = 0;
 
@@ -2049,18 +2081,18 @@ class RoadmapLinePainter extends CustomPainter {
         final int hash = (candleIndex * 37 + 17) % 100;
         final bool isBullish = (hash % 10) > 3; // 60% Bullish Green, 40% Bearish Red
 
-        // GIANT MASSIVE Dimensions (Super Visible & Bold!)
-        double bodyWidth = 12.0 + (hash % 5) * 2.5;  // 12.0px - 22.0px (SUPER CHUNKY!)
-        double bodyHeight = 14.0 + (hash % 7) * 6.0; // 14.0px - 50.0px (MASSIVE CANDLE BODIES!)
-        double upperWick = 6.0 + ((hash * 3) % 6) * 3.0; // 6.0px - 21.0px
-        double lowerWick = 6.0 + ((hash * 5) % 6) * 3.0; // 6.0px - 21.0px
+        // Elegant, proportionate dimensions (Crisp & Legible)
+        double bodyWidth = 7.0 + (hash % 3) * 1.5;   // 7.0px - 10.0px
+        double bodyHeight = 10.0 + (hash % 5) * 2.5; // 10.0px - 20.0px
+        double upperWick = 4.0 + ((hash * 3) % 4) * 2.0; // 4.0px - 10.0px
+        double lowerWick = 4.0 + ((hash * 5) % 4) * 2.0; // 4.0px - 10.0px
 
-        // Special Doji Candlestick (wide crosshair body, huge wicks)
-        if (hash % 8 == 0) {
-          bodyHeight = 5.0;
-          bodyWidth = 20.0;
-          upperWick = 18.0;
-          lowerWick = 18.0;
+        // Special Doji Candlestick
+        if (hash % 7 == 0) {
+          bodyHeight = 3.0;
+          bodyWidth = 14.0;
+          upperWick = 8.0;
+          lowerWick = 8.0;
         }
 
         final double topY = -bodyHeight / 2 - upperWick;
@@ -2084,55 +2116,58 @@ class RoadmapLinePainter extends CustomPainter {
 
           // 3D Drop Shadow on Ground
           canvas.drawLine(
-            Offset(0, topY + 3.5),
-            Offset(0, bottomY + 3.5),
-            Paint()..color = Colors.black.withOpacity(0.45)..strokeWidth = 4.5,
+            Offset(0, topY + 2.5),
+            Offset(0, bottomY + 2.5),
+            Paint()
+              ..color = Colors.black.withOpacity(0.3)
+              ..strokeWidth = 3.0
+              ..strokeCap = StrokeCap.round,
           );
 
-          // 3D Candlestick Wick (Thick 3.5px line)
+          // Candlestick Wick
           canvas.drawLine(
             Offset(0, topY),
             Offset(0, bottomY),
             Paint()
               ..color = wickColor
-              ..strokeWidth = 3.5
+              ..strokeWidth = 2.0
               ..strokeCap = StrokeCap.round,
           );
 
-          // 3D Candlestick Body Box
+          // Candlestick Body Box
           final bodyRect = RRect.fromLTRBR(
             -bodyWidth / 2, -bodyHeight / 2, bodyWidth / 2, bodyHeight / 2,
-            Radius.circular(bodyHeight < 8 ? 2.0 : 4.0),
+            Radius.circular(bodyHeight < 6 ? 1.5 : 2.5),
           );
 
           // Base Shadow Extrusion
-          canvas.drawRRect(bodyRect.shift(const Offset(0, 3.0)), Paint()..color = shadowColor);
+          canvas.drawRRect(bodyRect.shift(const Offset(0, 2.0)), Paint()..color = shadowColor);
           // Main Body Face
           canvas.drawRRect(bodyRect, Paint()..color = candleColor);
 
           // Specular Shine Dot
-          if (bodyHeight > 10 && bodyWidth > 8) {
+          if (bodyHeight > 8 && bodyWidth > 6) {
             canvas.drawCircle(
               Offset(-bodyWidth / 4, -bodyHeight / 4),
-              1.8,
-              Paint()..color = Colors.white.withOpacity(0.85),
+              1.2,
+              Paint()..color = Colors.white.withOpacity(0.8),
             );
           }
         } else {
-          // Locked Dark Slate Candlestick (GIANT)
+          // Locked Dark Slate Candlestick
           final wickPaint = Paint()
-            ..color = const Color(0xff64748b)
-            ..strokeWidth = 3.0
+            ..color = const Color(0xff475569)
+            ..strokeWidth = 1.8
             ..strokeCap = StrokeCap.round;
 
           canvas.drawLine(Offset(0, topY), Offset(0, bottomY), wickPaint);
 
           final bodyRect = RRect.fromLTRBR(
             -bodyWidth / 2, -bodyHeight / 2, bodyWidth / 2, bodyHeight / 2,
-            Radius.circular(bodyHeight < 8 ? 2.0 : 3.5),
+            Radius.circular(bodyHeight < 6 ? 1.5 : 2.5),
           );
 
-          canvas.drawRRect(bodyRect.shift(const Offset(0, 2.5)), Paint()..color = const Color(0xff0f172a));
+          canvas.drawRRect(bodyRect.shift(const Offset(0, 1.5)), Paint()..color = const Color(0xff0f172a));
           canvas.drawRRect(bodyRect, Paint()..color = const Color(0xff334155));
         }
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Centralized bilingual repository for quiz levels and questions with Procedural Map Generation
 class KuisData {
-  /// Procedural S-curve horizontal oscillation pattern (Duolingo style)
-  static const List<double> _xCurvePattern = [0.5, 0.72, 0.76, 0.5, 0.28, 0.24];
+  /// Procedural S-curve horizontal oscillation pattern (Harmonic 4-step Duolingo wave)
+  static const List<double> _xCurvePattern = [0.50, 0.70, 0.50, 0.30];
 
   /// Computes procedural layout metadata for dynamic map rendering
   static Map<String, dynamic> computeMapLayout(List<Map<String, dynamic>> levels) {
