@@ -203,15 +203,20 @@ static bool _translationsRegistered = false;
     super.initState();
     _ensureTranslations();
     final appState = Provider.of<AppState>(context, listen: false);
-    int activeLevelId = appState.completedLevels.length + 1;
-    if (activeLevelId > 10) activeLevelId = 10;
     final levels = _getLevelData(appState.language);
+    final mapMeta = KuisData.computeMapLayout(levels);
+    final int totalLevels = levels.length;
+
+    int activeLevelId = appState.completedLevels.length + 1;
+    if (activeLevelId > totalLevels) activeLevelId = totalLevels;
+
     final activeNode = levels.firstWhere(
       (l) => l['id'] == activeLevelId,
       orElse: () => levels.first,
     );
     final double activeY = (activeNode['y'] as double);
-    final double initialOffset = (activeY - 180.0).clamp(0.0, 1825.0);
+    final double totalHeight = (mapMeta['totalHeight'] as double?) ?? 1825.0;
+    final double initialOffset = (activeY - 180.0).clamp(0.0, totalHeight);
 
     _scrollController = ScrollController(initialScrollOffset: initialOffset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -278,12 +283,22 @@ static bool _translationsRegistered = false;
     _ensureTranslations();
     final language = appState.language;
     final levelData = _getLevelData(language);
+    final mapMeta = KuisData.computeMapLayout(levelData);
+    final double totalMapHeight = (mapMeta['totalHeight'] as double?) ?? 1825.0;
+    final List<Map<String, dynamic>> zoneHeaders = (mapMeta['zoneHeaders'] as List<Map<String, dynamic>>?) ?? [];
+    final List<Map<String, dynamic>> milestoneChests = (mapMeta['milestoneChests'] as List<Map<String, dynamic>>?) ?? [];
+    final double trophyTop = (mapMeta['trophyTop'] as double?) ?? 30.0;
+    final int totalLevels = levelData.length;
+
     String tr(String key, {Map<String, String> params = const {}}) =>
         AppTranslations.text(language, key, params: params);
 
     int activeLevelId = appState.completedLevels.length + 1;
-    if (activeLevelId > 10) activeLevelId = 10;
-    final activeLevel = levelData.firstWhere((l) => l['id'] == activeLevelId);
+    if (activeLevelId > totalLevels) activeLevelId = totalLevels;
+    final activeLevel = levelData.firstWhere(
+      (l) => l['id'] == activeLevelId,
+      orElse: () => levelData.first,
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -344,9 +359,9 @@ static bool _translationsRegistered = false;
                               const Icon(Icons.bookmark_rounded, color: Color(0xff6ee7b7), size: 13),
                               const SizedBox(width: 5),
                               Text(
-                                appState.completedLevels.length >= 10
+                                appState.completedLevels.length >= totalLevels
                                     ? (appState.language == 'en' ? "SECTION 1 • ALL LEVELS COMPLETED" : "BAGIAN 1 • SEMUA LEVEL SELESAI")
-                                    : (appState.language == 'en' ? "SECTION 1 • LEVEL $activeLevelId / 10" : "BAGIAN 1 • LEVEL $activeLevelId / 10"),
+                                    : (appState.language == 'en' ? "SECTION 1 • LEVEL $activeLevelId / $totalLevels" : "BAGIAN 1 • LEVEL $activeLevelId / $totalLevels"),
                                 style: const TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 10.5,
@@ -545,14 +560,14 @@ static bool _translationsRegistered = false;
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              appState.completedLevels.length >= 10 ? Icons.replay_rounded : Icons.play_arrow_rounded,
+                              appState.completedLevels.length >= totalLevels ? Icons.replay_rounded : Icons.play_arrow_rounded,
                               size: 20,
                               color: const Color(0xff047857),
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              appState.completedLevels.length >= 10
-                                  ? (appState.language == 'en' ? "REVIEW LEVEL 10" : "ULANG LEVEL 10")
+                              appState.completedLevels.length >= totalLevels
+                                  ? (appState.language == 'en' ? "REVIEW LEVEL $totalLevels" : "ULANG LEVEL $totalLevels")
                                   : (appState.language == 'en' ? "CONTINUE LEARNING" : "LANJUTKAN BELAJAR"),
                               style: const TextStyle(
                                 fontFamily: 'Outfit',
@@ -579,7 +594,7 @@ static bool _translationsRegistered = false;
                   child: Center(
                       child: Container(
                         width: mapWidth,
-                        height: 1825, // Generous Height with Guaranteed 0 Overlap
+                        height: totalMapHeight,
                         color: Colors.transparent,
                         child: Stack(
                           children: [
@@ -596,42 +611,34 @@ static bool _translationsRegistered = false;
                               ),
                             ),
 
-                            // 2. Full-Width 3D Rectangular Zone Banners
-                            _buildZoneHeader(
-                              zoneTag: tr('kuis.zone_1_tag'),
-                              title: tr('kuis.zone_1_title'),
-                              levelRange: tr('kuis.zone_1_range'),
-                              activeColor: const Color(0xff059669), // Duolingo Emerald Green
-                              activeShadowColor: const Color(0xff047857),
-                              isUnlocked: true, // Zone 1 is always unlocked
-                              top: 1735,
-                              zoneNumber: 1,
-                              language: language,
-                            ),
+                            // 2. Procedural Full-Width 3D Rectangular Zone Banners
+                            ...zoneHeaders.map((zh) {
+                              final int z = zh['zone'] as int;
+                              final double top = zh['top'] as double;
+                              final int firstId = zh['firstLevelId'] as int;
+                              final String rangeStr = zh['rangeStr'] as String;
 
-                            _buildZoneHeader(
-                              zoneTag: tr('kuis.zone_2_tag'),
-                              title: tr('kuis.zone_2_title'),
-                              levelRange: tr('kuis.zone_2_range'),
-                              activeColor: const Color(0xff2563eb), // Sapphire Blue
-                              activeShadowColor: const Color(0xff1d4ed8),
-                              isUnlocked: appState.completedLevels.contains(3), // Unlocked after level 3
-                              top: 1210,
-                              zoneNumber: 2,
-                              language: language,
-                            ),
+                              final Color activeColor = z == 1
+                                  ? const Color(0xff059669) // Emerald
+                                  : (z == 2 ? const Color(0xff2563eb) : const Color(0xffd97706)); // Sapphire / Amber
+                              final Color shadowColor = z == 1
+                                  ? const Color(0xff047857)
+                                  : (z == 2 ? const Color(0xff1d4ed8) : const Color(0xffb45309));
 
-                            _buildZoneHeader(
-                              zoneTag: tr('kuis.zone_3_tag'),
-                              title: tr('kuis.zone_3_title'),
-                              levelRange: tr('kuis.zone_3_range'),
-                              activeColor: const Color(0xffd97706), // Golden Amber
-                              activeShadowColor: const Color(0xffb45309),
-                              isUnlocked: appState.completedLevels.contains(7), // Unlocked after level 7
-                              top: 550,
-                              zoneNumber: 3,
-                              language: language,
-                            ),
+                              final bool isUnlocked = z == 1 || appState.completedLevels.contains(firstId - 1);
+
+                              return _buildZoneHeader(
+                                zoneTag: tr('kuis.zone_${z}_tag'),
+                                title: tr('kuis.zone_${z}_title'),
+                                levelRange: rangeStr,
+                                activeColor: activeColor,
+                                activeShadowColor: shadowColor,
+                                isUnlocked: isUnlocked,
+                                top: top,
+                                zoneNumber: z,
+                                language: language,
+                              );
+                            }),
 
                             // 3. Node Circles (Duolingo 3D Button style)
                             ...levelData.map((level) {
@@ -898,8 +905,12 @@ static bool _translationsRegistered = false;
                             // 4. Animated "MULAI" Bubble (Centered directly above active node)
                             Builder(
                               builder: (context) {
-                                final x = (activeLevel['xFactor'] as double) * mapWidth;
-                                final y = activeLevel['y'] as double;
+                                final activeNode = levelData.firstWhere(
+                                  (l) => l['id'] == activeLevelId,
+                                  orElse: () => levelData.first,
+                                );
+                                final x = (activeNode['xFactor'] as double) * mapWidth;
+                                final y = activeNode['y'] as double;
 
                                 return Positioned(
                                   left: x - 46, // Centered perfectly (width is 92, so center is exactly x)
@@ -944,33 +955,30 @@ static bool _translationsRegistered = false;
                               },
                             ),
 
-                            // 5. Milestone Treasure Chest Nodes (Zone 1 Level 3 & Zone 2 Level 7)
-                            _buildTreasureChestNode(
-                              context,
-                              appState,
-                              levelId: 3,
-                              x: mapWidth * 0.76,
-                              y: 1460,
-                              title: tr('kuis.bonus_zone_1'),
-                              xpReward: 50,
-                              language: language,
-                            ),
+                            // 5. Procedural Milestone Treasure Chest Nodes
+                            ...milestoneChests.map((ch) {
+                              final int z = ch['zone'] as int;
+                              final int lvlId = ch['levelId'] as int;
+                              final double chY = ch['y'] as double;
+                              final double chXFactor = ch['xFactor'] as double;
+                              final int xpR = ch['xpReward'] as int;
 
-                            _buildTreasureChestNode(
-                              context,
-                              appState,
-                              levelId: 7,
-                              x: mapWidth * 0.78,
-                              y: 800,
-                              title: tr('kuis.bonus_zone_2'),
-                              xpReward: 100,
-                              language: language,
-                            ),
+                              return _buildTreasureChestNode(
+                                context,
+                                appState,
+                                levelId: lvlId,
+                                x: mapWidth * chXFactor,
+                                y: chY,
+                                title: tr('kuis.bonus_zone_$z'),
+                                xpReward: xpR,
+                                language: language,
+                              );
+                            }),
 
-                            // 5. Bonus Trophy/Chest Node at the very top (above Level 10)
+                            // 6. Dynamic Bonus Trophy/Chest Node at the very top (above last level)
                             Positioned(
                               left: (mapWidth * 0.5) - 38,
-                              top: 30,
+                              top: trophyTop,
                               child: GestureDetector(
                                 onTapDown: (_) {
                                   setState(() {
@@ -981,7 +989,7 @@ static bool _translationsRegistered = false;
                                   setState(() {
                                     _pressedLevelId = null;
                                   });
-                                  final allDone = appState.completedLevels.length == 10;
+                                  final allDone = appState.completedLevels.length >= totalLevels;
                                   if (!allDone) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(tr('kuis.trophy_locked_msg'))),

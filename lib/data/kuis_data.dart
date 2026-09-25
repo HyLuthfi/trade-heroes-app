@@ -1,7 +1,103 @@
 import 'package:flutter/material.dart';
 
-/// Centralized bilingual repository for 10 quiz levels and 30 questions
+/// Centralized bilingual repository for quiz levels and questions with Procedural Map Generation
 class KuisData {
+  /// Procedural S-curve horizontal oscillation pattern (Duolingo style)
+  static const List<double> _xCurvePattern = [0.5, 0.72, 0.76, 0.5, 0.28, 0.24];
+
+  /// Computes procedural layout metadata for dynamic map rendering
+  static Map<String, dynamic> computeMapLayout(List<Map<String, dynamic>> levels) {
+    if (levels.isEmpty) {
+      return {
+        'totalHeight': 1825.0,
+        'zoneHeaders': <Map<String, dynamic>>[],
+        'milestoneChests': <Map<String, dynamic>>[],
+        'trophyTop': 30.0,
+      };
+    }
+
+    final int n = levels.length;
+
+    // 1. Calculate Y coordinates upward from bottom or downward from top (Level N at 120.0px)
+    final Map<int, double> yMap = {};
+    yMap[n] = 120.0;
+
+    for (int i = n - 1; i >= 1; i--) {
+      final int currZone = (levels[i - 1]['zone'] as num?)?.toInt() ?? 1;
+      final int upperZone = (levels[i]['zone'] as num?)?.toInt() ?? 1;
+
+      if (currZone == upperZone) {
+        yMap[i] = yMap[i + 1]! + 140.0;
+      } else {
+        // Generous vertical clearance for Zone Header + Milestone Chest
+        yMap[i] = yMap[i + 1]! + 240.0;
+      }
+    }
+
+    // 2. Attach computed procedural xFactor and y to each level map
+    for (int i = 0; i < levels.length; i++) {
+      final l = levels[i];
+      final int lid = l['id'] as int;
+      l['xFactor'] = _xCurvePattern[(lid - 1) % _xCurvePattern.length];
+      l['y'] = yMap[lid] ?? (1580.0 - (lid - 1) * 140.0);
+    }
+
+    // 3. Group levels by zone for procedural headers & milestone chests
+    final Map<int, List<Map<String, dynamic>>> zones = {};
+    for (final l in levels) {
+      final int z = (l['zone'] as num?)?.toInt() ?? 1;
+      zones.putIfAbsent(z, () => []).add(l);
+    }
+
+    final List<Map<String, dynamic>> zoneHeaders = [];
+    final List<Map<String, dynamic>> milestoneChests = [];
+    final sortedZones = zones.keys.toList()..sort();
+
+    for (final z in sortedZones) {
+      final zLevels = zones[z]!;
+      final firstLevel = zLevels.first;
+      final lastLevel = zLevels.last;
+
+      double headerTop;
+      if (z == 1) {
+        headerTop = (firstLevel['y'] as double) + 155.0;
+      } else {
+        final prevLast = zones[z - 1]!.last;
+        headerTop = (prevLast['y'] as double) - 90.0;
+      }
+
+      zoneHeaders.add({
+        'zone': z,
+        'top': headerTop,
+        'firstLevelId': firstLevel['id'],
+        'lastLevelId': lastLevel['id'],
+        'rangeStr': 'Level ${firstLevel['id']} - ${lastLevel['id']}',
+      });
+
+      // Milestone Chest for completed zone (at the finish of each zone except the last)
+      if (z < sortedZones.last) {
+        final double lastY = (lastLevel['y'] as double);
+        final double lastX = (lastLevel['xFactor'] as double);
+        milestoneChests.add({
+          'zone': z,
+          'levelId': lastLevel['id'] as int,
+          'y': lastY - 45.0, // Sits snugly directly above the zone-ending node
+          'xFactor': lastX <= 0.5 ? 0.76 : 0.24,
+          'xpReward': z * 50,
+        });
+      }
+    }
+
+    final double totalHeight = (yMap[1] ?? 1580.0) + 245.0;
+
+    return {
+      'totalHeight': totalHeight,
+      'zoneHeaders': zoneHeaders,
+      'milestoneChests': milestoneChests,
+      'trophyTop': 30.0,
+    };
+  }
+
   static List<Map<String, dynamic>> getLevelData(String language) {
     final isEn = language == 'en';
 
