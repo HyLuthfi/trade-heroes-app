@@ -1437,7 +1437,7 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final elapsedMs = now - _petirLastUsedTime!;
-    const regenMs = 60000;
+    const regenMs = 300000; // 5 minutes per petir (Option A)
 
     final earnedLives = elapsedMs ~/ regenMs;
     if (earnedLives > 0) {
@@ -1475,7 +1475,7 @@ class AppState extends ChangeNotifier {
 
       final now = DateTime.now().millisecondsSinceEpoch;
       final elapsedMs = now - _petirLastUsedTime!;
-      const regenMs = 60000;
+      const regenMs = 300000; // 5 minutes per petir (Option A)
 
       if (elapsedMs >= regenMs) {
         _petir = (_petir + 1).clamp(0, 5);
@@ -1498,16 +1498,22 @@ class AppState extends ChangeNotifier {
     });
   }
 
-  // Get countdown string for petir recovery
+  // Get countdown string for petir recovery (e.g. "4m 30s" or "45s")
   String getPetirRegenTime() {
     if (_isPremium || _petir >= 5 || _petirLastUsedTime == null) return "";
     final now = DateTime.now().millisecondsSinceEpoch;
     final elapsedMs = now - _petirLastUsedTime!;
-    final remainingMs = 60000 - elapsedMs;
+    const int totalRegenMs = 300000; // 5 minutes per petir (Option A)
+    final remainingMs = totalRegenMs - elapsedMs;
     if (remainingMs <= 0) return "";
     
     final remainingSec = (remainingMs / 1000).ceil();
-    return "${remainingSec}s";
+    final m = remainingSec ~/ 60;
+    final s = remainingSec % 60;
+    if (m > 0) {
+      return "${m}m ${s.toString().padLeft(2, '0')}s";
+    }
+    return "${s}s";
   }
 
   // Get fraction (0.0 to 1.0) of petir recovery progress
@@ -1515,7 +1521,7 @@ class AppState extends ChangeNotifier {
     if (_isPremium || _petir >= 5 || _petirLastUsedTime == null) return 1.0;
     final now = DateTime.now().millisecondsSinceEpoch;
     final elapsedMs = now - _petirLastUsedTime!;
-    return (elapsedMs / 60000.0).clamp(0.0, 1.0);
+    return (elapsedMs / 300000.0).clamp(0.0, 1.0);
   }
 
   // Deduct 1 petir on wrong answer or forfeit

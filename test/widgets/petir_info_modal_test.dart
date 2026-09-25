@@ -58,6 +58,24 @@ void main() {
       expect(appState.petir, equals(initialPetir - 1));
     });
 
+    test('Option A 5-minute petir recovery countdown and fraction', () {
+      // Drain petir below 5
+      while (appState.petir >= 5) {
+        appState.deductPetir();
+      }
+      expect(appState.petir, equals(4));
+
+      // Initial countdown should start near 5 minutes (e.g., 5m 00s or 4m 59s)
+      final timeStr = appState.getPetirRegenTime();
+      expect(timeStr, contains('m'));
+      expect(timeStr, contains('s'));
+
+      // Fraction should be between 0.0 and 1.0
+      final fraction = appState.getPetirRegenFraction();
+      expect(fraction, greaterThanOrEqualTo(0.0));
+      expect(fraction, lessThan(1.0));
+    });
+
     testWidgets('Renders PetirInfoModal correctly in Dark Mode (Indonesian)', (tester) async {
       await tester.pumpWidget(
         buildTestApp(
