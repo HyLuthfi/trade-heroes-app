@@ -233,124 +233,125 @@ class DeviceFrame extends StatelessWidget {
                   ),
                 ),
               ),
-              // 2. Centered Phone Mockup Container
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Top description on desktop screen
-                    Text(
-                      "TRADE HEROES MOBILE PREVIEW",
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: isDark
-                            ? const Color(0xff94a3b8)
-                            : const Color(0xff64748b),
-                        letterSpacing: 3.0,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Phone frame outer shape
-                    Container(
-                      width: 390 +
-                          24, // 390 screen width + 12px bezel on each side
-                      height: 844 +
-                          24, // 844 screen height + 12px bezel on top/bottom
-                      decoration: BoxDecoration(
-                        color: const Color(0xff090d16),
-                        borderRadius:
-                            BorderRadius.circular(44), // Rounded outer bezel
-                        border: Border.all(
-                          color:
-                              const Color(0xff334155), // metallic rim highlight
-                          width: 2.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                Colors.black.withOpacity(isDark ? 0.65 : 0.25),
-                            blurRadius: 36,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 20),
+              // 2. Centered Phone Mockup Container (Responsive with FittedBox to prevent overflow on laptops)
+              SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Top description on desktop screen
+                          Text(
+                            "TRADE HEROES MOBILE PREVIEW",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color: isDark
+                                  ? const Color(0xff94a3b8)
+                                  : const Color(0xff64748b),
+                              letterSpacing: 3.0,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Phone frame outer shape
+                          Container(
+                            width: 390 + 24, // 390 screen width + 12px bezel on each side
+                            height: 844 + 24, // 844 screen height + 12px bezel on top/bottom
+                            decoration: BoxDecoration(
+                              color: const Color(0xff090d16),
+                              borderRadius: BorderRadius.circular(44), // Rounded outer bezel
+                              border: Border.all(
+                                color: const Color(0xff334155), // metallic rim highlight
+                                width: 2.0,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(isDark ? 0.65 : 0.25),
+                                  blurRadius: 36,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 20),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10.0), // 10px thick bezel inner
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Main Screen content inside bezel
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(32), // Screen corner radius
+                                    child: MediaQuery(
+                                      // Override media query size to simulate mobile dimensions inside the frame
+                                      data: MediaQuery.of(context).copyWith(
+                                        size: const Size(390, 844),
+                                        padding: const EdgeInsets.only(top: 44, bottom: 34),
+                                      ),
+                                      child: SizedBox(
+                                        width: 390,
+                                        height: 844,
+                                        child: child,
+                                      ),
+                                    ),
+                                  ),
+                                  // Simulated Phone Notch / Dynamic Island at the top
+                                  Positioned(
+                                    top: 14,
+                                    child: Container(
+                                      width: 110,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black,
+                                        borderRadius: BorderRadius.circular(15),
+                                        border: Border.all(
+                                            color: const Color(0xff1e293b),
+                                            width: 0.5),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          // Camera lens simulation shine
+                                          Container(
+                                            margin: const EdgeInsets.only(right: 16),
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: const Color(0xff090d16),
+                                              border: Border.all(
+                                                  color: const Color(0xff334155),
+                                                  width: 1),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Bottom simulated iPhone Home Indicator bar
+                                  Positioned(
+                                    bottom: 8,
+                                    child: Container(
+                                      width: 134,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.4),
+                                        borderRadius: BorderRadius.circular(2.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                            10.0), // 10px thick bezel inner
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Main Screen content inside bezel
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                  32), // Screen corner radius
-                              child: MediaQuery(
-                                // Override media query size to simulate mobile dimensions inside the frame
-                                data: MediaQuery.of(context).copyWith(
-                                  size: const Size(390, 844),
-                                  padding: const EdgeInsets.only(
-                                      top: 44, bottom: 34),
-                                ),
-                                child: SizedBox(
-                                  width: 390,
-                                  height: 844,
-                                  child: child,
-                                ),
-                              ),
-                            ),
-                            // Simulated Phone Notch / Dynamic Island at the top
-                            Positioned(
-                              top: 14,
-                              child: Container(
-                                width: 110,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: Border.all(
-                                      color: const Color(0xff1e293b),
-                                      width: 0.5),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    // Camera lens simulation shine
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 16),
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: const Color(0xff090d16),
-                                        border: Border.all(
-                                            color: const Color(0xff334155),
-                                            width: 1),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // Bottom simulated iPhone Home Indicator bar
-                            Positioned(
-                              bottom: 8,
-                              child: Container(
-                                width: 134,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.4),
-                                  borderRadius: BorderRadius.circular(2.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
