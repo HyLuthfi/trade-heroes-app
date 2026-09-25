@@ -444,9 +444,27 @@ const Map<String, String> idTranslations = {
   'kuis.review_xp_reward': '+{xp} XP (Ulang)',
   'kuis.refill_title': 'PETIR ANDA HABIS!',
   'kuis.refill_desc': 'Nyawa petir Anda kosong. Klaim hadiah milestone XP, tunggu pemulihan otomatis, atau tonton iklan instan untuk memulai kuis!',
-  'kuis.refill_watch_ad': '🎬 TONTON IKLAN (+1 NYAWA)',
+  'kuis.refill_watch_ad': 'TONTON IKLAN (+1 NYAWA)',
   'kuis.refill_success': '1 Nyawa petir telah berhasil dipulihkan.',
   'kuis.refill_close': 'TUTUP',
+
+  // ==========================================
+  // Petir Info Modal (petir.*)
+  // ==========================================
+  'petir.modal_title': 'STATUS NYAWA PETIR',
+  'petir.vip_unlimited': 'TAK TERBATAS (VIP PASS)',
+  'petir.overflow_count': '{count} NYAWA PETIR',
+  'petir.overflow_badge': 'BONUS HADIAH AKTIF (KAPASITAS REGULER: 5)',
+  'petir.regular_count': '{current} / 5 NYAWA PETIR',
+  'petir.auto_recovery_title': 'Pemulihan Otomatis (+1 Petir)',
+  'petir.guarantee_title': 'Jaminan Belajar Bebas Khawatir',
+  'petir.guarantee_rule_1': '• Nyawa petir TIDAK BERKURANG jika kuis lulus minimal 1 bintang.',
+  'petir.guarantee_rule_2': '• Petir hanya berkurang (-1) jika Anda gagal total (0 bintang) atau menyerah.',
+  'petir.guarantee_rule_3': '• Bonus nyawa dari Absen Harian & Milestone XP tersimpan aman dan tidak hangus.',
+  'petir.btn_watch_ad': 'TONTON IKLAN (+1 NYAWA)',
+  'petir.btn_claim_daily': 'KLAIM ABSEN HARIAN',
+  'petir.btn_close': 'TUTUP',
+  'petir.snack_refilled': '1 Nyawa petir telah berhasil dipulihkan.',
 };
 
 const Map<String, String> appTranslationsId = idTranslations;

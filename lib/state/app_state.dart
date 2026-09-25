@@ -223,10 +223,14 @@ class AppState extends ChangeNotifier {
 
     if (type == 'petir') {
       final add = milestone['value'] as int;
-      _petir = (_petir + add).clamp(0, 5);
+      _petir = (_petir + add).clamp(0, 15);
       if (_petir >= 5) _petirLastUsedTime = null;
     } else if (type == 'full_petir') {
-      _petir = 5;
+      if (_petir < 5) {
+        _petir = 5;
+      } else {
+        _petir = (_petir + 5).clamp(0, 15);
+      }
       _petirLastUsedTime = null;
     } else if (type == 'shield') {
       final add = milestone['value'] as int;
@@ -1340,8 +1344,11 @@ class AppState extends ChangeNotifier {
     _lastDailyClaimDate = todayStr;
     _xp += xpReward;
     _dailyXp += xpReward;
-    if (!_isPremium) {
-      _petir = (_petir + petirReward).clamp(0, 5);
+    if (!_isPremium && petirReward > 0) {
+      _petir = (_petir + petirReward).clamp(0, 15);
+      if (_petir >= 5) {
+        _petirLastUsedTime = null;
+      }
     }
     AudioService.playReward();
     _saveState();
@@ -1503,15 +1510,23 @@ class AppState extends ChangeNotifier {
     return "${remainingSec}s";
   }
 
-  // Deduct 1 petir on wrong answer
+  // Get fraction (0.0 to 1.0) of petir recovery progress
+  double getPetirRegenFraction() {
+    if (_isPremium || _petir >= 5 || _petirLastUsedTime == null) return 1.0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final elapsedMs = now - _petirLastUsedTime!;
+    return (elapsedMs / 60000.0).clamp(0.0, 1.0);
+  }
+
+  // Deduct 1 petir on wrong answer or forfeit
   bool deductPetir() {
     if (_isPremium) return true;
     if (_petir > 0) {
-      if (_petir == 5) {
+      _petir -= 1;
+      if (_petir < 5 && _petirLastUsedTime == null) {
         _petirLastUsedTime = DateTime.now().millisecondsSinceEpoch;
         _petirFullNotified = false;
       }
-      _petir -= 1;
       _saveState();
       notifyListeners();
       return true;

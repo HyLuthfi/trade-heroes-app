@@ -442,9 +442,27 @@ const Map<String, String> enTranslations = {
   'kuis.review_xp_reward': '+{xp} XP (Review)',
   'kuis.refill_title': 'OUT OF LIVES!',
   'kuis.refill_desc': 'Your lightning energy is depleted. Claim XP milestone rewards, wait for auto-recharge, or watch an instant ad to start the quiz!',
-  'kuis.refill_watch_ad': '🎬 WATCH AD (+1 LIFE)',
+  'kuis.refill_watch_ad': 'WATCH AD (+1 LIFE)',
   'kuis.refill_success': '1 Lightning life restored successfully.',
   'kuis.refill_close': 'CLOSE',
+
+  // ==========================================
+  // Petir Info Modal (petir.*)
+  // ==========================================
+  'petir.modal_title': 'LIGHTNING LIVES STATUS',
+  'petir.vip_unlimited': 'UNLIMITED (VIP PASS)',
+  'petir.overflow_count': '{count} LIGHTNING LIVES',
+  'petir.overflow_badge': 'BONUS REWARD ACTIVE (REGULAR CAPACITY: 5)',
+  'petir.regular_count': '{current} / 5 LIGHTNING LIVES',
+  'petir.auto_recovery_title': 'Auto-Recovery (+1 Life)',
+  'petir.guarantee_title': 'Worry-Free Learning Guarantee',
+  'petir.guarantee_rule_1': '• Lightning lives DO NOT decrease if quiz passes with >= 1 star.',
+  'petir.guarantee_rule_2': '• Lives only decrease (-1) if you fail completely (0 stars) or forfeit.',
+  'petir.guarantee_rule_3': '• Bonus lives from Daily Check-in & XP Milestones are safely stored and never expire.',
+  'petir.btn_watch_ad': 'WATCH AD (+1 LIFE)',
+  'petir.btn_claim_daily': 'CLAIM DAILY REWARD',
+  'petir.btn_close': 'CLOSE',
+  'petir.snack_refilled': '1 Lightning life has been successfully restored.',
 };
 
 const Map<String, String> appTranslationsEn = enTranslations;
