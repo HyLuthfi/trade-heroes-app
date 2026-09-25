@@ -97,8 +97,12 @@ class _HomeViewState extends State<HomeView> {
                   final String tooltipMsg = appState.isPremium
                       ? tr('home.tooltip_premium_lives')
                       : (isOverflow
-                          ? "${appState.petir} Nyawa Petir (Bonus Hadiah Meluap) • Ketuk rincian"
-                          : "${appState.petir} / 5 Nyawa Petir • Ketuk rincian");
+                          ? (appState.language == 'en'
+                              ? "${appState.petir} Lightning Lives (Overflow Bonus) • Tap for details"
+                              : "${appState.petir} Nyawa Petir (Bonus Hadiah Meluap) • Ketuk rincian")
+                          : (appState.language == 'en'
+                              ? "${appState.petir} / 5 Lightning Lives • Tap for details"
+                              : "${appState.petir} / 5 Nyawa Petir • Ketuk rincian"));
 
                   return Material(
                     color: Colors.transparent,
@@ -170,7 +174,9 @@ class _HomeViewState extends State<HomeView> {
                     RankProgressionModal.show(context);
                   },
                   child: Tooltip(
-                    message: "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
+                    message: appState.language == 'en'
+                        ? "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Tap for rank details"
+                        : "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [

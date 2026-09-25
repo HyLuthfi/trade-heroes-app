@@ -552,7 +552,7 @@ static bool _translationsRegistered = false;
                             const SizedBox(width: 4),
                             Text(
                               appState.completedLevels.length >= 10
-                                  ? (appState.language == 'en' ? "REVIEW LEVEL 10" : "REVIEW LEVEL 10")
+                                  ? (appState.language == 'en' ? "REVIEW LEVEL 10" : "ULANG LEVEL 10")
                                   : (appState.language == 'en' ? "CONTINUE LEARNING" : "LANJUTKAN BELAJAR"),
                               style: const TextStyle(
                                 fontFamily: 'Outfit',
