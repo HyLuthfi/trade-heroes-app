@@ -287,27 +287,25 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
     }
   }
 
-  Future<void> _adjustBalance(Map<String, dynamic> user, double delta) async {
+  Future<void> _adjustXp(Map<String, dynamic> user, int delta) async {
     final userId = user['id'] as String;
-    final current = (user['virtual_balance'] as num?)?.toDouble() ?? 100000000.0;
-    final newBal = (current + delta).clamp(0.0, 10000000000.0);
+    final current = (user['xp'] as num?)?.toInt() ?? 0;
+    final newXp = (current + delta).clamp(0, 999999);
 
     final success = await SupabaseService.adminUpdateProfile(userId, {
-      'virtual_balance': newBal,
+      'xp': newXp,
     });
 
     if (success && mounted) {
       setState(() {
-        user['virtual_balance'] = newBal;
+        user['xp'] = newXp;
       });
       final appState = Provider.of<AppState>(context, listen: false);
       final lang = appState.language;
       final userName = user['name'] ?? user['email'] ?? 'Trader';
-      final msg = AppTranslations.text(
-        lang,
-        'admin.balance_adjust_snack',
-        params: {'name': userName.toString(), 'balance': _formatRp(newBal)},
-      );
+      final msg = appState.language == 'en'
+          ? "XP for $userName set to $newXp XP"
+          : "XP $userName disetel ke $newXp XP";
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 2),
@@ -332,6 +330,12 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
     final vipCount = _profiles.where((p) => p['is_premium'] == true).length;
     final freeCount = _profiles.where((p) => p['is_premium'] != true).length;
     final adminCount = _profiles.where((p) => (p['role'] ?? '').toString().toLowerCase() == 'admin').length;
+    int totalXp = 0;
+    for (var p in _profiles) {
+      totalXp += (p['xp'] as num?)?.toInt() ?? 0;
+    }
+
+    final avgXp = totalUsers > 0 ? (totalXp / totalUsers).round() : 0;
 
     return Scaffold(
       key: const ValueKey('admin-scaffold'),
@@ -432,9 +436,9 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
                     _buildDivider(isDark),
                     _buildTopStatCell(tr('admin.stat_vip_members'), "$vipCount", const Color(0xfff59e0b), isDark),
                     _buildDivider(isDark),
-                    _buildTopStatCell(tr('admin.stat_free_users'), "$freeCount", const Color(0xff34d399), isDark),
+                    _buildTopStatCell("Total XP", "$totalXp", const Color(0xff34d399), isDark),
                     _buildDivider(isDark),
-                    _buildTopStatCell(tr('admin.stat_admins'), "$adminCount", const Color(0xffa78bfa), isDark),
+                    _buildTopStatCell(appState.language == 'en' ? "Avg XP" : "Rata-rata XP", "$avgXp", const Color(0xffa78bfa), isDark),
                   ],
                 ),
               ),
@@ -591,7 +595,8 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
     final role = (u['role'] ?? '').toString().toLowerCase();
     final isAdmin = role == 'admin';
     final avatarUrl = u['avatar'] as String?;
-    final balance = (u['virtual_balance'] as num?)?.toDouble() ?? 100000000.0;
+    final petir = u['petir'] ?? 5;
+    final levelCount = (u['completed_levels'] as List?)?.length ?? 0;
     final xp = u['xp'] ?? 0;
     final streak = u['streak'] ?? 0;
     final joined = _formatDate(u['created_at']);
@@ -715,10 +720,10 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildCompactStat(tr('admin.stat_cash'), _formatRp(balance), const Color(0xff34d399), isDark),
-                _buildCompactStat(tr('admin.stat_xp'), "$xp", const Color(0xff60a5fa), isDark),
-                _buildCompactStat(tr('admin.stat_streak'), "$streak ${tr('admin.days')}", const Color(0xfff87171), isDark),
-                _buildCompactStat(tr('admin.stat_joined'), joined, const Color(0xffa78bfa), isDark),
+                _buildCompactStat("Level", "$levelCount", const Color(0xff34d399), isDark),
+                _buildCompactStat("XP", "$xp", const Color(0xff60a5fa), isDark),
+                _buildCompactStat("Petir", "$petir/5", const Color(0xfff59e0b), isDark),
+                _buildCompactStat("Streak", "$streak ${tr('admin.days')}", const Color(0xfff87171), isDark),
               ],
             ),
           ),
@@ -743,9 +748,9 @@ class _AdminConsoleViewState extends State<AdminConsoleView> with SingleTickerPr
               ),
               const SizedBox(width: 6),
               _buildMiniActionBtn(
-                label: tr('admin.action_add_balance'),
+                label: "+50 XP",
                 color: const Color(0xff38bdf8),
-                onTap: () => _adjustBalance(u, 50000000.0),
+                onTap: () => _adjustXp(u, 50),
                 isDark: isDark,
               ),
             ],

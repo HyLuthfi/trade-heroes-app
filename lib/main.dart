@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/supabase_service.dart';
 import 'state/app_state.dart';
 import 'views/home_view.dart';
@@ -47,9 +48,11 @@ void main() async {
     usePathUrlStrategy();
   }
   await SupabaseService.initialize();
+  final prefs = await SharedPreferences.getInstance();
+  final appState = AppState(initialPrefs: prefs);
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
+    ChangeNotifierProvider<AppState>.value(
+      value: appState,
       child: const KursusSahamApp(),
     ),
   );
@@ -142,6 +145,40 @@ class KursusSahamApp extends StatelessWidget {
           home: VideoSplashView(
             child: Consumer<AppState>(
               builder: (context, appState, child) {
+                if (appState.isAuthLoading) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  return Scaffold(
+                    backgroundColor: isDark ? const Color(0xff0b0f19) : const Color(0xfff8fafc),
+                    body: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/logo.png',
+                            width: 64,
+                            height: 64,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.show_chart_rounded, color: Color(0xff10b981), size: 56),
+                          ),
+                          const SizedBox(height: 16),
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2.5),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            settings.language == 'en' ? "Connecting account..." : "Menghubungkan akun...",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
                 return appState.isLoggedIn
                     ? const HomeView()
                     : const LoginView();

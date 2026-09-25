@@ -4,3 +4,7 @@
 bool jsIsOAuthRedirect() => false;
 
 void jsOpenBrowserTab(String url) {}
+
+String? jsGetLocalStorage(String key) => null;
+
+void jsSetLocalStorage(String key, String value) {}

@@ -574,37 +574,7 @@ class _LoginViewState extends State<LoginView> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Cloud Integration Tag
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xff1e293b) : const Color(0xffe2e8f0),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xffcbd5e1),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.cloud_done_rounded, color: Color(0xff10b981), size: 13),
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: Text(
-                            "Didukung oleh Supabase Cloud Sync",
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10.5,
-                              color: isDark ? const Color(0xff94a3b8) : const Color(0xff64748b),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),

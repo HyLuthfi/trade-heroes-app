@@ -18,6 +18,7 @@ class AppState extends ChangeNotifier {
   int _streak = 0;
   List<int> _completedLevels = [1, 2, 3];
   Map<int, int> _levelStars = {1: 3, 2: 3, 3: 3}; // levelId -> stars (1, 2, or 3) Candy Crush style
+  Map<int, int> _levelCorrectAnswers = {1: 3, 2: 3, 3: 3}; // levelId -> jumlah soal benar
   List<int> _readModules = [];
   List<Map<String, dynamic>> _favorites = []; // { 'levelId': int, 'qIndex': int, 'questionText': String }
   List<String> _unlockedBadges = [];
@@ -26,6 +27,7 @@ class AppState extends ChangeNotifier {
   String _lastDailyClaimDate = ""; // YYYY-MM-DD
   bool _isPremium = false;
   bool _isLoggedIn = false;
+  bool _isAuthLoading = true;
   String _lastActiveDate = ""; // YYYY-MM-DD
   int? _petirLastUsedTime; // timestamp in ms
 
@@ -66,8 +68,10 @@ class AppState extends ChangeNotifier {
   int get streak => _streak;
   List<int> get completedLevels => _completedLevels;
   Map<int, int> get levelStars => _levelStars;
+  Map<int, int> get levelCorrectAnswers => _levelCorrectAnswers;
 
   int getStarsForLevel(int levelId) => _levelStars[levelId] ?? 0;
+  int getCorrectAnswersForLevel(int levelId) => _levelCorrectAnswers[levelId] ?? (_completedLevels.contains(levelId) ? 3 : 0);
   List<int> get readModules => _readModules;
   List<Map<String, dynamic>> get favorites => _favorites;
   List<String> get unlockedBadges => _unlockedBadges;
@@ -76,6 +80,7 @@ class AppState extends ChangeNotifier {
   String get lastDailyClaimDate => _lastDailyClaimDate;
   bool get isPremium => _isPremium;
   bool get isLoggedIn => _isLoggedIn;
+  bool get isAuthLoading => _isAuthLoading;
   String get userName => _userName;
   String get userEmail => _userEmail;
   String get userAvatar => _userAvatar;
@@ -463,10 +468,57 @@ class AppState extends ChangeNotifier {
   Timer? _regenTimer;
   StreamSubscription<AuthState>? _authSubscription;
 
-  AppState() {
-    _initAndLoadState();
+  AppState({SharedPreferences? initialPrefs}) {
+    if (initialPrefs != null) {
+      _applyInitialSyncData(initialPrefs);
+    } else {
+      final currentSupabaseUser = SupabaseService.currentUser;
+      if (currentSupabaseUser != null) {
+        _isLoggedIn = true;
+        _userId = currentSupabaseUser.id;
+        _userEmail = currentSupabaseUser.email ?? _userEmail;
+        final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
+        if (metaName != null && metaName.isNotEmpty) {
+          _userName = metaName;
+        }
+        _isAuthLoading = false;
+      }
+    }
+    _initAndLoadState(initialPrefs: initialPrefs);
     _startRegenTimer();
     _listenAuthChanges();
+  }
+
+  void _applyInitialSyncData(SharedPreferences prefs) {
+    // 1. Check Supabase Current Session synchronously
+    final currentSupabaseUser = SupabaseService.currentUser;
+    if (currentSupabaseUser != null) {
+      _isLoggedIn = true;
+      _userId = currentSupabaseUser.id;
+      _userEmail = currentSupabaseUser.email ?? _userEmail;
+      final metaName = currentSupabaseUser.userMetadata?['name'] as String?;
+      if (metaName != null && metaName.isNotEmpty) {
+        _userName = metaName;
+      }
+    }
+
+    // 2. Load cached local state synchronously
+    final cachedJsonStr = prefs.getString('trade_heroes_state');
+    if (cachedJsonStr != null && cachedJsonStr.isNotEmpty) {
+      try {
+        final json = jsonDecode(cachedJsonStr);
+        _applyLocalData(json);
+      } catch (e) {
+        debugPrint("Error parsing initial sync data: $e");
+      }
+    } else {
+      final guestLogged = prefs.getBool('is_logged_in') ?? false;
+      if (guestLogged) {
+        _isLoggedIn = true;
+      }
+    }
+
+    _isAuthLoading = false;
   }
 
   void _listenAuthChanges() {
@@ -485,9 +537,13 @@ class AppState extends ChangeNotifier {
                 _userName = metaName;
               }
               try {
-                final cloudProfile = await SupabaseService.fetchProfile(_userId!);
+                final cloudProfile = await SupabaseService.fetchProfile(_userId!)
+                    .timeout(const Duration(seconds: 4));
                 if (cloudProfile != null) {
                   _applyProfileData(cloudProfile);
+                } else {
+                  // Profil baru di Supabase: simpan state awal ke cloud
+                  await _saveState();
                 }
               } catch (e) {
                 debugPrint("Profile fetch error in auth change: $e");
@@ -498,31 +554,40 @@ class AppState extends ChangeNotifier {
               } catch (e) {
                 debugPrint("Cache save error in auth change: $e");
               }
+              _isAuthLoading = false;
               notifyListeners();
             }
           } else if (event == AuthChangeEvent.signedOut) {
             _isLoggedIn = false;
+            _isAuthLoading = false;
             _userId = null;
             try {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('is_logged_in', false);
             } catch (_) {}
             notifyListeners();
+          } else if (event == AuthChangeEvent.initialSession) {
+            _isAuthLoading = false;
+            notifyListeners();
           }
         },
         onError: (err, stack) {
           debugPrint("Supabase onAuthStateChange stream error caught safely: $err");
+          _isAuthLoading = false;
+          notifyListeners();
         },
       );
     } catch (e) {
       debugPrint("Auth subscription error: $e");
+      _isAuthLoading = false;
+      notifyListeners();
     }
   }
 
   // Initialize state with SharedPreferences (Web + Native Safe) and Supabase Cloud Sync
-  Future<void> _initAndLoadState() async {
+  Future<void> _initAndLoadState({SharedPreferences? initialPrefs}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = initialPrefs ?? await SharedPreferences.getInstance();
 
       // 1. Check Supabase Current Session
       if (SupabaseService.isInitialized) {
@@ -536,8 +601,10 @@ class AppState extends ChangeNotifier {
             _userName = metaName;
           }
 
-          // Try load from Supabase Cloud Profile
-          final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id);
+        // Try load from Supabase Cloud Profile with safety timeout
+        try {
+          final cloudProfile = await SupabaseService.fetchProfile(currentSupabaseUser.id)
+              .timeout(const Duration(seconds: 4));
           if (cloudProfile != null) {
             _applyProfileData(cloudProfile);
             final dedicatedLanguage = prefs.getString('app_language');
@@ -553,10 +620,22 @@ class AppState extends ChangeNotifier {
             await _saveToLocalCache(prefs);
             _checkDailyReset();
             _checkPetirRegenOnLoad();
+            _isAuthLoading = false;
             notifyListeners();
             return;
+          } else {
+            await _saveState();
           }
+        } catch (e) {
+          debugPrint("Profile load timeout or error: $e");
         }
+        }
+        await _saveToLocalCache(prefs);
+        _checkDailyReset();
+        _checkPetirRegenOnLoad();
+        _isAuthLoading = false;
+        notifyListeners();
+        return;
       }
 
       // 2. Fallback to Local Cache (SharedPreferences)
@@ -586,12 +665,15 @@ class AppState extends ChangeNotifier {
         deviceLocales: PlatformDispatcher.instance.locales,
       );
 
+      _isAuthLoading = false;
       _checkDailyReset();
       _checkPetirRegenOnLoad();
       _checkDailyNotifications();
       notifyListeners();
     } catch (e) {
       debugPrint("Error initializing AppState: $e");
+      _isAuthLoading = false;
+      notifyListeners();
     }
   }
 
@@ -610,6 +692,13 @@ class AppState extends ChangeNotifier {
       );
     } else {
       _levelStars = {1: 3, 2: 3, 3: 3};
+    }
+    if (json['levelCorrectAnswers'] != null && json['levelCorrectAnswers'] is Map) {
+      _levelCorrectAnswers = (json['levelCorrectAnswers'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    } else {
+      _levelCorrectAnswers = {1: 3, 2: 3, 3: 3};
     }
     _readModules = List<int>.from(json['readModules'] ?? []);
     _favorites = List<Map<String, dynamic>>.from(json['favorites'] ?? []);
@@ -706,6 +795,11 @@ class AppState extends ChangeNotifier {
         (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
       );
     }
+    if (data['level_correct_answers'] != null && data['level_correct_answers'] is Map) {
+      _levelCorrectAnswers = (data['level_correct_answers'] as Map).map(
+        (k, v) => MapEntry(int.tryParse(k.toString()) ?? 1, (v as num).toInt()),
+      );
+    }
     if (data['read_modules'] != null && data['read_modules'] is List) {
       _readModules = (data['read_modules'] as List).map((x) => (x as num).toInt()).toList();
     }
@@ -744,6 +838,7 @@ class AppState extends ChangeNotifier {
       'streak': _streak,
       'completedLevels': _completedLevels,
       'levelStars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
+      'levelCorrectAnswers': _levelCorrectAnswers.map((k, v) => MapEntry(k.toString(), v)),
       'readModules': _readModules,
       'favorites': _favorites,
       'unlockedBadges': _unlockedBadges,
@@ -797,6 +892,7 @@ class AppState extends ChangeNotifier {
       'streak': _streak,
       'completed_levels': _completedLevels,
       'level_stars': _levelStars.map((k, v) => MapEntry(k.toString(), v)),
+      'level_correct_answers': _levelCorrectAnswers.map((k, v) => MapEntry(k.toString(), v)),
       'read_modules': _readModules,
       'favorites': _favorites,
       'unlocked_badges': _unlockedBadges,
@@ -843,11 +939,26 @@ class AppState extends ChangeNotifier {
         _userEmail = user.email ?? email;
         _userName = name ?? (email.contains('@') ? email.split('@')[0] : email);
         
+        try {
+          final cloudProfile = await SupabaseService.fetchProfile(user.id);
+          if (cloudProfile != null) {
+            _applyProfileData(cloudProfile);
+          }
+        } catch (_) {}
+
         await _saveState();
         notifyListeners();
         return null; // success
       }
       return "Pendaftaran gagal, silakan coba lagi.";
+    } on AuthException catch (e) {
+      if (e.message.contains("already registered")) {
+        return "Email ini sudah terdaftar. Silakan masuk menggunakan kata sandi Anda.";
+      }
+      if (e.message.contains("Password should be at least")) {
+        return "Kata sandi minimal harus 6 karakter.";
+      }
+      return e.message;
     } catch (e) {
       return e.toString().replaceAll("Exception: ", "");
     }
@@ -887,6 +998,14 @@ class AppState extends ChangeNotifier {
         return null; // success
       }
       return "Login gagal, silakan periksa email dan kata sandi.";
+    } on AuthException catch (e) {
+      if (e.message.contains("Invalid login credentials")) {
+        return "Email atau kata sandi tidak cocok. Silakan periksa kembali.";
+      }
+      if (e.message.contains("Email not confirmed")) {
+        return "Email belum dikonfirmasi. Silakan periksa kotak masuk email Anda.";
+      }
+      return e.message;
     } catch (e) {
       return e.toString().replaceAll("Exception: ", "");
     }
@@ -1040,6 +1159,8 @@ class AppState extends ChangeNotifier {
 
   void resetProgress() {
     _completedLevels = [1, 2, 3];
+    _levelStars = {1: 3, 2: 3, 3: 3};
+    _levelCorrectAnswers = {1: 3, 2: 3, 3: 3};
     _readModules = [];
     _favorites = [];
     _unlockedBadges = [];
@@ -1477,8 +1598,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Level completed with Candy Crush style Stars (1, 2, or 3)
-  void completeLevel(int levelId, {int stars = 3}) {
+  // Level completed with Candy Crush style Stars (1, 2, or 3) and correct answer count
+  void completeLevel(int levelId, {int stars = 3, int correctAnswers = 0}) {
     if (!_completedLevels.contains(levelId)) {
       _completedLevels.add(levelId);
     }
@@ -1486,8 +1607,22 @@ class AppState extends ChangeNotifier {
     if (stars > curStars) {
       _levelStars[levelId] = stars;
     }
+    final curCorrect = _levelCorrectAnswers[levelId] ?? 0;
+    if (correctAnswers > curCorrect) {
+      _levelCorrectAnswers[levelId] = correctAnswers;
+    }
     _saveState();
     notifyListeners();
+  }
+
+  // Record quiz attempt (even if not full stars/passed, tracks correct answers)
+  void recordLevelAttempt(int levelId, int correctAnswers) {
+    final curCorrect = _levelCorrectAnswers[levelId] ?? 0;
+    if (correctAnswers > curCorrect) {
+      _levelCorrectAnswers[levelId] = correctAnswers;
+      _saveState();
+      notifyListeners();
+    }
   }
 
   // Award Anti Boncos if no mistakes
@@ -1695,6 +1830,7 @@ class AppState extends ChangeNotifier {
                   fontSize: 14,
                   letterSpacing: 0.8,
                 ),
+              ),
               ),
             ),
           ],

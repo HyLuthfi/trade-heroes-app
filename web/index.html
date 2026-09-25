@@ -35,6 +35,13 @@
 </head>
 <body style="background-color: #0b0f19; margin: 0; padding: 0;">
   <script>
+    // Early OAuth redirect detection before Supabase strips URL hash
+    try {
+      if (window.location.hash.indexOf('access_token') !== -1 || window.location.search.indexOf('code=') !== -1) {
+        sessionStorage.setItem('th_oauth_pending', '1');
+      }
+    } catch(e) {}
+
     // Invalidate old service worker and caches to ensure latest release is loaded
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {

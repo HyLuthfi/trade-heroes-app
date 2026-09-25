@@ -162,6 +162,7 @@ const Map<String, String> _kuisEnTranslations = {
 class _KuisViewState extends State<KuisView> with TickerProviderStateMixin {
   int? _selectedLevelId;
   int? _pressedLevelId;
+  bool _isMulaiBubblePressed = false;
   late ScrollController _scrollController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -200,24 +201,24 @@ static bool _translationsRegistered = false;
   void initState() {
     super.initState();
     _ensureTranslations();
-    _scrollController = ScrollController();
+    final appState = Provider.of<AppState>(context, listen: false);
+    int activeLevelId = appState.completedLevels.length + 1;
+    if (activeLevelId > 10) activeLevelId = 10;
+    final levels = _getLevelData(appState.language);
+    final activeNode = levels.firstWhere(
+      (l) => l['id'] == activeLevelId,
+      orElse: () => levels.first,
+    );
+    final double activeY = (activeNode['y'] as double);
+    final double initialOffset = (activeY - 180.0).clamp(0.0, 1825.0);
+
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        final appState = Provider.of<AppState>(context, listen: false);
-        int activeLevelId = appState.completedLevels.length + 1;
-        if (activeLevelId > 10) activeLevelId = 10;
-        final levels = _getLevelData(appState.language);
-        final activeNode = levels.firstWhere(
-          (l) => l['id'] == activeLevelId,
-          orElse: () => levels.first,
-        );
-        final double activeY = (activeNode['y'] as double);
-        final double targetScroll = (activeY - 260.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-        _scrollController.animateTo(
-          targetScroll,
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOutCubic,
-        );
+        final double targetScroll = (activeY - 180.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+        if ((_scrollController.offset - targetScroll).abs() > 1.0) {
+          _scrollController.jumpTo(targetScroll);
+        }
       }
     });
     
@@ -342,7 +343,9 @@ static bool _translationsRegistered = false;
                               const Icon(Icons.bookmark_rounded, color: Color(0xff6ee7b7), size: 13),
                               const SizedBox(width: 5),
                               Text(
-                                tr('kuis.header_level', params: {'level': '$activeLevelId'}),
+                                appState.completedLevels.length >= 10
+                                    ? (appState.language == 'en' ? "SECTION 1 • ALL LEVELS COMPLETED" : "BAGIAN 1 • SEMUA LEVEL SELESAI")
+                                    : (appState.language == 'en' ? "SECTION 1 • LEVEL $activeLevelId / 10" : "BAGIAN 1 • LEVEL $activeLevelId / 10"),
                                 style: const TextStyle(
                                   fontFamily: 'Outfit',
                                   fontSize: 10.5,
@@ -429,60 +432,68 @@ static bool _translationsRegistered = false;
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Progress Bar & Percentage
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              Container(
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              FractionallySizedBox(
-                                widthFactor: (appState.completedLevels.length / 10.0).clamp(0.0, 1.0),
-                                child: Container(
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xffa7f3d0), Colors.white],
+                    // Progress Bar & Percentage of Active Level Questions
+                    Builder(
+                      builder: (context) {
+                        final activeQList = (activeLevel['questions'] as List?) ?? [];
+                        final activeQCount = activeQList.length > 0 ? activeQList.length : 3;
+                        final activeCorrect = appState.getCorrectAnswersForLevel(activeLevelId);
+                        final double activeProgress = (activeCorrect / activeQCount).clamp(0.0, 1.0);
+                        final int activePct = (activeProgress * 100).round();
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
-                                    borderRadius: BorderRadius.circular(4),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.white.withOpacity(0.5),
-                                        blurRadius: 4,
-                                      ),
-                                    ],
                                   ),
+                                  FractionallySizedBox(
+                                    widthFactor: activeProgress,
+                                    child: Container(
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xffa7f3d0), Colors.white],
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.white.withOpacity(0.5),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                "$activePct%",
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            tr('kuis.progress_pct', params: {
-                              'pct': '${(appState.completedLevels.length * 10).clamp(0, 100)}'
-                            }),
-                            style: const TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
                             ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 14),
                     // Quick Action Button: "Lanjutkan Belajar"
@@ -498,6 +509,33 @@ static bool _translationsRegistered = false;
                           padding: EdgeInsets.zero,
                         ),
                         onPressed: () {
+                          AudioService.playClick();
+                          final levels = _getLevelData(appState.language);
+                          final activeNode = levels.firstWhere(
+                            (l) => l['id'] == activeLevelId,
+                            orElse: () => levels.first,
+                          );
+                          final double activeY = (activeNode['y'] as double);
+
+                          if (_scrollController.hasClients) {
+                            final double targetScroll = (activeY - 180.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+                            final double dist = (_scrollController.offset - targetScroll).abs();
+                            if (dist > 30.0) {
+                              // Smoothly re-center back to active level first, then open level sheet
+                              _scrollController.animateTo(
+                                targetScroll,
+                                duration: const Duration(milliseconds: 380),
+                                curve: Curves.easeOutCubic,
+                              ).then((_) {
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedLevelId = activeLevelId;
+                                  });
+                                }
+                              });
+                              return;
+                            }
+                          }
                           setState(() {
                             _selectedLevelId = activeLevelId;
                           });
@@ -505,11 +543,17 @@ static bool _translationsRegistered = false;
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.play_arrow_rounded, size: 20, color: Color(0xff047857)),
+                            Icon(
+                              appState.completedLevels.length >= 10 ? Icons.replay_rounded : Icons.play_arrow_rounded,
+                              size: 20,
+                              color: const Color(0xff047857),
+                            ),
                             const SizedBox(width: 4),
                             Text(
-                              tr('kuis.continue_learning'),
-                              style: TextStyle(
+                              appState.completedLevels.length >= 10
+                                  ? (appState.language == 'en' ? "REVIEW LEVEL 10" : "REVIEW LEVEL 10")
+                                  : (appState.language == 'en' ? "CONTINUE LEARNING" : "LANJUTKAN BELAJAR"),
+                              style: const TextStyle(
                                 fontFamily: 'Outfit',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w900,
@@ -530,7 +574,7 @@ static bool _translationsRegistered = false;
                 child: SingleChildScrollView(
                   controller: _scrollController,
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 85),
+                  padding: const EdgeInsets.only(bottom: 115),
                   child: Center(
                       child: Container(
                         width: mapWidth,
@@ -700,12 +744,16 @@ static bool _translationsRegistered = false;
                                 ),
                               );
 
-                              // If active, wrap it in a pulsing progress ring with outer glowing aura
-                              if (isActive) {
+                              // Ring indicator around node showing question completion progress (Duolingo Style)
+                              final qCount = ((level['questions'] as List?)?.length ?? 3).clamp(1, 100);
+                              final correctCount = appState.getCorrectAnswersForLevel(id);
+                              final double levelProgress = (correctCount / qCount).clamp(0.0, 1.0);
+
+                              if (isActive || (isUnlocked && levelProgress > 0 && levelProgress < 1.0)) {
                                 nodeWidget = AnimatedBuilder(
                                   animation: _pulseAnimation,
                                   builder: (context, child) {
-                                    final scale = _pulseAnimation.value;
+                                    final scale = isActive ? _pulseAnimation.value : 1.0;
                                     return Container(
                                       width: 98,
                                       height: 104,
@@ -713,30 +761,31 @@ static bool _translationsRegistered = false;
                                       child: Stack(
                                         alignment: Alignment.center,
                                         children: [
-                                          // Outer Glowing Pulsing Aura
-                                          Transform.scale(
-                                            scale: scale,
-                                            child: Container(
-                                              width: 86,
-                                              height: 86,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: const Color(0xff58cc02).withOpacity(0.25),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(0xff58cc02).withOpacity(0.5),
-                                                    blurRadius: 18,
-                                                    spreadRadius: 4,
-                                                  ),
-                                                ],
+                                          // Outer Glowing Pulsing Aura (Only for active level)
+                                          if (isActive)
+                                            Transform.scale(
+                                              scale: scale,
+                                              child: Container(
+                                                width: 86,
+                                                height: 86,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: const Color(0xff58cc02).withOpacity(0.25),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: const Color(0xff58cc02).withOpacity(0.5),
+                                                      blurRadius: 18,
+                                                      spreadRadius: 4,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                          ),
                                           SizedBox(
                                             width: 90,
                                             height: 90,
                                             child: CircularProgressIndicator(
-                                              value: 0.6,
+                                              value: levelProgress,
                                               strokeWidth: 7,
                                               strokeCap: StrokeCap.round,
                                               color: const Color(0xff58cc02),
@@ -854,15 +903,41 @@ static bool _translationsRegistered = false;
                                 return Positioned(
                                   left: x - 46, // Centered perfectly (width is 92, so center is exactly x)
                                   top: y - 68,  // Positioned directly above active node
-                                  child: AnimatedBuilder(
-                                    animation: _bobAnimation,
-                                    builder: (context, child) {
-                                      return Transform.translate(
-                                        offset: Offset(0, _bobAnimation.value),
-                                        child: child,
-                                      );
-                                    },
-                                    child: _buildMulaiBubble(language),
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTapDown: (_) {
+                                        setState(() {
+                                          _isMulaiBubblePressed = true;
+                                        });
+                                      },
+                                      onTapUp: (_) {
+                                        setState(() {
+                                          _isMulaiBubblePressed = false;
+                                          _selectedLevelId = activeLevelId;
+                                        });
+                                        AudioService.playClick();
+                                      },
+                                      onTapCancel: () {
+                                        setState(() {
+                                          _isMulaiBubblePressed = false;
+                                        });
+                                      },
+                                      child: AnimatedBuilder(
+                                        animation: _bobAnimation,
+                                        builder: (context, child) {
+                                          return Transform.translate(
+                                            offset: Offset(0, _bobAnimation.value + (_isMulaiBubblePressed ? 3.0 : 0.0)),
+                                            child: Transform.scale(
+                                              scale: _isMulaiBubblePressed ? 0.94 : 1.0,
+                                              child: child,
+                                            ),
+                                          );
+                                        },
+                                        child: _buildMulaiBubble(language),
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
@@ -1280,7 +1355,6 @@ IconData _getZoneIcon(dynamic zone) {
     final bool isCompleted = appState.completedLevels.contains(levelId);
     final bool isClaimed = appState.isChestClaimed(levelId);
 
-
     final bool isReadyToClaim = isCompleted && !isClaimed;
 
     return Positioned(
@@ -1542,10 +1616,6 @@ IconData _getZoneIcon(dynamic zone) {
     );
   }
 
-  Widget _buildMascotWidget() {
-    return const Text("🐂", style: TextStyle(fontSize: 42));
-  }
-
   Widget _buildMulaiBubble(String language) {
     return SizedBox(
       width: 92,
@@ -1559,13 +1629,16 @@ IconData _getZoneIcon(dynamic zone) {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: const Color(0xff182232),
-              border: Border.all(color: const Color(0xff58cc02), width: 2.5),
+              border: Border.all(
+                color: _isMulaiBubblePressed ? const Color(0xff46a302) : const Color(0xff58cc02),
+                width: 2.5,
+              ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+                  color: const Color(0xff58cc02).withOpacity(_isMulaiBubblePressed ? 0.15 : 0.35),
+                  blurRadius: _isMulaiBubblePressed ? 3 : 8,
+                  offset: Offset(0, _isMulaiBubblePressed ? 1 : 3),
                 ),
               ],
             ),
@@ -1587,11 +1660,17 @@ IconData _getZoneIcon(dynamic zone) {
               child: Container(
                 width: 12,
                 height: 12,
-                decoration: const BoxDecoration(
-                  color: Color(0xff182232),
+                decoration: BoxDecoration(
+                  color: const Color(0xff182232),
                   border: Border(
-                    right: BorderSide(color: Color(0xff58cc02), width: 2.5),
-                    bottom: BorderSide(color: Color(0xff58cc02), width: 2.5),
+                    right: BorderSide(
+                      color: _isMulaiBubblePressed ? const Color(0xff46a302) : const Color(0xff58cc02),
+                      width: 2.5,
+                    ),
+                    bottom: BorderSide(
+                      color: _isMulaiBubblePressed ? const Color(0xff46a302) : const Color(0xff58cc02),
+                      width: 2.5,
+                    ),
                   ),
                 ),
               ),

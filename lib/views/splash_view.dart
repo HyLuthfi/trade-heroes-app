@@ -30,8 +30,8 @@ class _VideoSplashViewState extends State<VideoSplashView> {
 
     _initVideoPlayer();
 
-    // Guaranteed 3.2-second transition fallback
-    _fallbackTimer = Timer(const Duration(milliseconds: 3200), () {
+    // Guaranteed 2.2-second transition fallback
+    _fallbackTimer = Timer(const Duration(milliseconds: 2200), () {
       _finishSplash();
     });
   }
@@ -99,9 +99,38 @@ class _VideoSplashViewState extends State<VideoSplashView> {
               ),
             )
           else
-            const SizedBox.expand(
-              child: ColoredBox(
-                color: Color(0xff060a12),
+            SizedBox.expand(
+              child: Container(
+                color: const Color(0xff060a12),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 72,
+                      height: 72,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.show_chart_rounded, color: Color(0xff10b981), size: 64),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "TRADE HEROES",
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Color(0xff10b981), strokeWidth: 2.5),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

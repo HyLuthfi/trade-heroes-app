@@ -402,7 +402,6 @@ class _MateriViewState extends State<MateriView>
                           ),
                           child: Row(
                             children: [
-                              const Text("🪙 ", style: TextStyle(fontSize: 11)),
                               Text(
                                 "+${mod['xp']} XP",
                                 style: TextStyle(
@@ -632,6 +631,7 @@ class _MateriViewState extends State<MateriView>
                   ),
                 ),
               ],
+              const SizedBox(height: 14),
               Expanded(
                 child: SingleChildScrollView(
                   child: Text(

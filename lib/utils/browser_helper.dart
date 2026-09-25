@@ -9,4 +9,10 @@ class BrowserHelper {
 
   /// Open external URL in a new browser tab
   static void openTab(String url) => platform_browser.jsOpenBrowserTab(url);
+
+  /// Safe local storage getter (returns null on VM)
+  static String? getLocalStorage(String key) => platform_browser.jsGetLocalStorage(key);
+
+  /// Safe local storage setter (no-op on VM)
+  static void setLocalStorage(String key, String value) => platform_browser.jsSetLocalStorage(key, value);
 }
