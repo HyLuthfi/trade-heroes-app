@@ -136,11 +136,12 @@ class KursusSahamApp extends StatelessWidget {
             ),
           ),
           builder: (context, child) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return Container(
-              color: isDark ? const Color(0xff0b0f19) : const Color(0xfff1f5f9),
-              child: DeviceFrame(child: child ?? const SizedBox()),
-            );
+            // Check if running on desktop browser with width >= 600
+            final media = MediaQuery.of(context);
+            if (media.size.width >= 600) {
+              return DeviceFrame(child: child ?? const SizedBox());
+            }
+            return child ?? const SizedBox();
           },
           home: VideoSplashView(
             child: Consumer<AppState>(
