@@ -4,6 +4,7 @@ import '../services/audio_service.dart';
 import '../state/app_state.dart';
 import '../widgets/rank_progression_modal.dart';
 import '../widgets/leaderboard_modal.dart';
+import '../widgets/petir_info_modal.dart';
 import 'kuis_view.dart';
 import 'materi_view.dart';
 import 'profile_view.dart';
@@ -76,111 +77,143 @@ class _HomeViewState extends State<HomeView> {
           // Header Stats
           Row(
             children: [
-              // Petir/Lives Stat
-              Tooltip(
-                message: appState.isPremium ? "Nyawa tak terbatas" : "Nyawa petir Anda",
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff1e293b),
-                    border: Border.all(
-                      color: appState.isPremium ? const Color(0xfff59e0b) : const Color(0xff334155),
-                      width: appState.isPremium ? 2 : 1,
+              // Petir/Lives Stat (Interactive with Overflow Support)
+              Builder(
+                builder: (context) {
+                  final bool isOverflow = !appState.isPremium && appState.petir > 5;
+                  final String regenStr = appState.getPetirRegenTime();
+                  final Color petirColor = appState.isPremium
+                      ? const Color(0xfff59e0b)
+                      : (isOverflow
+                          ? const Color(0xff10b981) // Emerald Gold when overflowing
+                          : (appState.petir > 0 ? const Color(0xffef4444) : const Color(0xff64748b)));
+
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        AudioService.playClick();
+                        PetirInfoModal.show(context);
+                      },
+                      child: Tooltip(
+                        message: appState.isPremium
+                            ? "Nyawa tak terbatas (VIP) • Ketuk rincian"
+                            : (isOverflow
+                                ? "${appState.petir} Nyawa Petir (Bonus Hadiah Meluap) • Ketuk rincian"
+                                : "${appState.petir} / 5 Nyawa Petir • Ketuk rincian"),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff1e293b),
+                            border: Border.all(
+                              color: appState.isPremium
+                                  ? const Color(0xfff59e0b)
+                                  : (isOverflow ? const Color(0xff10b981) : const Color(0xff334155)),
+                              width: (appState.isPremium || isOverflow) ? 1.5 : 1,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.flash_on,
+                                color: petirColor,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                appState.isPremium ? "∞" : "${appState.petir}",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: petirColor,
+                                ),
+                              ),
+                              if (!appState.isPremium && appState.petir < 5 && regenStr.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  "($regenStr)",
+                                  style: const TextStyle(fontSize: 10, color: Color(0xff94a3b8)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.flash_on,
-                        color: appState.isPremium ? const Color(0xfff59e0b) : const Color(0xffef4444),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        appState.isPremium ? "∞" : "${appState.petir}",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: appState.isPremium ? const Color(0xfff59e0b) : const Color(0xffef4444),
-                        ),
-                      ),
-                      if (!appState.isPremium && appState.petir < 5) ...[
-                        const SizedBox(width: 4),
-                        Text(
-                          "(${appState.getPetirRegenTime()})",
-                          style: const TextStyle(fontSize: 10, color: Color(0xff94a3b8)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(width: 10),
 
               // XP & Rank Stat Pill (tappable to view roadmap)
-              GestureDetector(
-                onTap: () {
-                  AudioService.playClick();
-                  RankProgressionModal.show(context);
-                },
-                child: Tooltip(
-                  message: "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff1e293b),
-                          border: Border.all(
-                            color: (appState.currentRank['color'] as Color).withOpacity(0.5),
-                            width: 1.2,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              appState.currentRank['icon'] as IconData,
-                              color: appState.currentRank['color'] as Color,
-                              size: 15,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    AudioService.playClick();
+                    RankProgressionModal.show(context);
+                  },
+                  child: Tooltip(
+                    message: "${appState.currentRank['title']} (Tier ${appState.currentRank['roman']}) • Ketuk rincian gelar",
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff1e293b),
+                            border: Border.all(
+                              color: (appState.currentRank['color'] as Color).withOpacity(0.5),
+                              width: 1.2,
                             ),
-                            const SizedBox(width: 5),
-                            Text(
-                              "${appState.xp} XP",
-                              style: TextStyle(
-                                fontFamily: 'Outfit',
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w900,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                appState.currentRank['icon'] as IconData,
                                 color: appState.currentRank['color'] as Color,
+                                size: 15,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                "${appState.xp} XP",
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: appState.currentRank['color'] as Color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Notification badge alert if rewards are ready to claim
+                        if (appState.unclaimedMilestonesCount > 0)
+                          Positioned(
+                            top: -3,
+                            right: -3,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: const Color(0xffef4444),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xff0f172a), width: 1.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xffef4444).withOpacity(0.6),
+                                    blurRadius: 4,
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      // Notification badge alert if rewards are ready to claim
-                      if (appState.unclaimedMilestonesCount > 0)
-                        Positioned(
-                          top: -3,
-                          right: -3,
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: const Color(0xffef4444),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xff0f172a), width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xffef4444).withOpacity(0.6),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
