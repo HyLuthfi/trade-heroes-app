@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kursus_saham/l10n/app_translations.dart';
 import 'package:kursus_saham/state/app_state.dart';
 import 'package:kursus_saham/widgets/petir_info_modal.dart';
 
